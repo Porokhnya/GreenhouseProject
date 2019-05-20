@@ -49,9 +49,9 @@ HTU21D::HTU21D(HTU21D_Resolution sensorResolution)
 #if defined(ESP8266)
 bool HTU21D::begin(uint8_t sda, uint8_t scl)
 {
-  delay(250);                             //to compesate glitch if more than one library call Wire.begin() one after another
-  Wire.begin(sda, scl);
-  Wire.setClockStretchLimit(230);         //experimental! 150, default 230
+//  delay(250);                             //to compesate glitch if more than one library call Wire.begin() one after another
+//  Wire.begin(sda, scl);
+//  Wire.setClockStretchLimit(230);         //experimental! 150, default 230
 #else
 bool HTU21D::begin(void) 
 {

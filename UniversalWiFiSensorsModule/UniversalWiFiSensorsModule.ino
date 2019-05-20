@@ -418,13 +418,22 @@ void initSensors()
 
         HTU21D* htu = new HTU21D();
         sensors[i].data = htu;
-        htu->begin();
-
-        #ifdef _DEBUG
-          Serial.print(F("Si7021 inited"));
-          Serial.print(F(" with data="));
-          Serial.println((int)sensors[i].data);
-        #endif                
+        if(htu->begin())
+        {
+          #ifdef _DEBUG
+            Serial.print(F("Si7021 inited"));
+            Serial.print(F(" with data="));
+            Serial.println((int)sensors[i].data);
+            Serial.print(F("TEST READ FROM Si7021: "));
+            Serial.println(htu->readHumidity());
+          #endif          
+        }
+        else
+        {
+          #ifdef _DEBUG
+            Serial.println(F("[ERR]: Si7021 NOT FOUND!!!"));
+          #endif                
+        }
       }
       break;
 
