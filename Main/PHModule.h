@@ -70,7 +70,7 @@ class PhModule : public AbstractModule // модуль контроля pH
     void ReadSettings();
     void SaveSettings();
 
-    bool isLevelSensorTriggered(byte data);
+    bool isLevelSensorTriggered(uint8_t channel,byte data);
     
     uint16_t updateDelta;
     unsigned long mixPumpTimer;

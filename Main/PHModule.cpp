@@ -300,9 +300,9 @@ void PhModule::Setup()
   
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
-bool PhModule::isLevelSensorTriggered(byte data)
+bool PhModule::isLevelSensorTriggered(uint8_t channel, byte data)
 {
-  return (data & (PH_FLOW_LEVEL_TRIGGERED << PH_FLOW_LEVEL_SENSOR_CHANNEL)) == PH_FLOW_LEVEL_TRIGGERED;
+  return (data & (PH_FLOW_LEVEL_TRIGGERED << channel)) == PH_FLOW_LEVEL_TRIGGERED;
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void PhModule::SaveSettings()
@@ -683,9 +683,9 @@ void PhModule::Update(uint16_t dt)
 
     if(!pcfModule.lastError())
     {  
-      if(isLevelSensorTriggered(data))
+      if(isLevelSensorTriggered(PH_FLOW_LEVEL_SENSOR_CHANNEL, data))
       {
-        // сработал датчик уровня воды
+        // сработал нижний датчик уровня воды
         #ifdef PH_DEBUG
           PH_DEBUG_OUT(F("Level sensor triggered, OFF pumps, turn ON flow add pump, no pH control..."), "");
         #endif
@@ -722,16 +722,20 @@ void PhModule::Update(uint16_t dt)
         
         return; // ничего не контролируем, т.к. наполняем бак водой
         
-      } // if(isLevelSensorTriggered(data))
-      
+      } // if(isLevelSensorTriggered(PH_FLOW_LEVEL_SENSOR_CHANNEL, data))
 
-      // датчик уровня не сработал, очищаем бит контроля насоса, потом - выключаем насос подачи воды
-      SAVE_STATUS(PH_FLOW_ADD_BIT,0); // сохраняем статус насоса подачи воды
-      data &= ~(1 << PH_FLOW_ADD_CHANNEL);
-      data |= (PH_FLOW_ADD_OFF << PH_FLOW_ADD_CHANNEL);
-  
-      // сразу пишем в микросхему, чтобы поддержать актуальное состояние
-      pcfModule.write8(data);
+      if(!isLevelSensorTriggered(PH_FLOW_LEVEL_SENSOR2_CHANNEL, data))
+      {
+
+        // верхний датчик уровня не сработал (т.е. бак наполнен полностью), очищаем бит контроля насоса, потом - выключаем насос подачи воды
+        SAVE_STATUS(PH_FLOW_ADD_BIT,0); // сохраняем статус насоса подачи воды
+        data &= ~(1 << PH_FLOW_ADD_CHANNEL);
+        data |= (PH_FLOW_ADD_OFF << PH_FLOW_ADD_CHANNEL);
+    
+        // сразу пишем в микросхему, чтобы поддержать актуальное состояние
+        pcfModule.write8(data);
+        
+      } // if(!isLevelSensorTriggered(PH_FLOW_LEVEL_SENSOR2_CHANNEL, data))
       
     } // if(!pcfModule.lastError())
     
