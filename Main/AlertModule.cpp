@@ -24,6 +24,7 @@ AlertRule::AlertRule()
   Settings.WorkTime = 0;
   Settings.DayMask = 0xFF; // все дни недели работаем
   Settings.DataAlert = 0;
+  Settings.Reserved = 0;
 
   Settings.Enabled = 1;
   Settings.CanWork = 1;
@@ -64,6 +65,9 @@ uint8_t AlertRule::GetKnownModuleID(const char* moduleName)
 
   if(!strcmp_P(moduleName,(const char*) F("SCN")))
     return moduleScene;
+
+  if(!strcmp_P(moduleName,(const char*) F("MCP")))
+    return moduleMCP;
 
 return 0;
 
@@ -118,6 +122,10 @@ const char* AlertRule::GetKnownModuleName(uint8_t type)
 
     case moduleScene:
       strcpy_P(SD_BUFFER, (const char*) F("SCN"));
+    break;
+
+    case moduleMCP:
+      strcpy_P(SD_BUFFER, (const char*) F("MCP"));
     break;
     
   }
@@ -220,7 +228,39 @@ const char* AlertRule::GetTargetCommand()
       strcat_P(SD_BUFFER,(const char*) F("OFF"));
       
       return SD_BUFFER;
-    }     
+    }  
+
+    case commandMCP23S17PinOn: // CTSET=MCP|SPI|WRITE|mcpNumber|mcpChannel|ON
+    {
+      strcpy_P(SD_BUFFER,(const char*) F("SPI"));
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      strcpy_P(SD_BUFFER,(const char*) F("WRITE"));
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      String helper = String(Settings.TargetCommandParam); // mcpNumber
+      strcat(SD_BUFFER,helper.c_str());
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      helper = String(Settings.Reserved); // mcpChannel
+      strcat(SD_BUFFER,helper.c_str());
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      strcat_P(SD_BUFFER,(const char*) STATE_ON);
+      return SD_BUFFER;
+    } 
+
+    case commandMCP23S17PinOff: // CTSET=MCP|SPI|WRITE|mcpNumber|mcpChannel|OFF
+    {
+      strcpy_P(SD_BUFFER,(const char*) F("SPI"));
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      strcpy_P(SD_BUFFER,(const char*) F("WRITE"));
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      String helper = String(Settings.TargetCommandParam); // mcpNumber
+      strcat(SD_BUFFER,helper.c_str());
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      helper = String(Settings.Reserved); // mcpChannel
+      strcat(SD_BUFFER,helper.c_str());
+      strcat_P(SD_BUFFER,(const char*)PARAM_DELIMITER);
+      strcat_P(SD_BUFFER,(const char*) STATE_OFF);
+      return SD_BUFFER;
+    }              
   } // switch
 
   return rawCommand;
@@ -1141,7 +1181,28 @@ bool AlertRule::Construct(AbstractModule* lm, const Command& command)
                      
             } // if
             
-        } // CC
+        } // PIN
+        else
+        if(!strcmp_P(tcModuleName,(const char*)F("MCP"))) // чего-то делаем с MCP
+        {
+            // получаем тип MCP, с которой работаем
+             if(!strstr_P(tcParams,(const char*)F("SPI")))
+             {
+                // работаем с MCP23S17
+                
+                // у нас в command.GetArg(argsCnt-2), т.е. в предпоследнем параметре - номер канала MCP, который сохраняется в Reserved.
+                // в command.GetArg(argsCnt-3) - номер микросхемы MCP
+
+                Settings.Reserved = atoi(command.GetArg(argsCnt-2)); // MCP channel
+                Settings.TargetCommandParam = atoi(command.GetArg(argsCnt-3)); // MCP number
+
+                if(!strcmp_P(command.GetArg(argsCnt-1),(const char*) STATE_ON))
+                    Settings.TargetCommandType = commandMCP23S17PinOn;
+                  else
+                    Settings.TargetCommandType = commandMCP23S17PinOff;
+                
+             } // работаем с MCP23S17
+        }
     
        if(Settings.TargetCommandType == commandUnparsed)
        {

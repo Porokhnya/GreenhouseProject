@@ -118,6 +118,7 @@ bool  MCPModule::ExecCommand(const Command& command, bool wantAnswer)
           else // CTSET=MCP|SPI|WRITE|mcpNumber|mcpChannel|level
           {
             #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
+              WORK_STATUS.MCP_SPI_PinMode(mcpNumber,mcpChannel,OUTPUT);
               WORK_STATUS.MCP_SPI_PinWrite(mcpNumber,mcpChannel,level);
             #endif
           }
@@ -146,6 +147,7 @@ bool  MCPModule::ExecCommand(const Command& command, bool wantAnswer)
           else // CTSET=MCP|I2C|WRITE|mcpNumber|mcpChannel|level
           {
             #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
+              WORK_STATUS.MCP_I2C_PinMode(mcpNumber,mcpChannel,OUTPUT);
               WORK_STATUS.MCP_I2C_PinWrite(mcpNumber,mcpChannel,level);
             #endif
           }
