@@ -13,6 +13,8 @@ RULE_COMMANDS = {
 , '.+CC\\|EXEC\\|(.*)' : [6, 'выполняем составную команду']
 , '.+SCN\\|EXEC\\|(.*)' : [7, 'запускаем сценарий']
 , '.+SCN\\|STOP\\|(.*)' : [8, 'останавливаем сценарий']
+, '.+MCP\\|SPI\\|WRITE\\|(.*)\\|(.*)\\|ON' : [9, 'включаем канал MCP23S17']
+, '.+MCP\\|SPI\\|WRITE\\|(.*)\\|(.*)\\|OFF' : [10, 'выключаем канал MCP23S17']
 };
 
 RULE_BUILD_COMMANDS = [
@@ -25,6 +27,8 @@ RULE_BUILD_COMMANDS = [
 , 'CTSET=CC|EXEC|{0}'
 , 'CTSET=SCN|EXEC|{0}'
 , 'CTSET=SCN|STOP|{0}'
+, 'CTSET=MCP|SPI|WRITE|{0}|{1}|ON'
+, 'CTSET=MCP|SPI|WRITE|{0}|{1}|OFF'
 
 ];
 //-----------------------------------------------------------------------------------------------------
@@ -117,6 +121,26 @@ AlertRule.prototype.getAdditionalParam = function()
   return '';
 }
 //-----------------------------------------------------------------------------------------------------
+AlertRule.prototype.getAdditionalParam2 = function()
+{
+  for(var propName in RULE_COMMANDS)
+  {
+    
+    var propVal = RULE_COMMANDS[propName];
+
+    var reg = new RegExp(propName,'i');
+
+    if(reg.test(this.TargetCommand))
+    {
+      var res = reg.exec(this.TargetCommand);
+      if(res.length > 2)
+        return res[2];
+    }
+  }
+  
+  return '';
+}
+//-----------------------------------------------------------------------------------------------------
 AlertRule.prototype.getTargetCommandDescription = function()
 {
   for(var propName in RULE_COMMANDS)
@@ -158,10 +182,16 @@ RulesList.prototype.Clear = function()
   this.Rules = new Array();
 }
 //-----------------------------------------------------------------------------------------------------
-RulesList.prototype.buildTargetCommand = function(idx,param)
+RulesList.prototype.buildTargetCommand = function(idx,param, param2)
 {
   var result = '';
   var pattern = RULE_BUILD_COMMANDS[idx];
+    
   result = pattern.replace("{0}",param);
+  
+  if(param2 != undefined)
+  {
+	  result = result.replace("{1}",param2);
+  }
   return result;
 }

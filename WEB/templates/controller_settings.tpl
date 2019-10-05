@@ -440,6 +440,8 @@
                 <option value='6'>Выполнить составную команду</option>
                 <option value='7'>Запустить сценарий</option>
                 <option value='8'>Остановить сценарий</option>
+                <option value='9'>Включить канал MCP23S17</option>
+                <option value='10'>Выключить канал MCP23S17</option>
               </select>
             </div>
             
@@ -453,7 +455,7 @@
                 </div>
                 
                 <div id='ruleWndInterval' class='hdn'>
-                Положение окна, с:<br/>
+                <span id='wndPosHint'>Положение окна, с:</span><br/>
                 <input type='text' id='rule_wnd_interval_input' style='width:100%' placeholder='0 - не указано'/>
                 </div>
                 

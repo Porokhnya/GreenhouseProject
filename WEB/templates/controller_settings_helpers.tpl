@@ -1192,6 +1192,7 @@ function newRule(editedRule, editedRow)
     var tci = editedRule.getTargetCommandIndex();
     $('#rule_action_input').val(tci).trigger('change');
     $('#rule_additional_param_input').val(editedRule.getAdditionalParam());
+		
     if(tci == 0) // открыть окна, надо искать интервал
     {
       var tcSplitted = editedRule.TargetCommand.split("|");
@@ -1204,6 +1205,11 @@ function newRule(editedRule, editedRow)
       $('#rule_wnd_interval_input').val(passedInterval);
         
     }
+	else
+	if(tci == 9 || tci == 10) // вкл/выкл MCP
+	{
+			$('#rule_wnd_interval_input').val(editedRule.getAdditionalParam2());
+	}
     
     
     __globalRuleDaymask = editedRule.DayMask;
@@ -1310,7 +1316,8 @@ function newRule(editedRule, editedRow)
           
       }
       
-       if((rule_action_input == 0 || rule_action_input == 1 || rule_action_input == 4 || rule_action_input == 5 || rule_action_input == 6) 
+       if((rule_action_input == 0 || rule_action_input == 1 || rule_action_input == 4 || rule_action_input == 5 || rule_action_input == 6
+	   || rule_action_input == 7 || rule_action_input == 8 || rule_action_input == 9 || rule_action_input == 10) 
        && rule_additional_param_input == '')
        {
         showMessage('Укажите дополнительные параметры!');
@@ -1318,9 +1325,9 @@ function newRule(editedRule, editedRow)
         return;
        }
        
-       var targetCommand = rulesList.buildTargetCommand(rule_action_input,rule_additional_param_input);
+       var targetCommand = rulesList.buildTargetCommand(rule_action_input,rule_additional_param_input, $('#rule_wnd_interval_input').val());
        
-       if(rule_action_input == 0)
+       if(rule_action_input == 0) // открыть окна
        {
         var wndInt = parseInt($('#rule_wnd_interval_input').val());
         if(isNaN(wndInt))
@@ -3055,6 +3062,8 @@ $(document).ready(function(){
           $addParamCaption.html("Номера окон:");
           ed.attr('placeholder','ALL - все окна, 0-2 - диапазон');
           $('#rule_additional_param').toggle(true);
+		  $('#wndPosHint').text('Положение окна, с:');
+		  $('#rule_wnd_interval_input').attr('placeholder','0 - не указано');
           $('#ruleWndInterval').toggle(val == 0);
         break;
       
@@ -3077,6 +3086,18 @@ $(document).ready(function(){
           ed.attr('placeholder','номер сценария');
           $('#rule_additional_param').toggle(true);
         break;
+		
+        case 9:
+        case 10:
+          $addParamCaption.html("Номер микросхемы:");
+          ed.attr('placeholder','номер микросхемы');
+          $('#rule_additional_param').toggle(true);
+		  $('#wndPosHint').text('Канал микросхемы:');
+		  $('#rule_wnd_interval_input').attr('placeholder','0-15');
+          $('#ruleWndInterval').toggle(true);
+		  
+        break;
+		
 
       } // switch
   });
