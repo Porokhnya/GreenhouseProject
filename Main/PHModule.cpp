@@ -518,7 +518,11 @@ void PhModule::Update(uint16_t dt)
          float avgSample = (dataArray*1.0)/samplesDone;
 
           // считаем вольтаж
-          float voltage = avgSample*5.0/1024;
+          #if TARGET_BOARD == MEGA_BOARD
+          float voltage = avgSample*5.0/1024; // опорное 5В
+          #else
+          float voltage = avgSample*3.3/1024; // опорное 3.3В
+          #endif
 
   
          // теперь получаем значение pH
