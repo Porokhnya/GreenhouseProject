@@ -25,7 +25,8 @@ RTCTime RTCTime::maketime(uint32_t time)
 {
   RTCTime result;
 
-  tm* t = localtime((time_t*)&time);
+  time_t tt = time;
+  tm* t = localtime(&tt);
 
   result.hour = t->tm_hour;
   //t.tm_isdst = 0;
