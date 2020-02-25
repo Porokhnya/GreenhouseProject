@@ -561,8 +561,11 @@ bool  LuminosityModule::ExecCommand(const Command& command, bool wantAnswer)
          // добиваем до двух датчиков минимум
          for(uint8_t i=_written; i<2;i++)
          {
-           PublishSingleton << PARAM_DELIMITER;
+           if(_written > 0)
+            PublishSingleton << PARAM_DELIMITER;
+            
            PublishSingleton << NO_LUMINOSITY_DATA;
+           _written++;
          } // for
         
       }
