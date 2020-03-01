@@ -263,7 +263,24 @@ bool  WaterflowModule::ExecCommand(const Command& command, bool wantAnswer)
   {
     if(!argsCount) // нет аргументов
     {
-      if(wantAnswer) PublishSingleton = PARAMS_MISSED;
+      if(wantAnswer)
+      {
+        //PublishSingleton = PARAMS_MISSED;
+        
+        int cnt = State.GetStateCount(StateWaterFlowInstant);
+        PublishSingleton = cnt;
+        PublishSingleton.Flags.Status = true;
+        
+        for(int i=0;i<cnt;i++)
+        {
+          OneState* osInstant = State.GetStateByOrder(StateWaterFlowInstant,i);
+          OneState* osIncremental = State.GetStateByOrder(StateWaterFlowIncremental,i);
+          if(osInstant && osIncremental)
+          {
+              PublishSingleton << PARAM_DELIMITER << *osInstant << PARAM_DELIMITER << *osIncremental;
+          }
+        } // for        
+      }
     }
     else
     {
