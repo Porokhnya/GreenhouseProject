@@ -1118,7 +1118,7 @@ void CoreESPTransport::update()
         {
 			// NEW CODE //////////////////////////////////////////
 			#ifdef USE_EXTERNAL_WATCHDOG
-			//updateExternalWatchdog();
+			updateExternalWatchdog();
 			#endif
 			
    #if defined(USE_TIMER_ONE_FOR_ESP_SIM800) && ( defined(USE_SMS_MODULE) || defined(USE_WIFI_MODULE))
@@ -1131,7 +1131,7 @@ void CoreESPTransport::update()
             {
 				// NEW CODE //////////////////////////////////////////
 				#ifdef USE_EXTERNAL_WATCHDOG
-				//updateExternalWatchdog();
+				updateExternalWatchdog();
 				#endif
 				// NEW CODE //////////////////////////////////////////
 
