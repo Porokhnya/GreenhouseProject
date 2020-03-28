@@ -1,7 +1,3 @@
-<h1>Arduino based smart greenhouse</h1>
-<p>
-Project WIKI is located <a href="https://github.com/Porokhnya/GreenhouseProject/wiki">here</a> (sorry, still only Russian version, but you can help to translate it ;)).
-
 <h1>What the firmware can do</h1>
 <p>
  <ul>
