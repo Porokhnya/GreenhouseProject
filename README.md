@@ -15,7 +15,15 @@ Need volunteers to help with translating the interface into English (configurato
 <ul>
  <li><a href="README_EN.md">English description of the project</a></li>
  <li><a href="README_RU.md">Русская версия описания проекта</a></li>
- </ul>
+</ul>
+
+<h1>Links/Ресурсы</h1>
+<ul>
+ <li>Cайт проекта: <a href="http://gardenboss.ru" target="_blank">gardenboss.ru</a></li>
+ <li>Website: <a href="http://gardenboss.ru" target="_blank">gardenboss.ru</a></li>
+ <li>Приложение под Android: <a href="https://play.google.com/store/apps/details?id=ru.gardenboss.controller" target="_blank">Gardenboss Controller</li>
+ <li>Android app: <a href="https://play.google.com/store/apps/details?id=ru.gardenboss.controller" target="_blank">Gardenboss Controller</li>
+</ul>
 
 <h1>Расширенная версия проекта</h1>
 
