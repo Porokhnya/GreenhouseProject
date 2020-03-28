@@ -1,8 +1,3 @@
-<h1>Контроллер теплицы на Arduino</h1>
-<p>
-Когда возник вопрос - <a href="https://github.com/Porokhnya/GreenhouseProject/wiki">здесь уже может быть половина ответа</a>. Вторая половина ответа, как правило, <a href="https://www.forumhouse.ru/threads/367227">расположена тут</a>.
-
-
 <h1>Что умеет прошивка</h1>
 <p>
  <ul>
