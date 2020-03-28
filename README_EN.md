@@ -22,7 +22,7 @@
  </ul>
  
 <h1>ATTENTION!</h1>
-The firmware needs to be configured through `Globals.h` before uploading to the microcontroller! 
+The firmware needs to be configured through `Globals.h` and `Configuration_*.h` before uploading to the microcontroller! 
 <p>
 <h1>License</h1>
 
@@ -46,7 +46,7 @@ For home use only, any commercial use is strictly prohibited. If you want to use
 
 <h1>Default firmware settings</h1>
 
-Please be attentive - the default firmware settings most likely will not conform your needs! All settings can be (and SHOULD be) changed through the <b>Globals.h</b> file in the firmware source code.
+Please be attentive - the default firmware settings most likely will not conform your needs! All settings can be (and SHOULD be) changed through the <b>Globals.h</b> and <b>Configuration_*.h</b> files in the firmware source code.
 
 <br/>
 <h1>Configuration software screenshots</h1>
@@ -72,7 +72,7 @@ Please be attentive - the default firmware settings most likely will not conform
 <ul>
 <li><b>Install the libraries (in Libraries folder) to the Arduino IDE!</b></li>
 <li><b>READ ALL INSTRUCTIONS AT THE TOP OF MAIN.INO FILE!!!</b></li>
-<li><b>All firmware settings are located in the Globals.h file!</b></li>
+<li><b>All firmware settings are located in the Globals.h and Configuration_*.h files!</b></li>
 </ul>
 <p>
 
