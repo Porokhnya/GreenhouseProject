@@ -917,6 +917,9 @@ void CoreESPTransport::processKnownStatusFromESP(const String& line)
    if(line == F("WIFI DISCONNECT"))
    {
       flags.connectedToRouter = false;
+	  clearClientsQueue (true);
+	  initPool();
+	  
       #ifdef WIFI_DEBUG
         DEBUG_LOGLN(F("ESP: disconnected from router!"));
       #endif
