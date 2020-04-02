@@ -179,7 +179,13 @@ void CoreTransport::doConnect(CoreTransportClient& client, const char* ip, uint1
 void CoreTransport::doDisconnect(CoreTransportClient& client)
 {
   if(!client.connected())
+  {
+   #ifdef WIFI_DEBUG
+              DEBUG_LOG(F("ERROR!!! CLIENT ALREADY CONNECTED: #"));
+              DEBUG_LOGLN(String(client.socket));
+    #endif	  
     return;
+  }
 
     beginDisconnect(client);
 }
