@@ -60,7 +60,12 @@ void CoreTransportClient::connect(const char* ip, uint16_t port)
     return;
   
   if(connected()) // уже присоединены, нельзя коннектится до отсоединения!!!
+  {
+   #ifdef WIFI_DEBUG
+              DEBUG_LOGLN(F("connect(): CLIENT ALREADY CONNECTED!"));
+    #endif	  
     return;
+  }
           
   parent->doConnect(*this,ip,port);
   
