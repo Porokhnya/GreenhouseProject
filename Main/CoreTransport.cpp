@@ -164,7 +164,13 @@ void CoreTransport::doWrite(CoreTransportClient& client)
 void CoreTransport::doConnect(CoreTransportClient& client, const char* ip, uint16_t port)
 {
   if(client.connected())
+  {
+   #ifdef WIFI_DEBUG
+              DEBUG_LOG(F("ERROR!!! CLIENT ALREADY CONNECTED: #"));
+              DEBUG_LOGLN(String(client.socket));
+    #endif	  
     return;
+  }
 
    // запоминаем нашего клиента
    client.accept(this);
@@ -180,10 +186,6 @@ void CoreTransport::doDisconnect(CoreTransportClient& client)
 {
   if(!client.connected())
   {
-   #ifdef WIFI_DEBUG
-              DEBUG_LOG(F("ERROR!!! CLIENT ALREADY CONNECTED: #"));
-              DEBUG_LOGLN(String(client.socket));
-    #endif	  
     return;
   }
 
