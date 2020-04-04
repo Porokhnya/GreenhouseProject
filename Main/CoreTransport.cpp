@@ -1136,19 +1136,31 @@ void CoreESPTransport::update()
 
         while(remainingDataLength > 0)
         {
-			// NEW CODE //////////////////////////////////////////
-			#ifdef USE_EXTERNAL_WATCHDOG
-			updateExternalWatchdog();
-			#endif
+      			// NEW CODE //////////////////////////////////////////
+      			#ifdef USE_EXTERNAL_WATCHDOG
+      			updateExternalWatchdog();
+      			#endif
 			
-   #if defined(USE_TIMER_ONE_FOR_ESP_SIM800) && ( defined(USE_SMS_MODULE) || defined(USE_WIFI_MODULE))
-   Timer1.stop();
-   #endif			
-			// NEW CODE //////////////////////////////////////////
+           #if defined(USE_TIMER_ONE_FOR_ESP_SIM800) && ( defined(USE_SMS_MODULE) || defined(USE_WIFI_MODULE))
+           Timer1.stop();
+           #endif			
+    			// NEW CODE //////////////////////////////////////////
 
             // читаем, пока не хватает данных для одного пакета
             while(receiveBuffer.size() < packetLength)
             {
+
+              if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
+              {
+                #ifdef WIFI_DEBUG
+                  DEBUG_LOGLN(F("[ESP] READING TIMEOUT 1!!!"));            
+                #endif
+      
+                machineState = espReboot;
+                timer = millis();
+                break;
+              }
+              
       				// NEW CODE //////////////////////////////////////////
       				#ifdef USE_EXTERNAL_WATCHDOG
       				updateExternalWatchdog();
@@ -1163,50 +1175,41 @@ void CoreESPTransport::update()
                 if(!workStream->available())
                   continue;			  			  
     
-                receiveBuffer.push_back((uint8_t) workStream->read());
-
-              if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
-              {
-                #ifdef WIFI_DEBUG
-                  DEBUG_LOGLN(F("[ESP] READING TIMEOUT 1!!!"));            
-                #endif
-      
-                machineState = espReboot;
-                timer = millis();
-                break;
-              }
-                
+                receiveBuffer.push_back((uint8_t) workStream->read());                
                 
             } // while
 			
-   #if defined(USE_TIMER_ONE_FOR_ESP_SIM800) && ( defined(USE_SMS_MODULE) || defined(USE_WIFI_MODULE))
-   Timer1.resume();
-   #endif			
+           #if defined(USE_TIMER_ONE_FOR_ESP_SIM800) && ( defined(USE_SMS_MODULE) || defined(USE_WIFI_MODULE))
+           Timer1.resume();
+           #endif			
 
-            // вычитали один пакет, уведомляем клиентов, при этом может пополниться буфер,
-            // поэтому сохраняем пакет так, чтобы указатель на него был всегда валидным.
-            uint8_t* thisBuffer = new uint8_t[packetLength];
-            memcpy(thisBuffer,receiveBuffer.pData(),packetLength);
+            if(machineState != espReboot)
+            {
+                  // вычитали один пакет, уведомляем клиентов, при этом может пополниться буфер,
+                  // поэтому сохраняем пакет так, чтобы указатель на него был всегда валидным.
+                  uint8_t* thisBuffer = new uint8_t[packetLength];
+                  memcpy(thisBuffer,receiveBuffer.pData(),packetLength);
+      
+                  receiveBuffer.remove(0,packetLength);
+                  if(!receiveBuffer.size())
+                    receiveBuffer.clear();
+      
+                  notifyDataAvailable(*cl, thisBuffer, packetLength, (remainingDataLength - packetLength) == 0);
+                  delete [] thisBuffer;
+                  
+                  remainingDataLength -= packetLength;
+                  packetLength = min(TRANSPORT_MAX_PACKET_LENGTH,remainingDataLength);
+            }
 
-            receiveBuffer.remove(0,packetLength);
-            if(!receiveBuffer.size())
-              receiveBuffer.clear();
-
-            notifyDataAvailable(*cl, thisBuffer, packetLength, (remainingDataLength - packetLength) == 0);
-            delete [] thisBuffer;
-            
-            remainingDataLength -= packetLength;
-            packetLength = min(TRANSPORT_MAX_PACKET_LENGTH,remainingDataLength);
-
-          if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
-          {
-            #ifdef WIFI_DEBUG
-              DEBUG_LOGLN(F("[ESP] READING TIMEOUT 2!!!"));            
-            #endif
-  
-            machineState = espReboot;
-            timer = millis();
-            break;
+            if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
+            {
+              #ifdef WIFI_DEBUG
+                DEBUG_LOGLN(F("[ESP] READING TIMEOUT 2!!!"));            
+              #endif
+    
+              machineState = espReboot;
+              timer = millis();
+              break;
           }
             
         } // while
