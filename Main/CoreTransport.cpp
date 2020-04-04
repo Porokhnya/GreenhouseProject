@@ -1128,7 +1128,11 @@ void CoreESPTransport::update()
 
         // вычисляем длину одного пакета
         size_t packetLength = min(TRANSPORT_MAX_PACKET_LENGTH,remainingDataLength);
-		
+
+
+        uint32_t incomingDataTmr = millis();
+        const uint32_t ESP_INCOMING_DATA_TIMEOUT = 60000;
+    
 
         while(remainingDataLength > 0)
         {
@@ -1145,13 +1149,13 @@ void CoreESPTransport::update()
             // читаем, пока не хватает данных для одного пакета
             while(receiveBuffer.size() < packetLength)
             {
-				// NEW CODE //////////////////////////////////////////
-				#ifdef USE_EXTERNAL_WATCHDOG
-				updateExternalWatchdog();
-				#endif
-				// NEW CODE //////////////////////////////////////////
+      				// NEW CODE //////////////////////////////////////////
+      				#ifdef USE_EXTERNAL_WATCHDOG
+      				updateExternalWatchdog();
+      				#endif
+      				// NEW CODE //////////////////////////////////////////
 
-				#ifdef USE_SMS_MODULE
+        				#ifdef USE_SMS_MODULE
                   SIM800.readFromStream();
                 #endif
          
@@ -1160,6 +1164,18 @@ void CoreESPTransport::update()
                   continue;			  			  
     
                 receiveBuffer.push_back((uint8_t) workStream->read());
+
+              if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
+              {
+                #ifdef WIFI_DEBUG
+                  DEBUG_LOGLN(F("[ESP] READING TIMEOUT 1!!!"));            
+                #endif
+      
+                machineState = espReboot;
+                timer = millis();
+                break;
+              }
+                
                 
             } // while
 			
@@ -1181,6 +1197,18 @@ void CoreESPTransport::update()
             
             remainingDataLength -= packetLength;
             packetLength = min(TRANSPORT_MAX_PACKET_LENGTH,remainingDataLength);
+
+          if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
+          {
+            #ifdef WIFI_DEBUG
+              DEBUG_LOGLN(F("[ESP] READING TIMEOUT 2!!!"));            
+            #endif
+  
+            machineState = espReboot;
+            timer = millis();
+            break;
+          }
+            
         } // while
 
 	#ifdef WIFI_DEBUG
