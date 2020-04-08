@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<AppSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <redefined_captions>
+    <items />
+  </redefined_captions>
+  <current_locale>ru</current_locale>
+  <sms_commands />
+  <composite_commands />
+  <temp_column_w>50</temp_column_w>
+  <wtemp_column_w>50</wtemp_column_w>
+  <humidity_column_w>40</humidity_column_w>
+  <whumidity_column_w>40</whumidity_column_w>
+  <luminosity_column_w>30</luminosity_column_w>
+  <wluminosity_column_w>30</wluminosity_column_w>
+  <soil_column_w>40</soil_column_w>
+  <wsoil_column_w>40</wsoil_column_w>
+  <ph_column_w>30</ph_column_w>
+  <wph_column_w>30</wph_column_w>
+  <delta_column_w>40</delta_column_w>
+  <lastControllerGUID>d83812443a544f54a582606becbf9020</lastControllerGUID>
+  <widgetMemory>true</widgetMemory>
+  <widgetWorkTime>true</widgetWorkTime>
+  <widgetControllerTime>true</widgetControllerTime>
+  <widgetControllerTemperature>true</widgetControllerTemperature>
+  <widgetTemperatureInside>true</widgetTemperatureInside>
+  <widgetTemperatureOutside>true</widgetTemperatureOutside>
+  <widgetWindowsPosition>true</widgetWindowsPosition>
+  <widgetWindowsWorkMode>true</widgetWindowsWorkMode>
+  <widgetWindowsChannels>true</widgetWindowsChannels>
+  <widgetTemperatureSensors>true</widgetTemperatureSensors>
+  <widgetHumiditySensors>true</widgetHumiditySensors>
+  <widgetLightSensors>true</widgetLightSensors>
+  <widgetSoilMoisture>true</widgetSoilMoisture>
+  <widgetPH>true</widgetPH>
+  <widgetWaterChannels>true</widgetWaterChannels>
+  <widgetCO2>true</widgetCO2>
+  <logs_directory>D:\JOB\GreenhouseProject\SOFT\logs\</logs_directory>
+  <def_t_open>25</def_t_open>
+  <def_t_close>8</def_t_close>
+  <sel_idx>0</sel_idx>
+  <w_interval>30000</w_interval>
+  <phone />
+  <m_t_out_module>STATE</m_t_out_module>
+  <m_t_in_module>HUMIDITY</m_t_in_module>
+  <m_t_in_idx>0</m_t_in_idx>
+  <m_t_out_idx>1</m_t_out_idx>
+  <watering>2</watering>
+  <watering_days>0</watering_days>
+  <watering_time>0</watering_time>
+  <start_watering_time>0</start_watering_time>
+  <switch_w_to_a>1</switch_w_to_a>
+  <turn_on_pump>1</turn_on_pump>
+  <watering_sensor_index>-1</watering_sensor_index>
+  <watering_stop_border>0</watering_stop_border>
+  <connect_to_router>true</connect_to_router>
+  <router_id>Honor</router_id>
+  <router_password>HtRj7UJQ</router_password>
+  <station_id>Teplica</station_id>
+  <station_password>12345678</station_password>
+  <widgets>
+    <widget>widgetWindowsChannels</widget>
+    <widget>widgetWindowsPosition</widget>
+    <widget>widgetWindowsWorkMode</widget>
+    <widget>widgetWaterChannels</widget>
+    <widget>widgetTemperatureSensors</widget>
+    <widget>widgetHumiditySensors</widget>
+    <widget>widgetLightSensors</widget>
+    <widget>widgetSoilMoisture</widget>
+    <widget>widgetCO2</widget>
+    <widget>widgetPH</widget>
+    <widget>widgetTemperatureInside</widget>
+    <widget>widgetTemperatureOutside</widget>
+    <widget>widgetMemory</widget>
+    <widget>widgetWorkTime</widget>
+    <widget>widgetControllerTime</widget>
+    <widget>widgetControllerTemperature</widget>
+  </widgets>
+  <temp />
+</AppSettings>
