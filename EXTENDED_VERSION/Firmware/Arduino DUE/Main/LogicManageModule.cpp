@@ -4142,9 +4142,7 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
            GlobalSettings* settings = MainController->GetSettings();
            settings->SetWMBinding(windowsBySectionsBinding);
 		   
-#ifdef USE_WINDOW_MANAGE_MODULE
            ReloadWindowsSettings();
-#endif		   
           
           PublishSingleton.Flags.Status = true;
           PublishSingleton = which;
@@ -4234,7 +4232,7 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
           settings->Set75PercentsOpenTemp(sectionNum,t75);
           settings->Set100PercentsOpenTemp(sectionNum,t100);
 		  
-		  settings->SetWMHisteresis(sectionNum,histeresis);
+		      settings->SetWMHisteresis(sectionNum,histeresis);
           settings->SetWMSensor(sectionNum,sensorIndex);
           settings->SetWMActive(sectionNum,active);
 
@@ -4258,8 +4256,10 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
   
             settings->SetWindSpeed(atoi(command.GetArg(1)));
             settings->SetHurricaneSpeed(atoi(command.GetArg(2)));
-
+            
+#ifdef USE_WINDOW_MANAGE_MODULE
             ReloadWindowsSettings();
+#endif            
           
             PublishSingleton.Flags.Status = true;
             PublishSingleton = which;
