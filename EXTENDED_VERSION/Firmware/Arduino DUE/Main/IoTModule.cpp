@@ -267,8 +267,6 @@ void IoTModule::Update()
       SendDataToIoT();
     }
   }
-#else
-  UNUSED(dt);  
 #endif
   
 }
