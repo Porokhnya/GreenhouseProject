@@ -76,6 +76,8 @@ extern CipsendHandler Cipsend;
 extern WiFiClient Clients[MAX_CLIENTS]; // наши клиенты
 extern uint8_t ClientConnectStatus[MAX_CLIENTS]; // статусы соединения клиентов
 extern WiFiUDP ntpUDP;
+extern WiFiUDP broadcastUDP;
+extern int broadcastPort;
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #define CRITICAL_SECTION CriticalSection __thisCriticalSection;
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------

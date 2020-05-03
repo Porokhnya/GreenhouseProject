@@ -61,6 +61,11 @@ class WiFiModule : public AbstractModule // модуль поддержки WI-F
       
     #endif
 
+    #ifdef ENABLE_CONTROLLER_STATE_BROADCAST
+    uint32_t broadcastTimer;
+    void sendControllerStateBroadcast();
+    #endif
+
   
   public:
     WiFiModule() : AbstractModule("WIFI") {}

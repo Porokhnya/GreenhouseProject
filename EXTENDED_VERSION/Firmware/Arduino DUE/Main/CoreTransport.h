@@ -272,6 +272,7 @@ typedef enum
   cmdCIFSR, // команда получения MAC-адресов и IP
   cmdCheckCSQ, // уровень сигнала
   cmdNTPTIME, // получить время с NTP-сервера
+  cmdBROADCAST, // отправить пакет броадкаста
   
 } ESPCommands;
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -304,6 +305,9 @@ class CoreESPTransport : public CoreTransport
     CoreESPTransport();
     ~CoreESPTransport();
 
+
+    void broadcast(const String& packet); // запись пакета броадкаста в ESP
+
     virtual void update(); // обновляем состояние транспорта
     virtual void begin(); // начинаем работу
 
@@ -332,6 +336,8 @@ class CoreESPTransport : public CoreTransport
 
   private:
 
+      String packetToBroadcast;
+      
       uint8_t signalQuality;
 
       // буфер для приёма команд от ESP

@@ -449,6 +449,10 @@ void WiFiModule::OnClientDataAvailable(CoreTransportClient& client, uint8_t* dat
 void WiFiModule::Setup()
 {
   streamBuffer = new String();
+
+    #ifdef ENABLE_CONTROLLER_STATE_BROADCAST
+    broadcastTimer = 0;
+    #endif
   
  // сообщаем, что мы провайдер HTTP-запросов
  #ifdef USE_WIFI_MODULE_AS_HTTP_PROVIDER
@@ -474,6 +478,8 @@ void WiFiModule::Setup()
     mqtt.begin(&ESP);
   #endif  
 
+
+
 }
 //--------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_WIFI_MODULE_AS_HTTP_PROVIDER
@@ -495,6 +501,26 @@ void WiFiModule::EnsureHTTPProcessed(uint16_t statusCode)
 //--------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_WIFI_MODULE_AS_HTTP_PROVIDER
 //--------------------------------------------------------------------------------------------------------------------------------
+#ifdef ENABLE_CONTROLLER_STATE_BROADCAST
+//--------------------------------------------------------------------------------------------------------------------------------
+void WiFiModule::sendControllerStateBroadcast()
+{
+  String packet;
+  
+  ControllerState state = WORK_STATUS.GetState();
+  uint8_t* pt = (uint8_t*) &state;
+  
+  for(size_t i=0;i<sizeof(ControllerState);i++)
+  {
+    packet += WorkStatus::ToHex(*pt);
+    pt++;
+  }
+
+  ESP.broadcast(packet);
+}
+//--------------------------------------------------------------------------------------------------------------------------------
+#endif // ENABLE_CONTROLLER_STATE_BROADCAST
+//--------------------------------------------------------------------------------------------------------------------------------
 void WiFiModule::Update()
 { 
   
@@ -503,6 +529,21 @@ void WiFiModule::Update()
   #ifdef USE_WIFI_MODULE_AS_MQTT_CLIENT
     mqtt.update();
   #endif // USE_WIFI_MODULE_AS_MQTT_CLIENT
+
+  #ifdef ENABLE_CONTROLLER_STATE_BROADCAST
+  if(ESP.ready() && ESP.isConnectedToRouter())
+  {
+    if(millis() - broadcastTimer >= CONTROLLER_STATE_BROADCAST_DURATION)
+    {
+      sendControllerStateBroadcast();
+      broadcastTimer = millis();
+    }
+  }
+  else
+  {
+    broadcastTimer = millis();
+  }
+  #endif
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------

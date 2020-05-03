@@ -325,6 +325,11 @@ CoreESPTransport::~CoreESPTransport()
   clearClientsQueue(false);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+void CoreESPTransport::broadcast(const String& packet)
+{
+  packetToBroadcast = packet;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::readFromStream()
 {
   if(!workStream)
@@ -579,6 +584,22 @@ void CoreESPTransport::sendCommand(ESPCommands command)
     }
     break;
 
+    case cmdBROADCAST:
+    {
+      #ifdef WIFI_DEBUG
+        DEBUG_LOGLN(F("ESP: SEND BROADCAST PACKET..."));
+      #endif
+
+      String cmd = F("AT+BROADCAST=\"");
+      cmd += packetToBroadcast;
+      cmd += "\"";
+      
+      packetToBroadcast = "";
+
+      sendCommand(cmd);
+      
+    }
+    break;
 
     case cmdCIFSR:
     {
@@ -1438,7 +1459,11 @@ void CoreESPTransport::update()
                     hangTimer = millis();
                     sendCommand(cmdCheckModemHang);
                     
-                  } // if                                    
+                  } // if
+                  else if(packetToBroadcast.length() > 0)
+                  {
+                    sendCommand(cmdBROADCAST);                                    
+                  }
                   else
                   {
                     GlobalSettings* settings = MainController->GetSettings();
@@ -1500,6 +1525,15 @@ void CoreESPTransport::update()
                     }
                   }
                   break; // cmdNTPTIME
+
+                  case cmdBROADCAST:
+                  {
+                    if(isKnownAnswer(thisCommandLine,knownAnswer))
+                    {
+                      machineState = espIdle; // переходим к следующей команде
+                    }
+                  }
+                  break; // cmdBROADCAST                  
 
                   case cmdCIFSR:
                   {

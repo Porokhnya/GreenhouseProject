@@ -1,7 +1,6 @@
 //----------------------------------------------------------------------------------------------------------------------------------------------------------
-// СКОРОСТЬ РАБОТЫ С ПОРТОМ !!!
-//----------------------------------------------------------------------------------------------------------------------------------------------------------
-#define UART_SPEED 57600
+#define UART_SPEED 57600 // СКОРОСТЬ РАБОТЫ С ПОРТОМ
+#define BROADCAST_PORT 8888 // порт для рассылки широковещательных пакетов
 //----------------------------------------------------------------------------------------------------------------------------------------------------------
 #include <ESP8266WiFi.h>
 #include "SerialCommand.h"
@@ -34,6 +33,10 @@ String ntpServer;
 int ntpPort = 123;
 uint8_t ntpPacket[NTP_PACKET_SIZE];
 #define SEVENZYYEARS 2208988800UL
+
+// broadcast related
+WiFiUDP broadcastUDP;
+int broadcastPort = BROADCAST_PORT;
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------------
 SerialCommand* commandStream = NULL;
@@ -222,6 +225,28 @@ void CWJAP_TEST(const char* command)
       });
  
   
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
+void BROADCAST(const char* command)
+{
+ CRITICAL_SECTION;
+
+   char* arg = commandStream->next(); // packet
+   if(!arg || !WiFi.isConnected())
+   {
+    echo(command, AT_ERROR);
+    return;
+   }  
+
+   String packet = arg;
+   unQuote(packet);
+
+   IPAddress broadcastIp(255,255,255,255);
+   broadcastUDP.beginPacket(broadcastIp,broadcastPort);
+   broadcastUDP.write(packet.c_str(),packet.length());
+   broadcastUDP.endPacket();
+
+   echo(command, AT_OK);  
 }
 //----------------------------------------------------------------------------------------------------------------------------------------------------------
 void sendNTPPacket()
@@ -954,6 +979,7 @@ void setup()
   commandStream->addCommand("AT+CIPSEND",CIPSENDBUF);
   commandStream->addCommand("AT+CSQ",CSQ);
   commandStream->addCommand("AT+NTPTIME",NTPTIME);
+  commandStream->addCommand("AT+BROADCAST",BROADCAST);
   
   DBGLN(F("Known commands inited."));  
 

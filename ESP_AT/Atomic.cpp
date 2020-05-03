@@ -140,6 +140,7 @@ void onStationConnected(const WiFiEventStationModeConnected& evt)
   if(!__connected)
   {
     ntpUDP.begin(NTP_DEFAULT_LOCAL_PORT);
+    broadcastUDP.begin(broadcastPort);
     Events.raise("WIFI CONNECTED\r\n"); 
   }
         
@@ -151,6 +152,7 @@ void onStationDisconnected(const WiFiEventStationModeDisconnected& evt)
   if(__connected)
   {
     ntpUDP.stop();
+    broadcastUDP.stop();
     Events.raise("WIFI DISCONNECT\r\n");     
   }
 
