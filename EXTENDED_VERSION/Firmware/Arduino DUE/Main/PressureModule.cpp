@@ -163,9 +163,35 @@ void PressureModule::Update()
 bool  PressureModule::ExecCommand(const Command& command, bool wantAnswer)
 {
   UNUSED(wantAnswer);
-  UNUSED(command);
+  PublishSingleton = UNKNOWN_COMMAND;
 
-  return true;
+  size_t argsCount = command.GetArgsCount();
+  
+  if(command.GetType() == ctSET) 
+  {
+        PublishSingleton = NOT_SUPPORTED;
+  }
+  else
+  if(command.GetType() == ctGET) //получить статистику
+  {
+
+    if(!argsCount) // нет аргументов
+    {
+      String result = GetPressure();
+      PublishSingleton = result;
+      PublishSingleton.Flags.Status = true;
+    }
+    else
+    {
+
+    }// have arguments
+    
+  } // if
+ 
+ // отвечаем на команду
+    MainController->Publish(this,command);
+    
+  return PublishSingleton.Flags.Status;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void PressureModule::readPressure()
