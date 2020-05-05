@@ -762,6 +762,25 @@ void CycleVent::enable()
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+bool CycleVent::canWork(CycleVentSettings& sett)
+{
+      // получаем текущее время
+      RealtimeClock rtc = MainController->GetClock();
+      RTCTime currentTime = rtc.getTime();        
+
+      // формируем диапазоны, в минутах
+      uint32_t startDia = sett.startTime;
+      uint32_t endDia = sett.endTime;
+      uint32_t nowMins = 60ul*currentTime.hour + currentTime.minute;
+
+      if(bitRead(sett.weekdays,currentTime.dayOfWeek-1) && (nowMins >= startDia && nowMins < endDia))
+      {
+        return true;
+      }
+
+     return false;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
 void CycleVent::update(CycleVentSettings& sett)
 {  
   if(!activeFlag || workMode == cvwmManual) // выключены
@@ -783,17 +802,7 @@ void CycleVent::update(CycleVentSettings& sett)
       // если попали в рабочий диапазон - однозначно включаем канал, взводим таймер
       // на ожидание выключения и выходим
 
-      
-      // получаем текущее время
-      RealtimeClock rtc = MainController->GetClock();
-      RTCTime currentTime = rtc.getTime();        
-
-      // формируем диапазоны, в минутах
-      uint32_t startDia = sett.startTime;
-      uint32_t endDia = sett.endTime;
-      uint32_t nowMins = 60ul*currentTime.hour + currentTime.minute;
-
-      if(bitRead(sett.weekdays,currentTime.dayOfWeek-1) && (nowMins >= startDia && nowMins < endDia))
+      if(canWork(sett))
       {
         // надо включать!
 
@@ -848,12 +857,21 @@ void CycleVent::update(CycleVentSettings& sett)
         Serial.print(channel);
         Serial.println(" WANTS ON !");  
         #endif
-        
-        // пора включать
-        on();
-        machineState = cvmWaitOff;
-        waitInterval = 60000ul*sett.workTime;
-        waitTimer = millis();
+
+        if(canWork(sett)) // попадаем в диапазон
+        {
+          // пора включать
+          on();
+          machineState = cvmWaitOff;
+          waitInterval = 60000ul*sett.workTime;
+          waitTimer = millis();
+        }
+        else
+        {
+          off();
+          // переключаемся на ожидание
+          machineState = cvmIdle;
+        }
       }
     }
     break;
@@ -2693,8 +2711,8 @@ void LogicManageModuleClass::makeLightDecision()
 	// тут проверяем, можем ли работать по времени
 	
 	// формируем диапазон проверки, в минутах
-	uint16_t startDia = lightSettings.hour*60;
-	uint16_t endDia = startDia + lightSettings.durationHour*60;
+	uint16_t startDia = 60ul*lightSettings.hour;
+	uint16_t endDia = startDia + 60ul*lightSettings.durationHour;
 	
 	// если мы находимся между этим диапазоном, то мы можем работать в это время,
 	// иначе - не можем, и просто выставляем флаг работы в false.
