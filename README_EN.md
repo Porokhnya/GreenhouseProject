@@ -75,9 +75,6 @@ Please be attentive - the default firmware settings most likely will not conform
 <p>
 
 
-<h1>EXAMPLE schematic</h1>
-<img src="plan_en.png"/>
-
 <h1>Questions, feedback and so on</h1>
 
 Please write to <a href="mailto:spywarrior@gmail.com">spywarrior@gmail.com</a>
