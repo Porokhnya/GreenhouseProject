@@ -1545,7 +1545,7 @@ FeedbacksManager FeedbackManager;
 //--------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_FEEDBACK_MANAGER
 //--------------------------------------------------------------------------------------------------------------------------------
-#if defined(_DEBUG) || defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE) || defined(LOGGING_DEBUG_MODE) || defined(ETHERNET_DEBUG) || defined(WATER_DEBUG) || defined(NRF_DEBUG) || defined(RS485_DEBUG) || defined(UNI_DEBUG) || defined(PH_DEBUG) || defined(IOT_DEBUG) || defined(HTTP_DEBUG) || defined(MQTT_DEBUG) || defined(LORA_DEBUG)  || defined(DS18B20_DEBUG) || defined(POWER_DEBUG)
+#if defined(_DEBUG) || defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE) || defined(LOGGING_DEBUG_MODE) || defined(WINDOW_MANAGE_DEBUG) || defined(WATER_DEBUG) || defined(NRF_DEBUG) || defined(RS485_DEBUG) || defined(UNI_DEBUG) || defined(PH_DEBUG) || defined(IOT_DEBUG) || defined(HTTP_DEBUG) || defined(MQTT_DEBUG) || defined(LORA_DEBUG)  || defined(DS18B20_DEBUG) || defined(POWER_DEBUG)
 
   #if defined(USE_WIFI_MODULE) || defined(USE_SMS_MODULE)
   #include "CoreTransport.h"

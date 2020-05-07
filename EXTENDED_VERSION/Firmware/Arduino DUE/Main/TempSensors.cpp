@@ -642,17 +642,29 @@ void TempSensors::WriteToMCP() // ПИШЕМ В MCP
                 {
                     if(bnd.WindowsPins[iter] != UNBINDED_PIN)
                     {
+
+                    #ifdef WINDOW_MANAGE_DEBUG
+                      DEBUG_LOG(F("Write to MCP #"));
+                      DEBUG_LOG(String(addr));
+                      DEBUG_LOG(F(", set channel #"));
+                      DEBUG_LOG(String(bnd.WindowsPins[iter]));
+                      DEBUG_LOG(F(" to LEVEL="));
+                      DEBUG_LOGLN(String(bitRead(bVal,kk)));
+                    #endif
+                      
                         if(bnd.LinkType == linkMCP23S17)
                         {
                           #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-                            WORK_STATUS.MCP_SPI_PinWrite(addr, bnd.WindowsPins[iter] , bVal & (1 << kk) );
+                            //WORK_STATUS.MCP_SPI_PinWrite(addr, bnd.WindowsPins[iter] , bVal & (1 << kk) );
+                            WORK_STATUS.MCP_SPI_PinWrite(addr, bnd.WindowsPins[iter], bitRead(bVal,kk) );
                           #endif
                         }
                         else
                         if(bnd.LinkType == linkMCP23017)
                         {
                           #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-                             WORK_STATUS.MCP_I2C_PinWrite(addr, bnd.WindowsPins[iter] , bVal & (1 << kk) );
+                             //WORK_STATUS.MCP_I2C_PinWrite(addr, bnd.WindowsPins[iter] , bVal & (1 << kk) );
+                             WORK_STATUS.MCP_I2C_PinWrite(addr, bnd.WindowsPins[iter], bitRead(bVal,kk) );
                           #endif
                         }
                     } // if(bnd.WindowsPins[iter] != UNBINDED_PIN)
@@ -781,8 +793,13 @@ void TempSensors::SetupWindows()
   // настраиваем фрамуги  
   WindowsBinding bnd = HardwareBinding->GetWindowsBinding();
 
+  #ifdef WINDOW_MANAGE_DEBUG
+    DEBUG_LOGLN(F("SETUP WINDOWS HARDWARE BEGIN..."));
+  #endif
+
   for(uint8_t i=0, j=0;i<SUPPORTED_WINDOWS;i++, j+=2)
   {
+    
       // раздаём каналы реле: первому окну - 0,1, второму - 2,3 и т.д.
       Windows[i].Setup(i, j, j+1);
 
@@ -791,22 +808,58 @@ void TempSensors::SetupWindows()
       {
           if(bnd.LinkType == linkMCP23S17 || bnd.LinkType == linkMCP23017)
           {
-              uint8_t pin1 = bnd.WindowsPins[j];
-              uint8_t pin2 = bnd.WindowsPins[j+1];
 
-              int addr = j > 15 ? bnd.MCPAddress2 : bnd.MCPAddress1;
+            uint8_t pin1 = bnd.WindowsPins[j];
+            uint8_t pin2 = bnd.WindowsPins[j+1];
+            int addr = j > 15 ? bnd.MCPAddress2 : bnd.MCPAddress1;
+              
+          #ifdef WINDOW_MANAGE_DEBUG
+            DEBUG_LOG(F("Window #"));
+            DEBUG_LOG(String(i));
+            DEBUG_LOG(F(" has channels ## "));
+            DEBUG_LOG(String(j));
+            DEBUG_LOG(F(","));
+            DEBUG_LOG(String(j+1));
+            DEBUG_LOG(F(" and MCP outputs ## "));
+            DEBUG_LOG(String(pin1));
+            DEBUG_LOG(F(","));
+            DEBUG_LOGLN(String(pin2));
+
+            DEBUG_LOG(F("Current MCP address are: "));
+            DEBUG_LOGLN(String(addr));
+          #endif
+            
+
 
               if(bnd.LinkType == linkMCP23S17) // MCP23S17
               {
                 #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
                   if(pin1 != UNBINDED_PIN)
                   {
+                    #ifdef WINDOW_MANAGE_DEBUG
+                      DEBUG_LOG(F("Setup MCP #"));
+                      DEBUG_LOG(String(addr));
+                      DEBUG_LOG(F(", set channel #"));
+                      DEBUG_LOG(String(pin1));
+                      DEBUG_LOG(F(" to OUTPUT with LEVEL="));
+                      DEBUG_LOGLN(String(!bnd.Level));
+                    #endif
+                    
                     WORK_STATUS.MCP_SPI_PinMode(addr, pin1, OUTPUT);
                     WORK_STATUS.MCP_SPI_PinWrite(addr, pin1, !bnd.Level);
                   }
                   
                   if(pin2 != UNBINDED_PIN)
                   {
+                    #ifdef WINDOW_MANAGE_DEBUG
+                      DEBUG_LOG(F("Setup MCP #"));
+                      DEBUG_LOG(String(addr));
+                      DEBUG_LOG(F(", set channel #"));
+                      DEBUG_LOG(String(pin1));
+                      DEBUG_LOG(F(" to OUTPUT with LEVEL="));
+                      DEBUG_LOGLN(String(!bnd.Level));
+                    #endif
+                    
                     WORK_STATUS.MCP_SPI_PinMode(addr, pin2, OUTPUT);
                     WORK_STATUS.MCP_SPI_PinWrite(addr, pin2, !bnd.Level);
                   }
@@ -817,12 +870,33 @@ void TempSensors::SetupWindows()
                   #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
                     if(pin1 != UNBINDED_PIN)
                     {
+
+                    #ifdef WINDOW_MANAGE_DEBUG
+                      DEBUG_LOG(F("Setup MCP #"));
+                      DEBUG_LOG(String(addr));
+                      DEBUG_LOG(F(", set channel #"));
+                      DEBUG_LOG(String(pin1));
+                      DEBUG_LOG(F(" to OUTPUT with LEVEL="));
+                      DEBUG_LOGLN(String(!bnd.Level));
+                    #endif
+
+                      
                       WORK_STATUS.MCP_I2C_PinMode(addr, pin1, OUTPUT);
                       WORK_STATUS.MCP_I2C_PinWrite(addr, pin1, !bnd.Level);
                     }
                     
                     if(pin2 != UNBINDED_PIN)
                     {
+                      
+                    #ifdef WINDOW_MANAGE_DEBUG
+                      DEBUG_LOG(F("Setup MCP #"));
+                      DEBUG_LOG(String(addr));
+                      DEBUG_LOG(F(", set channel #"));
+                      DEBUG_LOG(String(pin1));
+                      DEBUG_LOG(F(" to OUTPUT with LEVEL="));
+                      DEBUG_LOGLN(String(!bnd.Level));
+                    #endif
+                      
                       WORK_STATUS.MCP_I2C_PinMode(addr, pin2, OUTPUT);
                       WORK_STATUS.MCP_I2C_PinWrite(addr, pin2, !bnd.Level);
                     }
@@ -835,6 +909,19 @@ void TempSensors::SetupWindows()
              // просто настраиваем пины
               uint8_t pin1 = bnd.WindowsPins[j];
               uint8_t pin2 = bnd.WindowsPins[j+1];
+
+              #ifdef WINDOW_MANAGE_DEBUG
+                DEBUG_LOG(F("Setup PIN #"));
+                DEBUG_LOG(String(pin1));
+                DEBUG_LOG(F(" to OUTPUT with LEVEL="));
+                DEBUG_LOGLN(String(!bnd.Level));
+
+                DEBUG_LOG(F("Setup PIN #"));
+                DEBUG_LOG(String(pin2));
+                DEBUG_LOG(F(" to OUTPUT with LEVEL="));
+                DEBUG_LOGLN(String(!bnd.Level));                      
+              #endif
+              
 
               if(pin1 != UNBINDED_PIN && EEPROMSettingsModule::SafePin(pin1))
               {
@@ -890,6 +977,11 @@ void TempSensors::SetupWindows()
    } // (bnd.ManageMode == 1) // попеременно
 
 ////// КОНЕЦ ИЗМЕНЕНИЙ ПО РАЗДЕЛЬНОМУ УПРАВЛЕНИЮ ОКНАМИ //////  
+
+  #ifdef WINDOW_MANAGE_DEBUG
+    DEBUG_LOGLN(F("SETUP WINDOWS HARDWARE DONE."));
+  #endif
+
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void TempSensors::CloseWindow(uint8_t num)
