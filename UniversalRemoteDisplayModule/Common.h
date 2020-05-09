@@ -87,6 +87,8 @@ enum
   RS485CommandsToExecuteReceipt = 5,
   RS485SensorDataForRemoteDisplay = 6,
   RS485SettingsForRemoteDisplay = 7,
+  RS485WindRainData = 8, // запрос данных по дождю, скорости, направлению ветра
+  RS485SunControllerData = 9, // пакет с данными контроллера солнечной установки
 };
 //----------------------------------------------------------------------------------------------------------------
 #pragma pack(push,1)
