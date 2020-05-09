@@ -619,8 +619,9 @@ class UniNRFGate
 typedef struct
 {
   byte controller_id; // ID контроллера, который выплюнул в эфир пакет
+  byte packetType; // тип пакета
   ControllerState state; // состояние контроллера
-  byte reserved[5]; // резерв, добитие до 30 байт
+  byte reserved[4]; // резерв, добитие до 30 байт
   byte crc8; // контрольная сумма
   
 } LoRaControllerStatePacket; // пакет с состоянием контроллера
