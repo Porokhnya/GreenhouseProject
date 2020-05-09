@@ -754,7 +754,21 @@ void EEPROMSettingsModule::Setup()
         doorBinding[i].Pin2 = UNBINDED_PIN;
       }
       
-   }   
+   }
+
+   // читаем настройки интервалов открытия окон
+    for(size_t i=0;i<sizeof(windowsIntervals.Interval)/sizeof(windowsIntervals.Interval[0]);i++)
+    {
+      windowsIntervals.Interval[i] = -1;   
+    }
+
+   if(!read(INTERVALS_BINDING_ADDRESS, windowsIntervals))
+   {
+      for(size_t i=0;i<sizeof(windowsIntervals.Interval)/sizeof(windowsIntervals.Interval[0]);i++)
+      {
+        windowsIntervals.Interval[i] = -1;   
+      }   
+   }
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1470,7 +1484,7 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
              windowsBinding.ShiftLatchPin = atoi(command.GetArg(++cntr));
              windowsBinding.ShiftDataPin = atoi(command.GetArg(++cntr));
              windowsBinding.ShiftClockPin = atoi(command.GetArg(++cntr));
-			 windowsBinding.AdditionalCloseTime = atoi(command.GetArg(++cntr));
+			       windowsBinding.AdditionalCloseTime = atoi(command.GetArg(++cntr));
             
               write(WINDOWS_BINDING_ADDRESS, windowsBinding);
 
@@ -1479,6 +1493,32 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
              PublishSingleton << PARAM_DELIMITER << REG_SUCC;
           }        
        } // F("WINDOWS")
+       else
+       if(param == F("WINTERVAL")) // установить настройки интервалов окон: CTSET=EES|WINTERVAL|int1|..|int16
+       {
+          if(argsCnt < 17)
+          {
+            if(wantAnswer)
+            {
+              PublishSingleton = PARAMS_MISSED;
+            }
+          }
+          else
+          {
+             // аргументов хватает
+             uint8_t cntr = 0;
+
+             for(size_t i=0;i<sizeof(windowsIntervals.Interval)/sizeof(windowsIntervals.Interval[0]);i++)
+             {
+              windowsIntervals.Interval[i] = atoi(command.GetArg(++cntr));
+             }
+              write(INTERVALS_BINDING_ADDRESS, windowsIntervals);
+
+             PublishSingleton.Flags.Status = true;
+             PublishSingleton = param;
+             PublishSingleton << PARAM_DELIMITER << REG_SUCC;
+          }        
+       } // F("WINTERVAL")       
        #ifdef USE_WINDOWS_ENDSTOPS
         else
        if(param == F("ENDSTOPS")) // установить настройки концевиков CTSET=EES|ENDSTOPS|link type|mcp 1|mcp 2|level|open1|..|open16|close1|..|close16
@@ -2298,7 +2338,7 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
             PublishSingleton << PARAM_DELIMITER << dallasBinding.Pin[i];
           }
         } // F("DS18B20")
-         else
+        else
         if(param == F("WINDOWS")) // запросили настройки фрамуг: CTGET=EES|WINDOWS
         {
           PublishSingleton.Flags.Status = true;
@@ -2324,6 +2364,17 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
 		  ;
           
         } // F("WINDOWS")
+        else
+        if(param == F("WINTERVAL")) // запросили настройки интервалов открытия окон: CTGET=EES|WINTERVAL
+        {
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = param;
+
+          for(size_t i=0;i<sizeof(windowsIntervals.Interval)/sizeof(windowsIntervals.Interval[0]);i++)
+          {
+            PublishSingleton << PARAM_DELIMITER << windowsIntervals.Interval[i];
+          }
+        } // F("DS18B20")
         #ifdef USE_WINDOWS_ENDSTOPS
          else
         if(param == F("ENDSTOPS")) // запросили настройки концевиков: CTGET=EES|ENDSTOPS

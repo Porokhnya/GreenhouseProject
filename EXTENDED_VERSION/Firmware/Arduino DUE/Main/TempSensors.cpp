@@ -15,14 +15,24 @@
 
 TempSensors* WindowModule = NULL;
 //--------------------------------------------------------------------------------------------------------------------------------------
-void WindowState::ResetToMaxPosition()
+uint32_t WindowState::GetWorkTime() // возвращает время работы, в миллисекундах
 {
-  CurrentPosition = MainController->GetSettings()->GetOpenInterval();
+   WindowsIntervals intervals = HardwareBinding->GetWindowsIntervals();  
+  if(intervals.Interval[flags.Index]  < 1) // использовать общий интервал
+  {
+    return MainController->GetSettings()->GetOpenInterval(); // тут у нас сразу в миллисекундах
+  }
+   return (1000ul*intervals.Interval[flags.Index]); // у нас интервал в секундах !!!
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-uint8_t WindowState::GetCurrentPositionPercents()
+void WindowState::ResetToMaxPosition() // сбрасывает процент открытия окна на максимальную позицию
 {
-  unsigned long oI = MainController->GetSettings()->GetOpenInterval();
+  CurrentPosition = GetWorkTime(); 
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+uint8_t WindowState::GetCurrentPositionPercents() // возвращает процент открытия окна от максимальной позиции
+{
+  uint32_t oI = GetWorkTime();
   return (CurrentPosition*100)/oI;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -104,14 +114,13 @@ void WindowState::Setup(uint8_t index, uint8_t relayChannel1, uint8_t relayChann
 
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-bool WindowState::ChangePosition(unsigned long newPos, bool waitFor)
+bool WindowState::ChangePosition(uint32_t newPos, bool waitFor)
 {
-  /*
-  Serial.print(F("Window #")); Serial.println(flags.Index); 
-  Serial.print(F("POSITION REQUESTED: ")); Serial.println(newPos);
-  Serial.print(F("POSITION CURRENT: ")); Serial.println(CurrentPosition);
-  Serial.println();
-  */
+#ifdef WINDOW_MANAGE_DEBUG
+  DEBUG_LOG(F("Window #")); DEBUG_LOGLN(String(flags.Index)); 
+  DEBUG_LOG(F("POSITION REQUESTED: ")); DEBUG_LOGLN(String(newPos));
+  DEBUG_LOG(F("POSITION CURRENT: ")); DEBUG_LOGLN(String(CurrentPosition));
+#endif
   
  if(IsBusy() && waitForChangePositionDone)
  {
@@ -126,11 +135,14 @@ bool WindowState::ChangePosition(unsigned long newPos, bool waitFor)
   else
     currentDifference = newPos - CurrentPosition;
 
-  if(CurrentPosition == newPos || currentDifference < FEEDBACK_MANAGER_POSITION_HISTERESIS) 
+
+  if(CurrentPosition == newPos || currentDifference < WINDOW_POSITION_HISTERESIS) 
   {
     // та же самая позиция запрошена, или разница текущей позиции и запрошеной - в пределах гистерезиса.
-    // в этом случае мы ничего не делаем.    
-   //   Serial.println(F("SAME POSITION!"));
+    // в этом случае мы ничего не делаем.
+    #ifdef WINDOW_MANAGE_DEBUG   
+      DEBUG_LOGLN(F("SAME POSITION!"));
+   #endif
     return false;
   }
 
@@ -172,7 +184,12 @@ bool WindowState::ChangePosition(unsigned long newPos, bool waitFor)
        TimerInterval = newPos - CurrentPosition;
        flags.Direction = dir;
 
- //      Serial.println("OPEN FROM POSITION " + String(CurrentPosition) + " TO " + String(newPos));
+        #ifdef WINDOW_MANAGE_DEBUG
+            DEBUG_LOG(F("OPEN FROM POSITION "));
+            DEBUG_LOG(String(CurrentPosition));
+            DEBUG_LOG(F(" TO "));
+            DEBUG_LOGLN(String(newPos));
+        #endif
   }
   else
   if(dir == dirCLOSE)
@@ -184,19 +201,24 @@ bool WindowState::ChangePosition(unsigned long newPos, bool waitFor)
 		if(!newPos)  // попросили закрыться полностью, увеличиваем время закрытия на 10%
         {
           _fullCloseTimer = bnd.AdditionalCloseTime;
-		  //Serial.print(("ADD ADDITIONAL CLOSE TIME: ")); Serial.println(String(_fullCloseTimer));
+          
+          #ifdef WINDOW_MANAGE_DEBUG
+            DEBUG_LOG(F("ADD ADDITIONAL CLOSE TIME: "));
+            DEBUG_LOGLN(String(_fullCloseTimer));
+          #endif
         }
         else 
         {
          _fullCloseTimer = 0;  
         }
 		
-
- //       Serial.println("CLOSE FROM POSITION " + String(CurrentPosition) + " TO " + String(newPos));
-
+        #ifdef WINDOW_MANAGE_DEBUG
+            DEBUG_LOG(F("CLOSE FROM POSITION "));
+            DEBUG_LOG(String(CurrentPosition));
+            DEBUG_LOG(F(" TO "));
+            DEBUG_LOGLN(String(newPos));
+        #endif
   }
-
-// Serial.println();
 
   // будем двигаться, надо получить задержку перед началом движения
   powerTimerDelay = PowerManager.WindowWantMove(flags.Index);
@@ -227,9 +249,8 @@ void WindowState::SwitchRelays(uint8_t rel1State, uint8_t rel2State)
 void WindowState::Feedback(bool isCloseSwitchTriggered, bool isOpenSwitchTriggered, bool hasPosition, uint8_t positionPercents, bool isFirstFeedback)
 {  
   UNUSED(isFirstFeedback);
-  
-  GlobalSettings* settings = MainController->GetSettings();
-  unsigned long interval = settings->GetOpenInterval();
+    
+  uint32_t interval = GetWorkTime();
 
   if(hasPosition)
   {
@@ -248,7 +269,6 @@ void WindowState::Feedback(bool isCloseSwitchTriggered, bool isOpenSwitchTrigger
       flags.OnMyWay = false;
       WindowsBinding bnd = HardwareBinding->GetWindowsBinding();
       SwitchRelays(!bnd.Level,!bnd.Level); // держим реле выключенными
-      //SwitchRelays(!RELAY_ON,!RELAY_ON); // держим реле выключенными
       flags.Direction = dirNOTHING; // уже никуда не движемся
 
       // закончили движение - сообщаем об этом менеджеру питания фрамуг
@@ -282,7 +302,7 @@ void WindowState::Feedback(bool isCloseSwitchTriggered, bool isOpenSwitchTrigger
   if(hasPosition && !IsBusy())
   {
     // есть информация о позиции, и это первая информация с обратной связи - мы должны запомнить, в какой позиции находится окно 
-    unsigned long requestedPosition = (interval*positionPercents)/100;
+    uint32_t requestedPosition = (interval*positionPercents)/100;
     long currentDifference = 0;
     if(CurrentPosition > requestedPosition)
     {
@@ -293,7 +313,7 @@ void WindowState::Feedback(bool isCloseSwitchTriggered, bool isOpenSwitchTrigger
       currentDifference = requestedPosition - CurrentPosition;
     }
       
-    if(currentDifference > FEEDBACK_MANAGER_POSITION_HISTERESIS)
+    if(currentDifference > WINDOW_POSITION_HISTERESIS)
     {
       // разница позиций больше, чем гистерезис - обновляем позицию.
       // само окно, понятное дело, никуда не движется, но мы должны
@@ -369,7 +389,9 @@ void WindowState::UpdateState()
    
   if(_waitFullClose)
   {
-    // Serial.println(("WAIT FULL CLOSE..."));
+    #ifdef WINDOW_MANAGE_DEBUG
+      DEBUG_LOGLN(F("WAIT FULL CLOSE..."));
+    #endif
      
       if(_fullCloseTimer >= dt)
       {
@@ -391,7 +413,9 @@ void WindowState::UpdateState()
 
      if(!_waitFullClose) // время вышло, можно выключать реле
      {
-    //  Serial.println(("ADDITIONAL CLOSE TIME REACHED, STOP MOVE!"));
+      #ifdef WINDOW_MANAGE_DEBUG
+        DEBUG_LOGLN(F("ADDITIONAL CLOSE TIME REACHED, STOP MOVE!"));
+      #endif
       
        // приехали, останавливаемся
        flags.Direction = dirNOTHING; // уже никуда не движемся
@@ -480,7 +504,7 @@ void WindowState::UpdateState()
 
             if(bAnyEndstopTriggered)
             {
-              CurrentPosition = MainController->GetSettings()->GetOpenInterval();
+              CurrentPosition = GetWorkTime(); // максимальное время открытия
               TimerInterval = 0;
             }
         #endif // USE_WINDOWS_ENDSTOPS
@@ -584,8 +608,10 @@ void WindowState::UpdateState()
     
     			// закончили движение - сообщаем об этом менеджеру питания фрамуг
     			PowerManager.WindowMoveDone(flags.Index);        
-    
-    		   // Serial.println(F("Position changed!"));
+
+          #ifdef WINDOW_MANAGE_DEBUG
+    		   DEBUG_LOGLN(F("Position changed!"));
+          #endif
     
     			return;
 		    }
@@ -1520,10 +1546,35 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
           bool bIntervalAsked = token.indexOf("-") != -1; // запросили интервал каналов?
           uint8_t channelIdx = token.toInt(); // номер канала окна
           
-          unsigned long motorsFullWorkTime = sett->GetOpenInterval();
-          unsigned long targetPosition = bOpen ? motorsFullWorkTime : 0; // если не запрошено интервала - будем использовать настройки прощивки, и открываем/закрываем полностью
+         // uint32_t motorsFullWorkTime = sett->GetOpenInterval();
+          //uint32_t targetPosition = bOpen ? motorsFullWorkTime : 0; // если не запрошено интервала - будем использовать настройки прощивки, и открываем/закрываем полностью
+          
+          uint32_t passedPosition = 0; // какую позицию передали в команде? Это может быть процент от открытия, или - интервал для работы.
+          bool bPercentsRequested = false; // флаг, что запросили процент открытия
+          bool hasIntervalPassed = false; // передали ли нам доп. параметр с интервалом или процентовкой?
+                    
+          if(command.GetArgsCount() > 3) // запрошен интервал или проценты на позицию
+          {
+            String strIntervalPassed = command.GetArg(3);
+            bPercentsRequested = strIntervalPassed.endsWith("%");
+            hasIntervalPassed = true;
+            
+             if(bPercentsRequested)
+             {
+                strIntervalPassed.remove(strIntervalPassed.length()-1);
+             }
 
-                        
+             passedPosition = (uint32_t) atol(strIntervalPassed.c_str()); // получили интервал для работы реле
+             
+             if(bPercentsRequested && passedPosition > 100) // если переданы проценты - убеждаемся, что их не больше 100
+             {
+                passedPosition = 100;
+             }
+            
+             
+          } // if(command.GetArgsCount() > 3)
+
+          /*                        
           if(command.GetArgsCount() > 3) // запрошен интервал или проценты на позицию
           {
             String strIntervalPassed = command.GetArg(3);
@@ -1532,7 +1583,7 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
             if(bPercentsRequested)
               strIntervalPassed.remove(strIntervalPassed.length()-1);
               
-            targetPosition = (unsigned long) atol(strIntervalPassed.c_str()); // получили интервал для работы реле
+            targetPosition = (uint32_t) atol(strIntervalPassed.c_str()); // получили интервал для работы реле
 
             if(bPercentsRequested)
             {
@@ -1548,6 +1599,7 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
               }
             }
           } // if(command.GetArgsCount() > 3)
+          */
 
  
           PublishSingleton.Flags.Status = true;
@@ -1586,17 +1638,82 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
           ////// НАЧАЛО ИЗМЕНЕНИЙ ПО РАЗДЕЛЬНОМУ УПРАВЛЕНИЮ ОКНАМИ //////
 
           WindowsBinding bnd = HardwareBinding->GetWindowsBinding();
+          WindowsIntervals intervals = HardwareBinding->GetWindowsIntervals();  
+          
           if(bnd.ManageMode == 1) // попеременно
           {
               bool shouldChangeFirstWindowPosition = !separateManagerList.size(); // меняем позицию первого окна сразу, если в очереди не было изменений
               for(uint8_t i=from;i<to;i++)
               {
+                // выясняем, какой интервал открытия будем применять к окну?
+                uint32_t workInterval = Windows[i].GetWorkTime();
+
+                // в passedPosition у нас лежит либо 0, либо - переданный интервал (bPercentsRequested == false), либо - процентовка (bPercentsRequested == true)
+                // если доп. параметр не передан - то мы должны сами выяснять, что делать.
+                 uint32_t targetPosition;
+                 
+                if(hasIntervalPassed) // передали доп. параметр
+                {
+                  // имеем переданный в доп. параметре интервал или процентовку
+                  if(bPercentsRequested) // запросили процентовку для этого окна, от времени работы его приводов
+                  {
+                    // конвертируем запрошенные проценты в актуальный интервал
+                    targetPosition = (workInterval*passedPosition)/100;    
+                  }
+                  else
+                  {
+                    // передали просто интервал для работы
+                    targetPosition = passedPosition;
+                  }                  
+                }
+                else
+                {
+                   // нет доп. параметра, надо просто открыть или закрыть окно
+                   targetPosition = bOpen ? workInterval : 0;
+                }
+                
+                // проверяем, чтобы окно не работало слишком долго
+                if(targetPosition > workInterval)
+                {
+                  targetPosition = workInterval;
+                }
+                
                 // просим окно сменить позицию, последовательно, одно за другим
                 addToSeparateList(&(Windows[i]),targetPosition,false,false);
               } // for
     
               if(shouldChangeFirstWindowPosition && separateManagerList.size())
               {
+                // тут опять надо выяснить позицию для окна, которое находится первым в списке
+                uint32_t workInterval = separateManagerList[0].window->GetWorkTime();                              
+                uint32_t targetPosition;
+
+                if(hasIntervalPassed) // передали доп. параметр
+                {
+                  // имеем переданный в доп. параметре интервал или процентовку
+                  if(bPercentsRequested) // запросили процентовку для этого окна, от времени работы его приводов
+                  {
+                    // конвертируем запрошенные проценты в актуальный интервал
+                    targetPosition = (workInterval*passedPosition)/100;    
+                  }
+                  else
+                  {
+                    // передали просто интервал для работы
+                    targetPosition = passedPosition;
+                  }                  
+                }
+                else
+                {
+                   // нет доп. параметра, надо просто открыть или закрыть окно
+                   targetPosition = bOpen ? workInterval : 0;
+                }                
+
+                // проверяем, чтобы окно не работало слишком долго
+                if(targetPosition > workInterval)
+                {
+                  targetPosition = workInterval;
+                }
+                
                 separateManagerList[0].window->ChangePosition(targetPosition);
               }
           } // if(bnd.ManageMode == 1) // попеременно
@@ -1605,6 +1722,38 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
               // простое управление окнами
               for(uint8_t i=from;i<to;i++)
               {
+
+                // выясняем, какой интервал открытия будем применять к окну?
+                uint32_t workInterval = Windows[i].GetWorkTime();
+                uint32_t targetPosition;
+
+                if(hasIntervalPassed) // передали доп. параметр
+                {
+                  // имеем переданный в доп. параметре интервал или процентовку
+                  if(bPercentsRequested) // запросили процентовку для этого окна, от времени работы его приводов
+                  {
+                    // конвертируем запрошенные проценты в актуальный интервал
+                    targetPosition = (workInterval*passedPosition)/100;    
+                  }
+                  else
+                  {
+                    // передали просто интервал для работы
+                    targetPosition = passedPosition;
+                  }                  
+                }
+                else
+                {
+                   // нет доп. параметра, надо просто открыть или закрыть окно
+                   targetPosition = bOpen ? workInterval : 0;
+                }                
+
+
+                // проверяем, чтобы окно не работало слишком долго
+                if(targetPosition > workInterval)
+                {
+                  targetPosition = workInterval;
+                }      
+
                 // просим окно сменить позицию
                 Windows[i].ChangePosition(targetPosition);
               } // for
@@ -2061,10 +2210,10 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
                         PublishSingleton << PARAM_DELIMITER << commandRequested << PARAM_DELIMITER << sAdd << PARAM_DELIMITER;
 
                         // тут просчитываем положение окна в процентах от максимального
-                        unsigned long curWindowPosition = ws->GetCurrentPosition();
-                        unsigned long maxOpenPosition = MainController->GetSettings()->GetOpenInterval();
+                        uint32_t curWindowPosition = ws->GetCurrentPosition();
+                        uint32_t maxOpenPosition = ws->GetWorkTime();
 
-                        unsigned long positionPercents = (curWindowPosition*100)/maxOpenPosition;
+                        uint32_t positionPercents = (curWindowPosition*100)/maxOpenPosition;
 
                         PublishSingleton << positionPercents;// << '%';
                       }
@@ -2100,17 +2249,18 @@ bool  TempSensors::ExecCommand(const Command& command, bool wantAnswer)
           PublishSingleton = commandRequested;
           PublishSingleton << PARAM_DELIMITER << SUPPORTED_WINDOWS;
 
-          unsigned long maxOpenPosition = MainController->GetSettings()->GetOpenInterval();
+          
 
           for(int i=0;i<SUPPORTED_WINDOWS;i++)
           {
-              unsigned long curWindowPosition = Windows[i].GetCurrentPosition();
-              unsigned long positionPercents = (curWindowPosition*100)/maxOpenPosition;
+              uint32_t maxOpenPosition = Windows[i].GetWorkTime();
+              uint32_t curWindowPosition = Windows[i].GetCurrentPosition();
+              uint32_t positionPercents = (curWindowPosition*100)/maxOpenPosition;
               PublishSingleton << PARAM_DELIMITER << positionPercents;
           } // for
         }
         else
-        if(commandRequested == WM_INTERVAL) // запросили интервал срабатывания форточек
+        if(commandRequested == WM_INTERVAL) // запросили ОБЩИЙ интервал срабатывания форточек
         {
           PublishSingleton.Flags.Status = true;
           if(wantAnswer)

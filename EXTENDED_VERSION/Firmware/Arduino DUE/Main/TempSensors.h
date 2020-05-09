@@ -38,8 +38,8 @@ class WindowState
 {
  private:
  
-  unsigned long CurrentPosition; // текущая позиция фрамуги
-  unsigned long TimerInterval; // сколько работать фрамуге?
+  uint32_t CurrentPosition; // текущая позиция фрамуги
+  uint32_t TimerInterval; // сколько работать фрамуге?
 
   uint32_t _timer;
   uint32_t _fullCloseTimer;
@@ -63,12 +63,14 @@ public:
     return IsBusy() && waitForChangePositionDone;
   }
   
-  bool ChangePosition(unsigned long newPos, bool waitForChangePositionDone=false); // меняет позицию
+  bool ChangePosition(uint32_t newPos, bool waitForChangePositionDone=false); // меняет позицию
   
-  unsigned long GetCurrentPosition() {return CurrentPosition;}
+  uint32_t GetCurrentPosition() {return CurrentPosition;}
   uint8_t GetCurrentPositionPercents();
   void ResetToMaxPosition();
   uint8_t GetDirection() {return flags.Direction;}
+
+  uint32_t GetWorkTime();
 
   void UpdateState(); // обновляет состояние фрамуги
   

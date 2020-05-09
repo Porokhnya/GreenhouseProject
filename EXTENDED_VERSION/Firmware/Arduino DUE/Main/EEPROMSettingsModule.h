@@ -466,6 +466,14 @@ typedef struct
 } DoorBinding;
 #pragma pack(pop)
 //--------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  int16_t Interval[16]; // интервалы открытия на 16 окон, в секундах (-1 - брать из общего интервала)
+  
+} WindowsIntervals;
+#pragma pack(pop)
+//--------------------------------------------------------------------------------------------------------------------------------------
 class EEPROMSettingsModule : public AbstractModule // модуль хранения настроек привязок в EEPROM
 {
   private:
@@ -543,6 +551,7 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
   TFTSensorBinding tftSensorBinding[12];
   WPowerBinding wPowerBinding;
   DoorBinding doorBinding[2];
+  WindowsIntervals windowsIntervals;
   
   public:
     EEPROMSettingsModule();
@@ -640,8 +649,11 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
     // возвращает настройки привязки управления питанием фрамуг
     WPowerBinding& GetWPowerBinding() { return wPowerBinding; }
 
-  // возвращает настройки привязки управления дверями
+    // возвращает настройки привязки управления дверями
     DoorBinding& GetDoorBinding(uint8_t channel) { return doorBinding[channel]; }    
+
+    // возвращает настройки интервалов открытия окон
+    WindowsIntervals& GetWindowsIntervals() { return windowsIntervals; }
 
 };
 //--------------------------------------------------------------------------------------------------------------------------------------
