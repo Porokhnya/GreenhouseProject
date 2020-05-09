@@ -2942,6 +2942,7 @@ void UniNRFGate::Update(uint16_t dt)
         // состояние контроллера изменилось, посылаем его в эфир
          memcpy(&(packet.state),&st,sizeof(ControllerState));
          packet.controller_id = UniDispatcher.GetControllerID();
+         packet.packetType = RS485ControllerStatePacket;
          packet.crc8 = OneWire::crc8((const byte*) &packet,sizeof(packet)-1);
     
          #ifdef NRF_DEBUG
@@ -3344,6 +3345,7 @@ void UniLoRaGate::Update(uint16_t dt)
         // состояние контроллера изменилось, посылаем его в эфир
          memcpy(&(packet.state),&st,sizeof(ControllerState));
          packet.controller_id = UniDispatcher.GetControllerID();
+         packet.packetType = RS485ControllerStatePacket;
          packet.crc8 = OneWire::crc8((const byte*) &packet,sizeof(packet)-1);
     
          #ifdef LORA_DEBUG
