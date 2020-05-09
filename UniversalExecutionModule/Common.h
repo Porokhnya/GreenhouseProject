@@ -47,7 +47,18 @@ typedef struct
 #pragma pack(pop)
 //----------------------------------------------------------------------------------------------------------------
 enum {RS485FromMaster = 1, RS485FromSlave = 2};
-enum {RS485ControllerStatePacket = 1, RS485SensorDataPacket = 2, RS485WindowsPositionPacket = 3};
+enum 
+{
+  RS485ControllerStatePacket = 1, 
+  RS485SensorDataPacket = 2, 
+  RS485WindowsPositionPacket = 3,
+  RS485RequestCommandsPacket = 4,
+  RS485CommandsToExecuteReceipt = 5,
+  RS485SensorDataForRemoteDisplay = 6,
+  RS485SettingsForRemoteDisplay = 7,
+  RS485WindRainData = 8, // запрос данных по дождю, скорости, направлению ветра
+  RS485SunControllerData = 9, // пакет с данными контроллера солнечной установки
+};
 //----------------------------------------------------------------------------------------------------------------
 /*
  структура одной записи информации об окне:
@@ -127,7 +138,9 @@ typedef enum
 {
   uniSensorsClient = 1, // packet_type == 1
   uniNextionClient = 2, // packet_type == 2
-  uniExecutionClient = 3 // packet_type == 3
+  uniExecutionClient = 3, // packet_type == 3
+  uniWindRainClient = 4, // packet_type == 4
+  uniSunControllerClient = 5, // packet_type == 5
   
 } UniClientType; // тип клиента
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -135,8 +148,9 @@ typedef enum
 typedef struct
 {
   byte controller_id; // ID контроллера, который выплюнул в эфир пакет
+  byte packetType; // тип пакета
   ControllerState state; // состояние контроллера
-  byte reserved[5]; // резерв, добитие до 30 байт
+  byte reserved[4]; // резерв, добитие до 30 байт
   byte crc8; // контрольная сумма
   
 } NRFControllerStatePacket; // пакет с состоянием контроллера
