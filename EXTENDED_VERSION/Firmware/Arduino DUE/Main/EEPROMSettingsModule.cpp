@@ -646,7 +646,7 @@ void EEPROMSettingsModule::Setup()
         gsmBinding.PowerkeyPulseDuration = GSM_POWERKEY_PULSE_DURATION;
         gsmBinding.PowerkeyOnLevel = GSM_POWERKEY_ON_LEVEL;
         gsmBinding.WaitPowerkeyAfterPowerOn = 500ul;
-        gsmBinding.SendWorkStartedSMS = GSM_SEND_WORK_STARTED_SMS;
+        gsmBinding.SendWorkStartedSMS = 1;
         gsmBinding.IncomingDataTimeout = 10000ul;
         gsmBinding.CalmWatchdog = 1;
         gsmBinding.SendWindowStateInStatusSMS = 1;

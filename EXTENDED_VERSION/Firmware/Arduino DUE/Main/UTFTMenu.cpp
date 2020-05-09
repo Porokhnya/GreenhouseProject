@@ -4602,7 +4602,7 @@ void TFTSensorsScreen::drawSensor(TFTMenu* menuManager,uint8_t row, TFTSensorDat
     case tftSensorSystemTemperature:
     {
       if(!onlyData)
-        caption = F("Температура системы:");
+        caption = F("Т-ра системы:");
         
       AbstractModule* mod = MainController->GetModuleByID("0");
       if(mod)
