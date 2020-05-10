@@ -196,6 +196,10 @@ uint16_t PowerManagerClass::PumpOn(uint8_t pump)
     return 0;
   }  
 
+  // тут надо проверять - есть ли хотя бы один привязанный канал полива?
+  if(!bnd.WateringChannels)
+    return 0;
+
    turnOn(); // включаем питание
 
   if(pump == 0)
@@ -216,7 +220,11 @@ void PowerManagerClass::PumpOff(uint8_t pump)
   if(bnd.LinkType == linkUnbinded) // нет управления питанием
   {
     return;
-  }  
+  } 
+
+  // тут надо проверять - есть ли хотя бы один привязанный канал полива?
+  if(!bnd.WateringChannels)
+    return;   
   
   if(pump == 0)
   {
