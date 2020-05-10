@@ -4643,7 +4643,7 @@ void CoreSIM800Transport::processKnownStatusFromSIM800(const String& line)
           }
         #endif  
   } // if(line.startsWith(F("+CSMINS:")))
-   else
+  else
   if(line.startsWith(F("+CME ERROR:")) || line.startsWith(F("ERROR")))  
   {
 
@@ -4657,6 +4657,14 @@ void CoreSIM800Transport::processKnownStatusFromSIM800(const String& line)
     }
     
   } // if(line.startsWith(F("+CME ERROR:")))
+  else
+  if(line.startsWith(F("+CIPPING:")))
+  {
+    if(currentCommand == smaPING) // посылали пинг, он удачен
+    {
+      badPingAttempts = 0; 
+    }    
+  } // if(line.startsWith(F("+CIPPING:")))
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -6204,6 +6212,7 @@ void CoreSIM800Transport::update()
                       #ifdef GSM_DEBUG_MODE
                               DEBUG_LOGLN(F("SIM800: PING done."));
                       #endif
+                      
                       machineState = sim800Idle; // переходим к следующей команде
                       
                     } // if(isKnownAnswer
