@@ -1052,33 +1052,7 @@ void CoreESPTransport::update()
           DEBUG_LOGLN(F("ESP: modem not answering, reboot!"));
         #endif
 
-        if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)
-        {
-            if(bnd.RebootPinLinkType == linkDirect)
-            {
-                #ifndef DISABLE_WIFI_CONFIGURE
-                if(EEPROMSettingsModule::SafePin(bnd.RebootPin))
-                #endif
-                {
-                   WORK_STATUS.PinWrite(bnd.RebootPin,!bnd.PowerOnLevel);
-                }
-            }
-            else
-            if(bnd.RebootPinLinkType == linkMCP23S17)
-            {
-              #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-                WORK_STATUS.MCP_SPI_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,!bnd.PowerOnLevel);
-              #endif
-            }
-            else
-            if(bnd.RebootPinLinkType == linkMCP23017)
-            {
-                #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-                  WORK_STATUS.MCP_I2C_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,!bnd.PowerOnLevel);
-                #endif
-            }
-        } // if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)
-       
+        power(false); // выключаем питание модему
         machineState = espReboot;
         timer = millis();
         
@@ -1192,7 +1166,8 @@ void CoreESPTransport::update()
                   #ifdef WIFI_DEBUG
                     DEBUG_LOGLN(F("[ESP] READING TIMEOUT 1!!!"));            
                   #endif
-        
+
+                  power(false); // выключаем питание модему
                   machineState = espReboot;
                   timer = millis();
                   break;
@@ -1245,7 +1220,8 @@ void CoreESPTransport::update()
               #ifdef WIFI_DEBUG
                 DEBUG_LOGLN(F("[ESP] READING TIMEOUT 2!!!"));            
               #endif
-    
+
+              power(false); // выключаем питание модему
               machineState = espReboot;
               timer = millis();
               break;
@@ -2010,33 +1986,7 @@ void CoreESPTransport::update()
               DEBUG_LOGLN(F("ESP: turn power ON!"));
             #endif
 
-              if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)
-              {
-                  if(bnd.RebootPinLinkType == linkDirect)
-                  {
-                      #ifndef DISABLE_WIFI_CONFIGURE
-                      if(EEPROMSettingsModule::SafePin(bnd.RebootPin))
-                      #endif
-                      {
-                         WORK_STATUS.PinWrite(bnd.RebootPin,bnd.PowerOnLevel);
-                      }
-                  }
-                  else
-                  if(bnd.RebootPinLinkType == linkMCP23S17)
-                  {
-                    #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-                      WORK_STATUS.MCP_SPI_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,bnd.PowerOnLevel);
-                    #endif
-                  }
-                  else
-                  if(bnd.RebootPinLinkType == linkMCP23017)
-                  {
-                      #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-                        WORK_STATUS.MCP_I2C_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,bnd.PowerOnLevel);
-                      #endif
-                  }
-              } // if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)            
-
+            power(true); // включаем питание модему
             machineState = espWaitInit;
             timer = millis();
             
@@ -2070,6 +2020,43 @@ void CoreESPTransport::clearSpecialCommandResults()
     delete specialCommandResults[i];
   }
   specialCommandResults.clear();
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void CoreESPTransport::power(bool on)
+{
+
+  WiFiBinding bnd = HardwareBinding->GetWiFiBinding();
+
+  if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)
+  {
+      if(bnd.RebootPinLinkType == linkDirect)
+      {
+          #ifndef DISABLE_WIFI_CONFIGURE
+          if(EEPROMSettingsModule::SafePin(bnd.RebootPin))
+          #endif
+          {
+             WORK_STATUS.PinMode(bnd.RebootPin,OUTPUT);
+             WORK_STATUS.PinWrite(bnd.RebootPin,on ? bnd.PowerOnLevel: !bnd.PowerOnLevel);
+          }
+      }
+      else
+      if(bnd.RebootPinLinkType == linkMCP23S17)
+      {
+        #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
+          WORK_STATUS.MCP_SPI_PinMode(bnd.RebootPinMCPAddress,bnd.RebootPin,OUTPUT);
+          WORK_STATUS.MCP_SPI_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,on ? bnd.PowerOnLevel: !bnd.PowerOnLevel);
+        #endif
+      }
+      else
+      if(bnd.RebootPinLinkType == linkMCP23017)
+      {
+          #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
+            WORK_STATUS.MCP_I2C_PinMode(bnd.RebootPinMCPAddress,bnd.RebootPin,OUTPUT);
+            WORK_STATUS.MCP_I2C_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin, on ? bnd.PowerOnLevel: !bnd.PowerOnLevel);
+          #endif
+      }
+      
+  } // if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)    
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::begin()
@@ -2128,39 +2115,7 @@ void CoreESPTransport::begin()
   }  
 
   restart();
-
-
-  if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)
-  {
-      if(bnd.RebootPinLinkType == linkDirect)
-      {
-          #ifndef DISABLE_WIFI_CONFIGURE
-          if(EEPROMSettingsModule::SafePin(bnd.RebootPin))
-          #endif
-          {
-             WORK_STATUS.PinMode(bnd.RebootPin,OUTPUT);
-             WORK_STATUS.PinWrite(bnd.RebootPin,!bnd.PowerOnLevel);
-          }
-      }
-      else
-      if(bnd.RebootPinLinkType == linkMCP23S17)
-      {
-        #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-          WORK_STATUS.MCP_SPI_PinMode(bnd.RebootPinMCPAddress,bnd.RebootPin,OUTPUT);
-          WORK_STATUS.MCP_SPI_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,!bnd.PowerOnLevel);
-        #endif
-      }
-      else
-      if(bnd.RebootPinLinkType == linkMCP23017)
-      {
-          #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-            WORK_STATUS.MCP_I2C_PinMode(bnd.RebootPinMCPAddress,bnd.RebootPin,OUTPUT);
-            WORK_STATUS.MCP_I2C_PinWrite(bnd.RebootPinMCPAddress,bnd.RebootPin,!bnd.PowerOnLevel);
-          #endif
-      }
-      
-  } // if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)  
-
+  power(false);
   machineState = espReboot;
 
   #ifdef WIFI_DEBUG
@@ -3940,7 +3895,6 @@ void CoreSIM800Transport::sendCommand(SIM800Commands command)
     case smaCIFSR:
     {
       flags.gprsAvailable = false;
-      //cifsrIPfound = false;
       sendCommand(F("AT+CIFSR"));      
     }
     break;
@@ -4689,6 +4643,20 @@ void CoreSIM800Transport::processKnownStatusFromSIM800(const String& line)
           }
         #endif  
   } // if(line.startsWith(F("+CSMINS:")))
+   else
+  if(line.startsWith(F("+CME ERROR:")) || line.startsWith(F("ERROR")))  
+  {
+
+    if(currentCommand == smaPING) // посылали пинг, он неудачен
+    {
+      #ifdef GSM_DEBUG_MODE
+        DEBUG_LOGLN(F("SIM800: PING FAIL DETECTED!"));
+      #endif
+      
+      badPingAttempts++;
+    }
+    
+  } // if(line.startsWith(F("+CME ERROR:")))
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -4736,7 +4704,7 @@ void CoreSIM800Transport::dumpReceiveBuffer()
 }
 #endif
 //--------------------------------------------------------------------------------------------------------------------------------------
-void CoreSIM800Transport::rebootModem()
+void CoreSIM800Transport::power(bool on)
 {
   GSMBinding gbnd = HardwareBinding->GetGSMBinding();
 
@@ -4748,30 +4716,36 @@ void CoreSIM800Transport::rebootModem()
           if(EEPROMSettingsModule::SafePin(gbnd.RebootPin))
           #endif
           {
-            WORK_STATUS.PinWrite(gbnd.RebootPin,!gbnd.PowerOnLevel);
+            WORK_STATUS.PinMode(gbnd.RebootPin,OUTPUT);
+            WORK_STATUS.PinWrite(gbnd.RebootPin,on ? gbnd.PowerOnLevel : !gbnd.PowerOnLevel);
           }
       }
       else
       if(gbnd.RebootPinLinkType == linkMCP23S17)
       {
         #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-          WORK_STATUS.MCP_SPI_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,!gbnd.PowerOnLevel);
+          WORK_STATUS.MCP_SPI_PinMode(gbnd.RebootPinMCPAddress,gbnd.RebootPin,OUTPUT);
+          WORK_STATUS.MCP_SPI_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,on ? gbnd.PowerOnLevel : !gbnd.PowerOnLevel);
         #endif
       }
       else
       if(gbnd.RebootPinLinkType == linkMCP23017)
       {
           #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-            WORK_STATUS.MCP_I2C_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,!gbnd.PowerOnLevel);
+            WORK_STATUS.MCP_I2C_PinMode(gbnd.RebootPinMCPAddress,gbnd.RebootPin,OUTPUT);
+            WORK_STATUS.MCP_I2C_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,on ? gbnd.PowerOnLevel : !gbnd.PowerOnLevel);
           #endif
       }
     
-  } if(gbnd.RebootPinLinkType != linkUnbinded && gbnd.RebootPin != UNBINDED_PIN)
-
-
+  } // if(gbnd.RebootPinLinkType != linkUnbinded && gbnd.RebootPin != UNBINDED_PIN)  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void CoreSIM800Transport::rebootModem()
+{
+    flags.ready = false; // чтобы никто не тыркался извне
+    power(false); // выключаем питание модему
     machineState = sim800Reboot;
-    timer = millis();
-  
+    timer = millis();  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreSIM800Transport::update()
@@ -4953,7 +4927,9 @@ void CoreSIM800Transport::update()
 
               if(millis() - incomingDataTmr > gbnd.IncomingDataTimeout)
               {
+                #ifdef GSM_DEBUG_MODE
                 DEBUG_LOGLN(F("SIM800: READING TIMEOUT #1!!!"));                                 
+                #endif
                 rebootModem();
                 return;
               }
@@ -5083,6 +5059,18 @@ void CoreSIM800Transport::update()
       processKnownStatusFromSIM800(thisCommandLine);
     } 
 
+    // тут проверяем - возможно, кучу неудачных попыток пропинговать соединение
+    if(badPingAttempts >= 10)
+    {
+      #ifdef GSM_DEBUG_MODE
+        DEBUG_LOGLN(F("SIM800: 10 BAD PING ATTEMPTS, REBOOT MODEM!"));
+      #endif
+
+      badPingAttempts = 0;
+      rebootModem();
+      return;
+    }
+
     // при разборе ответа тут будет лежать тип ответа, чтобы часто не сравнивать со строкой
     SIM800KnownAnswer knownAnswer = gsmNone;
 
@@ -5099,6 +5087,7 @@ void CoreSIM800Transport::update()
                 #ifdef GSM_DEBUG_MODE
                   DEBUG_LOGLN(F("SIM800: process next command..."));
                 #endif
+                
                 currentCommand = initCommandsQueue[initCommandsQueue.size()-1];
                 initCommandsQueue.pop();
 
@@ -5428,7 +5417,6 @@ void CoreSIM800Transport::update()
                   case smaCIPCLOSE:
                   {
                     // отсоединялись. Ответа не ждём, т.к. может вклиниться всё, что угодно, пока мы ждём ответа
-
                     
                       if(clientsQueue.size())
                       {
@@ -6247,33 +6235,7 @@ void CoreSIM800Transport::update()
                 DEBUG_LOGLN(F("SIM800: turn power ON!"));
               #endif
 
-              // работаем с пином ребута
-              if(gbnd.RebootPinLinkType != linkUnbinded && gbnd.RebootPin != UNBINDED_PIN)
-              {
-                  if(gbnd.RebootPinLinkType == linkDirect)
-                  {
-                      #ifndef DISABLE_GSM_CONFIGURE
-                      if(EEPROMSettingsModule::SafePin(gbnd.RebootPin))
-                      #endif
-                      {
-                        WORK_STATUS.PinWrite(gbnd.RebootPin,gbnd.PowerOnLevel);
-                      }
-                  }
-                  else
-                  if(gbnd.RebootPinLinkType == linkMCP23S17)
-                  {
-                    #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-                       WORK_STATUS.MCP_SPI_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,gbnd.PowerOnLevel);
-                    #endif 
-                  }
-                  else
-                  if(gbnd.RebootPinLinkType == linkMCP23017)
-                  {
-                    #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-                      WORK_STATUS.MCP_I2C_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,gbnd.PowerOnLevel);
-                    #endif
-                  }
-              } // if(gbnd.RebootPinLinkType != linkUnbinded && gbnd.RebootPin != UNBINDED_PIN)
+              power(true); // включаем питание модема
 
             // работаем с пином POWERKEY
             if(gbnd.PowerkeyLinkType != linkUnbinded && gbnd.PowerkeyPin != UNBINDED_PIN)
@@ -6331,7 +6293,7 @@ void CoreSIM800Transport::update()
                   DEBUG_LOGLN(F("SIM800: use POWERKEY!"));
                #endif
               
-              if(gbnd.PowerkeyLinkType == linkDirect)
+                  if(gbnd.PowerkeyLinkType == linkDirect)
                   {
                       #ifndef DISABLE_GSM_CONFIGURE
                       if(EEPROMSettingsModule::SafePin(gbnd.PowerkeyPin))
@@ -6426,6 +6388,39 @@ void CoreSIM800Transport::update()
 
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+void CoreSIM800Transport::powerkeyInit()
+{
+  GSMBinding gbnd = HardwareBinding->GetGSMBinding();
+  
+  if(gbnd.PowerkeyLinkType != linkUnbinded && gbnd.PowerkeyPin != UNBINDED_PIN)
+  {
+    if(gbnd.PowerkeyLinkType == linkDirect)
+    {
+        #ifndef DISABLE_GSM_CONFIGURE
+        if(EEPROMSettingsModule::SafePin(gbnd.PowerkeyPin))
+        #endif
+        {
+          WORK_STATUS.PinMode(gbnd.PowerkeyPin,OUTPUT);
+        }
+    }
+    else
+    if(gbnd.PowerkeyLinkType == linkMCP23S17)
+    {
+      #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
+          WORK_STATUS.MCP_SPI_PinMode(gbnd.PowerkeyMCPAddress,gbnd.PowerkeyPin,OUTPUT);
+      #endif
+    }
+    else
+    if(gbnd.PowerkeyLinkType == linkMCP23017)
+    {
+      #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
+          WORK_STATUS.MCP_I2C_PinMode(gbnd.PowerkeyMCPAddress,gbnd.PowerkeyPin,OUTPUT);
+      #endif
+    }    
+  } // if(gbnd.PowerkeyLinkType != linkUnbinded && gbnd.PowerkeyPin != UNBINDED_PIN)
+  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
 void CoreSIM800Transport::begin()
 {
 
@@ -6484,69 +6479,8 @@ void CoreSIM800Transport::begin()
 
   restart();
 
-
-  if(gbnd.RebootPinLinkType != linkUnbinded && gbnd.RebootPin != UNBINDED_PIN)
-  {
-    #ifdef GSM_DEBUG_MODE
-      DEBUG_LOGLN(F("SIM800: power OFF!"));
-    #endif
-    
-    if(gbnd.RebootPinLinkType == linkDirect)
-    {
-        #ifndef DISABLE_GSM_CONFIGURE
-        if(EEPROMSettingsModule::SafePin(gbnd.RebootPin))
-        #endif
-        {
-          WORK_STATUS.PinMode(gbnd.RebootPin,OUTPUT);
-          WORK_STATUS.PinWrite(gbnd.RebootPin,!gbnd.PowerOnLevel);
-        }
-    }
-    else
-    if(gbnd.RebootPinLinkType == linkMCP23S17)
-    {
-      #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-          WORK_STATUS.MCP_SPI_PinMode(gbnd.RebootPinMCPAddress,gbnd.RebootPin,OUTPUT);
-          WORK_STATUS.MCP_SPI_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,!gbnd.PowerOnLevel);
-      #endif
-    }
-    else
-    if(gbnd.RebootPinLinkType == linkMCP23017)
-    {
-      #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-          WORK_STATUS.MCP_I2C_PinMode(gbnd.RebootPinMCPAddress,gbnd.RebootPin,OUTPUT);
-          WORK_STATUS.MCP_I2C_PinWrite(gbnd.RebootPinMCPAddress,gbnd.RebootPin,!gbnd.PowerOnLevel);
-      #endif
-    }
-    
-  } // if(gbnd.RebootPinLinkType != linkUnbinded && gbnd.RebootPin != UNBINDED_PIN)
-
-  if(gbnd.PowerkeyLinkType != linkUnbinded && gbnd.PowerkeyPin != UNBINDED_PIN)
-  {
-    if(gbnd.PowerkeyLinkType == linkDirect)
-    {
-        #ifndef DISABLE_GSM_CONFIGURE
-        if(EEPROMSettingsModule::SafePin(gbnd.PowerkeyPin))
-        #endif
-        {
-          WORK_STATUS.PinMode(gbnd.PowerkeyPin,OUTPUT);
-        }
-    }
-    else
-    if(gbnd.PowerkeyLinkType == linkMCP23S17)
-    {
-      #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
-          WORK_STATUS.MCP_SPI_PinMode(gbnd.PowerkeyMCPAddress,gbnd.PowerkeyPin,OUTPUT);
-      #endif
-    }
-    else
-    if(gbnd.PowerkeyLinkType == linkMCP23017)
-    {
-      #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
-          WORK_STATUS.MCP_I2C_PinMode(gbnd.PowerkeyMCPAddress,gbnd.PowerkeyPin,OUTPUT);
-      #endif
-    }    
-  } // if(gbnd.PowerkeyLinkType != linkUnbinded && gbnd.PowerkeyPin != UNBINDED_PIN)
-
+  power(false); // выключаем питание модему
+  powerkeyInit();  
   
   machineState = sim800Reboot;
 
@@ -6626,6 +6560,7 @@ void CoreSIM800Transport::restart()
   syncTimeTimerEnabled = false;
   
   signalQuality = 0;
+  badPingAttempts = 0;
   
   timer = millis();
 

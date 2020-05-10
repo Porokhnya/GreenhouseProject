@@ -336,6 +336,8 @@ class CoreESPTransport : public CoreTransport
 
   private:
 
+      void power(bool on);
+
       String packetToBroadcast;
       
       uint8_t signalQuality;
@@ -535,6 +537,9 @@ class CoreSIM800Transport : public CoreTransport
 
   private:
 
+      void power(bool on);
+      void powerkeyInit();
+
       bool PSUTTZreceived;
       bool syncTimeTimerEnabled;
       uint32_t syncTimeTimer;
@@ -547,6 +552,8 @@ class CoreSIM800Transport : public CoreTransport
       bool cgattStatusReceived, cgattStatus, cgattKnownAnswerFound;
       uint8_t signalQuality;
 
+      uint8_t badPingAttempts;
+      
       void rebootModem();
 
       Vector<String*> cusdList;
