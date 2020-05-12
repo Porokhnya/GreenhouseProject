@@ -273,6 +273,7 @@ typedef enum
   cmdCheckCSQ, // уровень сигнала
   cmdNTPTIME, // получить время с NTP-сервера
   cmdBROADCAST, // отправить пакет броадкаста
+  cmdInternalPing, // команда внутреннего пингования
   
 } ESPCommands;
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -335,6 +336,9 @@ class CoreESPTransport : public CoreTransport
     virtual void beginDisconnect(CoreTransportClient& client); // начинаем отсоединение от адреса
 
   private:
+
+      uint8_t badPingAttempts;
+      uint32_t internalPingTimer;
 
       void power(bool on);
 

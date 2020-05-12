@@ -316,6 +316,8 @@ CoreESPTransport::CoreESPTransport() : CoreTransport(ESP_MAX_CLIENTS)
   flags.waitCipstartConnect = false;
   cipstartConnectClient = NULL;
   workStream = NULL;
+  badPingAttempts = 0;
+  internalPingTimer = 0;
 
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -563,6 +565,22 @@ void CoreESPTransport::sendCommand(ESPCommands command)
      
     }
     break;
+
+    case cmdInternalPing:
+    {
+      #ifdef WIFI_DEBUG
+        DEBUG_LOG(F("ESP: PING HOST: "));
+        DEBUG_LOGLN(WIFI_PING_HOST);
+      #endif
+
+      String cmd = F("AT+PING=\"");
+      cmd += WIFI_PING_HOST;
+      cmd += F("\"");
+
+      sendCommand(cmd);
+     
+    }
+    break;    
 
     case cmdNTPTIME:
     {
@@ -1054,15 +1072,9 @@ void CoreESPTransport::update()
 
         power(false); // выключаем питание модему
         machineState = espReboot;
-        timer = millis();
-        
+        timer = millis();        
       } // if 
   }
-  else // есть ответ
-  {
-   // timer = millis();
-  }
-
   // выставляем флаг, что мы хотя бы раз получили хоть чего-то от ESP
   flags.isAnyAnswerReceived = flags.isAnyAnswerReceived || hasAnswer;
 
@@ -1213,7 +1225,8 @@ void CoreESPTransport::update()
                 
                 remainingDataLength -= packetLength;
                 packetLength = min(TRANSPORT_MAX_PACKET_LENGTH,remainingDataLength);
-            }
+                
+            } // if(machineState != espReboot)
 
             if(millis() - incomingDataTmr > ESP_INCOMING_DATA_TIMEOUT)
             {
@@ -1233,7 +1246,7 @@ void CoreESPTransport::update()
       } // else
 
     
-  } // if(checkIPD(receiveBuffer))
+  } // if(checkIPD(receiveBuffer))  
   else if(flags.waitForDataWelcome && receiveBuffer.size() && receiveBuffer[0] == '>')
   {
     flags.waitForDataWelcome = false;
@@ -1424,40 +1437,50 @@ void CoreESPTransport::update()
                 else
                 {
 
-                  // у нас прошла инициализация, нет клиентов в очереди на обработку, следовательно - мы можем проверять модем на зависание
-                  // тут смотрим - не пора ли послать команду для проверки на зависание. Слишком часто её звать нельзя, что очевидно,
-                  // поэтому мы будем звать её минимум раз в N секунд. При этом следует учитывать, что мы всё равно должны звать эту команду
-                  // вне зависимости от того, откликается ли ESP или нет, т.к. в этой команде мы проверяем - есть ли соединение с роутером.
-                  // эту проверку надо делать периодически, чтобы форсировать переподсоединение, если роутер отвалился.
-                  static uint32_t hangTimer = 0;
-                  if(millis() - hangTimer > bnd.AvailableCheckTime)
+                  if(flags.connectedToRouter && (millis() - internalPingTimer >= WIFI_PING_FREQUENCY))
                   {
-                    hangTimer = millis();
-                    sendCommand(cmdCheckModemHang);
-                    
-                  } // if
-                  else if(packetToBroadcast.length() > 0)
-                  {
-                    sendCommand(cmdBROADCAST);                                    
+
+                    // пора пинговать соединение с интернетом
+                    sendCommand(cmdInternalPing);
+                                        
                   }
                   else
                   {
-                    GlobalSettings* settings = MainController->GetSettings();
-                    TimeSyncSettings* ts = settings->getTimeSyncSettings();
-                    uint32_t tsInterval = ts->wifiInterval;
-                    tsInterval *= 3600000ul;
+                           // у нас прошла инициализация, нет клиентов в очереди на обработку, следовательно - мы можем проверять модем на зависание
+                          // тут смотрим - не пора ли послать команду для проверки на зависание. Слишком часто её звать нельзя, что очевидно,
+                          // поэтому мы будем звать её минимум раз в N секунд. При этом следует учитывать, что мы всё равно должны звать эту команду
+                          // вне зависимости от того, откликается ли ESP или нет, т.к. в этой команде мы проверяем - есть ли соединение с роутером.
+                          // эту проверку надо делать периодически, чтобы форсировать переподсоединение, если роутер отвалился.
+                          static uint32_t hangTimer = 0;
+                          if(millis() - hangTimer > bnd.AvailableCheckTime)
+                          {
+                            hangTimer = millis();
+                            sendCommand(cmdCheckModemHang);
+                            
+                          } // if
+                          else if(packetToBroadcast != "")
+                          {
+                            sendCommand(cmdBROADCAST);                                    
+                          }
+                          else
+                          {
+                            GlobalSettings* settings = MainController->GetSettings();
+                            TimeSyncSettings* ts = settings->getTimeSyncSettings();
+                            uint32_t tsInterval = ts->wifiInterval;
+                            tsInterval *= 3600000ul;
+        
+                            if(ts->wifiActive)
+                            {
+                               static uint32_t ntpTimer = 0;
+                               if(millis() - ntpTimer > tsInterval)
+                               {
+                                  ntpTimer = millis();
+                                  sendCommand(cmdNTPTIME);
+                               }
+                            } // if(ts->wifiActive)
+                          } // else
 
-                    if(ts->wifiActive)
-                    {
-                       static uint32_t ntpTimer = 0;
-                       if(millis() - ntpTimer > tsInterval)
-                       {
-                          ntpTimer = millis();
-                          sendCommand(cmdNTPTIME);
-                       }
-                    } // if(ts->wifiActive)
                   } // else
-                  
                   
                 } // else
                 
@@ -1479,6 +1502,38 @@ void CoreESPTransport::update()
                     // ничего не делаем
                   }
                   break; // cmdNone
+
+                  case cmdInternalPing:
+                  {
+                     if(isKnownAnswer(thisCommandLine,knownAnswer))
+                    {
+                      if(kaError == knownAnswer)
+                      {
+                        badPingAttempts++;
+                      }
+                      else
+                      if(kaOK == knownAnswer)
+                      {
+                        badPingAttempts = 0;                        
+                      }
+
+                      internalPingTimer = millis();
+                      machineState = espIdle; // переходим к следующей команде
+
+                      if(badPingAttempts >= WIFI_BAD_PING_ATTEMPTS)
+                      {
+                        #ifdef WIFI_DEBUG
+                          DEBUG_LOGLN(F("ESP: BAD 10 PING ATTEMPTS, NEED TO RESTART!"));
+                        #endif
+
+                        power(false); // выключаем питание модему
+                        machineState = espReboot;
+                        timer = millis();
+                        badPingAttempts = 0;                        
+                      }
+                    }
+                  }
+                  break; // cmdInternalPing
 
                   case cmdPING:
                   {
@@ -1787,7 +1842,7 @@ void CoreESPTransport::update()
                         #endif
                         restart();
 						
-						flags.onIdleTimer = true;
+						            flags.onIdleTimer = true;
                         idleTimer = millis();
                         idleTime = 5000;
                       }
@@ -2150,6 +2205,8 @@ void CoreESPTransport::restart()
 
   currentCommand = cmdNone;
   machineState = espIdle;
+  badPingAttempts = 0;
+  internalPingTimer = millis();
 
   // инициализируем очередь командами по умолчанию
  createInitCommands(true);

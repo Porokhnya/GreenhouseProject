@@ -449,6 +449,7 @@ void WiFiModule::OnClientDataAvailable(CoreTransportClient& client, uint8_t* dat
 void WiFiModule::Setup()
 {
   streamBuffer = new String();
+  forceSendBroadcastPacket = true;
 
     #ifdef ENABLE_CONTROLLER_STATE_BROADCAST
     broadcastTimer = 0;
@@ -505,18 +506,26 @@ void WiFiModule::EnsureHTTPProcessed(uint16_t statusCode)
 //--------------------------------------------------------------------------------------------------------------------------------
 void WiFiModule::sendControllerStateBroadcast()
 {
-  String packet;
-  
-  ControllerState state = WORK_STATUS.GetState();
-  uint8_t* pt = (uint8_t*) &state;
-  
-  for(size_t i=0;i<sizeof(ControllerState);i++)
-  {
-    packet += WorkStatus::ToHex(*pt);
-    pt++;
-  }
 
-  ESP.broadcast(packet);
+  static ControllerState lastState;  
+  ControllerState state = WORK_STATUS.GetState();
+
+  if(forceSendBroadcastPacket || memcmp(&lastState,&state,sizeof(ControllerState)))
+  {  
+    forceSendBroadcastPacket = false;
+    memcpy(&lastState,&state,sizeof(ControllerState));
+    
+    String packet;
+    uint8_t* pt = (uint8_t*) &state;
+    
+    for(size_t i=0;i<sizeof(ControllerState);i++)
+    {
+      packet += WorkStatus::ToHex(*pt);
+      pt++;
+    }
+  
+    ESP.broadcast(packet);
+  }
 }
 //--------------------------------------------------------------------------------------------------------------------------------
 #endif // ENABLE_CONTROLLER_STATE_BROADCAST
@@ -539,9 +548,10 @@ void WiFiModule::Update()
       broadcastTimer = millis();
     }
   }
-  else
+  else // как только ESP законнектится к роутеру - мы будем должны отослать пакет броадкаста с состоянием контроллера
   {
     broadcastTimer = millis();
+    forceSendBroadcastPacket = true;
   }
   #endif
   

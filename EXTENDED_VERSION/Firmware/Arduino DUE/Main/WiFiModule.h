@@ -24,7 +24,8 @@ class WiFiModule : public AbstractModule // модуль поддержки WI-F
 , public Stream
 {
   private:
-  
+
+    bool forceSendBroadcastPacket;
     String* streamBuffer;
 
     #ifdef USE_WIFI_MODULE_AS_MQTT_CLIENT
