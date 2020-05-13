@@ -287,7 +287,10 @@ void CoreTransport::notifyClientConnected(CoreTransportClient& client, bool conn
 
       // возможно, это внешний клиент, надо проверить - есть ли он в списке слежения
       if(!connected) // пришло что-то типа 1,CLOSED
-      {         
+      {
+
+        client.clear(); // очищаем данные клиента
+                 
         // клиент отсоединился, надо освободить его сокет
         for(size_t i=0;i<externalClients.size();i++)
         {
