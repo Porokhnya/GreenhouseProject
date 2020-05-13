@@ -42,7 +42,12 @@ void CoreTransportClient::clear()
 void CoreTransportClient::disconnect()
 {
   if(!parent)
+  {
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+     DEBUG_LOGLN(F("CLIENT, disconnect(): parent == NULL!"));
+   #endif     
     return;
+  }
   
   if(!connected())
     return;
@@ -54,12 +59,18 @@ void CoreTransportClient::disconnect()
 void CoreTransportClient::connect(const char* ip, uint16_t port)
 {
   if(!parent)
+  {
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+     DEBUG_LOGLN(F("CLIENT, connect(): parent == NULL!"));
+   #endif     
+    
     return;
+  }
   
   if(connected()) // уже присоединены, нельзя коннектится до отсоединения!!!
   {
-   #ifdef WIFI_DEBUG
-              DEBUG_LOGLN(F("connect(): CLIENT ALREADY CONNECTED!"));
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+              DEBUG_LOGLN(F("CLIENT, connect(): CLIENT ALREADY CONNECTED!"));
     #endif	  
     return;
   }
@@ -71,13 +82,21 @@ void CoreTransportClient::connect(const char* ip, uint16_t port)
 bool CoreTransportClient::write(uint8_t* buff, size_t sz)
 {
   if(!parent)
+  {
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+     DEBUG_LOGLN(F("CLIENT, write(): parent == NULL!"));
+   #endif     
+    
+    
     return false;
+  }
   
     if(!sz || !buff || !connected() || socket == NO_CLIENT_ID)
     {
-      #ifdef WIFI_DEBUG
-        DEBUG_LOGLN(F("CoreTransportClient - CAN'T WRITE!"));
+      #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+        DEBUG_LOGLN(F("CLIENT, write() - CAN'T WRITE!"));
       #endif
+      
       return false;
     }
 
@@ -98,7 +117,12 @@ bool CoreTransportClient::write(uint8_t* buff, size_t sz)
 bool CoreTransportClient::connected() 
 {
   if(!parent || socket == NO_CLIENT_ID)
+  {
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+     DEBUG_LOGLN(F("CLIENT, connected(): parent == NULL or socket == NO_CLIENT_ID!"));
+   #endif         
     return false;
+  }
     
   return parent->connected(socket);
 }
@@ -129,8 +153,8 @@ CoreTransport::~CoreTransport()
 void CoreTransport::initPool()
 {
 
-  #ifdef WIFI_DEBUG
-    DEBUG_LOGLN(F("ESP: INIT CLIENTS POOL..."));
+  #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+    DEBUG_LOGLN(F("TRANSPORT: INIT CLIENTS POOL..."));
   #endif
   
   Vector<CoreTransportClient*> tmp = externalClients;
@@ -138,7 +162,10 @@ void CoreTransport::initPool()
   {
     notifyClientConnected(*(tmp[i]),false,CT_ERROR_NONE);
     tmp[i]->release();
+    tmp[i]->clear(); // очищаем данные внешнего клиента
   }
+
+  externalClients.clear(); // очищаем список внешних клиентов
   
   for(size_t i=0;i<status.size();i++)
   {
@@ -156,6 +183,9 @@ void CoreTransport::doWrite(CoreTransportClient& client)
 {
   if(!client.connected())
   {
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+     DEBUG_LOGLN(F("TRANSPORT, doWrite(): client NOT CONNECTED!"));
+   #endif       
     client.clear();
     return;
   }
@@ -167,7 +197,7 @@ void CoreTransport::doConnect(CoreTransportClient& client, const char* ip, uint1
 {
   if(client.connected())
   {
-   #ifdef WIFI_DEBUG
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
               DEBUG_LOG(F("ERROR!!! CLIENT ALREADY CONNECTED: #"));
               DEBUG_LOGLN(String(client.socket));
     #endif	  
@@ -179,7 +209,9 @@ void CoreTransport::doConnect(CoreTransportClient& client, const char* ip, uint1
 
   // если внешний клиент - будем следить за его статусом соединения/подсоединения
    if(isExternalClient(client))
-    externalClients.push_back(&client);
+   {
+      externalClients.push_back(&client);
+   }
 
    beginConnect(client,ip,port); 
 }
@@ -187,7 +219,12 @@ void CoreTransport::doConnect(CoreTransportClient& client, const char* ip, uint1
 void CoreTransport::doDisconnect(CoreTransportClient& client)
 {
   if(!client.connected())
+  {
+   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+     DEBUG_LOGLN(F("TRANSPORT, doDisconnect(): client NOT CONNECTED!"));
+   #endif         
     return;
+  }
 
     beginDisconnect(client);
 }
@@ -197,7 +234,9 @@ void CoreTransport::subscribe(IClientEventsSubscriber* subscriber)
   for(size_t i=0;i<subscribers.size();i++)
   {
     if(subscribers[i] == subscriber)
+    {
       return;
+    }
   }
 
   subscribers.push_back(subscriber);
@@ -225,7 +264,9 @@ bool CoreTransport::isExternalClient(CoreTransportClient& client)
   for(size_t i=0;i<pool.size();i++)
   {
     if(pool[i] == &client)
+    {
       return false;
+    }
   }
 
   return true;
@@ -254,8 +295,8 @@ void CoreTransport::notifyClientConnected(CoreTransportClient& client, bool conn
           {
             externalClients[i]->clear();
             
-            #ifdef WIFI_DEBUG
-              DEBUG_LOG(F("RELEASE SOCKET ON OUTGOING CLIENT #"));
+            #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
+              DEBUG_LOG(F("TRANSPORT: RELEASE SOCKET ON OUTGOING CLIENT #"));
               DEBUG_LOGLN(String(client.socket));
             #endif
             
@@ -292,12 +333,16 @@ void CoreTransport::notifyDataAvailable(CoreTransportClient& client, uint8_t* da
 CoreTransportClient* CoreTransport::getClient(uint8_t socket)
 {
   if(socket != NO_CLIENT_ID)
+  {
     return pool[socket];
+  }
 
   for(size_t i=0;i<pool.size();i++)
   {
     if(!pool[i]->connected())
+    {
       return pool[i];
+    }
   }
 
   return NULL;
