@@ -16949,7 +16949,7 @@ int TFTIdleScreen::drawLoRaIcons(TFTMenu* menuManager, int curIconRightMargin, b
   loraRSSICaption = lastLoraRSSI;
   loraRSSICaption += F("dBm");
 
-   if(lastLoraRSSI >= - 50)
+   if(lastLoraRSSI >= -50)
    {
       loraSigQuality = 4;
    }

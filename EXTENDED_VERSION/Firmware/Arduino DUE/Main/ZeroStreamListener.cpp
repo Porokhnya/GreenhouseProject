@@ -9,6 +9,7 @@
 #include "Memory.h"
 #include "EEPROMSettingsModule.h"
 #include "TinyVector.h"
+#include "CoreTransport.h"
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 #if defined(USE_UNIVERSAL_MODULES) && defined(USE_UNI_REGISTRATION_LINE)
 
@@ -257,6 +258,83 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
           PublishSingleton = PONG;
           PublishSingleton.Flags.AddModuleIDToAnswer = false;
         } // if
+        else if(t == F("SIG")) // получить информацию по сигналам Wi-Fi, SIM800, LoRa
+        {
+          uint8_t wifiAvailable = 0;
+          uint8_t wifiConnected = 0;
+          uint8_t wifiSignalQuality = 0;
+
+          uint8_t sim800Available = 0;
+          uint8_t sim800Connected = 0;
+          uint8_t sim800SignalQuality = 0;
+
+          uint8_t loraAvailable = 0;
+          uint8_t loraConnected = 0;
+          uint8_t loraSignalQuality = 0;
+          int lastLoraRSSI = -120;
+
+          #ifdef USE_WIFI_MODULE
+            wifiAvailable = 1;
+            wifiConnected = ESP.isConnectedToRouter() ? 1 : 0;
+            wifiSignalQuality = ESP.getSignalQuality();
+          #endif
+
+          #ifdef USE_SMS_MODULE
+            sim800Available = 1;
+            sim800Connected = SIM800.hasGPRSConnection() ? 1 : 0;
+            sim800SignalQuality = SIM800.getSignalQuality();
+          #endif
+
+          #ifdef USE_LORA_GATE
+            loraAvailable = 1;
+            loraConnected = loraGate.isLoraInited();
+            lastLoraRSSI = loraGate.getRSSI();
+            
+            if(lastLoraRSSI >= -50)
+             {
+                loraSignalQuality = 4;
+             }
+             else
+             if(lastLoraRSSI >= -75)
+             {
+                loraSignalQuality = 3;
+             }
+             else
+             if(lastLoraRSSI >= -70)
+             {
+                loraSignalQuality = 2;
+             }
+             else
+             if(lastLoraRSSI >= -90)
+             {
+                loraSignalQuality = 1;
+             }
+             else
+             {
+                loraSignalQuality = 0;
+             }
+          #endif
+
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton.Flags.AddModuleIDToAnswer = false;
+
+          PublishSingleton = t;
+          
+          PublishSingleton << PARAM_DELIMITER << wifiAvailable;
+          PublishSingleton << PARAM_DELIMITER << wifiConnected;
+          PublishSingleton << PARAM_DELIMITER << wifiSignalQuality;
+
+          PublishSingleton << PARAM_DELIMITER << sim800Available;
+          PublishSingleton << PARAM_DELIMITER << sim800Connected;
+          PublishSingleton << PARAM_DELIMITER << sim800SignalQuality;
+          PublishSingleton << PARAM_DELIMITER << MainController->GetSettings()->GetGSMProviderName();
+
+          PublishSingleton << PARAM_DELIMITER << loraAvailable;
+          PublishSingleton << PARAM_DELIMITER << loraConnected;
+          PublishSingleton << PARAM_DELIMITER << loraSignalQuality;
+          PublishSingleton << PARAM_DELIMITER << lastLoraRSSI;
+          
+        } // SIG
         else if(t == F("LIMITS"))
         {
           // получить настойки ограничений
