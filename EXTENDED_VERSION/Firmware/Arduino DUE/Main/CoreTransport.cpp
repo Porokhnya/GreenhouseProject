@@ -118,9 +118,6 @@ bool CoreTransportClient::connected()
 {
   if(!parent || socket == NO_CLIENT_ID)
   {
-   #if defined(WIFI_DEBUG) || defined(GSM_DEBUG_MODE)
-     DEBUG_LOGLN(F("CLIENT, connected(): parent == NULL or socket == NO_CLIENT_ID!"));
-   #endif         
     return false;
   }
     
@@ -1571,7 +1568,9 @@ void CoreESPTransport::update()
                       if(badPingAttempts >= WIFI_BAD_PING_ATTEMPTS)
                       {
                         #ifdef WIFI_DEBUG
-                          DEBUG_LOGLN(F("ESP: BAD 10 PING ATTEMPTS, NEED TO RESTART!"));
+                          DEBUG_LOG(F("ESP: BAD "));
+                          DEBUG_LOG(String(WIFI_BAD_PING_ATTEMPTS));
+                          DEBUG_LOGLN(F(" PING ATTEMPTS, NEED TO RESTART!"));
                         #endif
 
                         power(false); // выключаем питание модему
@@ -1798,6 +1797,10 @@ void CoreESPTransport::update()
                     else
                     if(thisCommandLine.indexOf(F("FAIL")) != -1 || thisCommandLine.indexOf(F("ERROR")) != -1)
                     {
+                        #ifdef WIFI_DEBUG
+                          DEBUG_LOGLN(F("ESP: WRITE ERROR DETECTED!"));
+                        #endif
+                                               
                        // всё плохо, не получилось ничего записать
                       if(clientsQueue.size())
                       {
@@ -2128,6 +2131,12 @@ void CoreESPTransport::clearSpecialCommandResults()
 void CoreESPTransport::power(bool on)
 {
 
+#ifdef WIFI_DEBUG
+  DEBUG_LOG(F("ESP: power("));
+  DEBUG_LOG(String(on));
+  DEBUG_LOGLN(F(");"));
+#endif
+  
   WiFiBinding bnd = HardwareBinding->GetWiFiBinding();
 
   if(bnd.RebootPinLinkType != linkUnbinded && bnd.RebootPin != UNBINDED_PIN)
@@ -2230,6 +2239,10 @@ void CoreESPTransport::begin()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::restart()
 {
+#ifdef WIFI_DEBUG
+  DEBUG_LOGLN(F("ESP: restart();"));
+#endif
+  
   // очищаем входной буфер
   receiveBuffer.clear();
 
@@ -2263,6 +2276,10 @@ void CoreESPTransport::restart()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::createInitCommands(bool addResetCommand)
 {  
+#ifdef WIFI_DEBUG
+  DEBUG_LOGLN(F("ESP: createInitCommands();"));
+#endif  
+
   // очищаем очередь команд
   clearInitCommands();
 
@@ -2302,6 +2319,11 @@ void CoreESPTransport::clearInitCommands()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::clearClientsQueue(bool raiseEvents)
 {  
+
+#ifdef WIFI_DEBUG
+  DEBUG_LOGLN(F("ESP: clearClientsQueue();"));
+#endif  
+  
   // тут попросили освободить очередь клиентов.
   // для этого нам надо выставить каждому клиенту флаг того, что он свободен,
   // плюс - сообщить, что текущее действие над ним не удалось.  
@@ -2399,7 +2421,6 @@ void CoreESPTransport::addClientToQueue(CoreTransportClient* client, TransportCl
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::removeClientFromQueue(CoreTransportClient* client, TransportClientAction action)
 {
-  
   for(size_t i=0;i<clientsQueue.size();i++)
   {
     if(clientsQueue[i].client == client && clientsQueue[i].action == action)
@@ -2422,7 +2443,6 @@ void CoreESPTransport::removeClientFromQueue(CoreTransportClient* client, Transp
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::removeClientFromQueue(CoreTransportClient* client)
 {
-  
   for(size_t i=0;i<clientsQueue.size();i++)
   {
     if(clientsQueue[i].client == client)
@@ -2446,7 +2466,6 @@ void CoreESPTransport::removeClientFromQueue(CoreTransportClient* client)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::beginWrite(CoreTransportClient& client)
 {
-  
   // добавляем клиента в очередь на запись
   addClientToQueue(&client, actionWrite);
 
@@ -2456,7 +2475,6 @@ void CoreESPTransport::beginWrite(CoreTransportClient& client)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void CoreESPTransport::beginConnect(CoreTransportClient& client, const char* ip, uint16_t port)
 {
-
   if(client.connected())
   {
     
@@ -2477,6 +2495,9 @@ void CoreESPTransport::beginDisconnect(CoreTransportClient& client)
 {
   if(!client.connected())
   {
+    #ifdef WIFI_DEBUG
+      DEBUG_LOGLN(F("ESP: beginDisconnect(), client NOT CONNECTED!"));
+    #endif     
     return;
   }
 
