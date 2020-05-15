@@ -543,7 +543,7 @@ void PING(const char* command)
    String remoteIP = arg;
    unQuote(remoteIP);
 
-   if(Ping.ping(remoteIP.c_str()))
+   if(Ping.ping(remoteIP.c_str(),3))
    {
       pingAvgTimeHelper = Ping.averageTime();
       echo(command, AT_OK,[](){
