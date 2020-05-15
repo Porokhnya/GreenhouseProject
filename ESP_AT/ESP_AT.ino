@@ -802,12 +802,12 @@ void handleClientConnectStatus()
       
       if(curStatus != lastStatus) // статус соединения изменился
       {
-
+/*
           if(!curStatus) // клиент не подконнекчен, надо его остановить
           {
             Clients[i].stop();
           }
-       
+*/       
           // сообщаем статус клиента
           raiseClientStatus(i,!lastStatus);
 
