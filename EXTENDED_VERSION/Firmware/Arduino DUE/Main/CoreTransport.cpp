@@ -1779,10 +1779,6 @@ void CoreESPTransport::update()
                              SIM800.readFromStream();
                              #endif                             
                           }
-
-                          #ifdef WIFI_DEBUG
-                            DEBUG_LOGLN(F("CLEAR CLIENT DATA !!!"));
-                          #endif
                           
                           delete [] clientsQueue[0].data;
                           delete [] clientsQueue[0].ip;
