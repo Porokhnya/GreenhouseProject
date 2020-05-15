@@ -800,10 +800,17 @@ void handleClientConnectStatus()
       uint8_t lastStatus = ClientConnectStatus[i];
       ClientConnectStatus[i] = curStatus;
       
-      if(curStatus != lastStatus)
+      if(curStatus != lastStatus) // статус соединения изменился
       {
+
+          if(!curStatus) // клиент не подконнекчен, надо его остановить
+          {
+            Clients[i].stop();
+          }
+       
           // сообщаем статус клиента
           raiseClientStatus(i,!lastStatus);
+
                   
       } // if(curStatus != lastStatus)
     
