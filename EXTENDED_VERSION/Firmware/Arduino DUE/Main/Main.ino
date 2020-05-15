@@ -920,12 +920,18 @@ void ModuleUpdateProcessed(AbstractModule* module)
   // используем её, чтобы проверить состояние порта UART для WI-FI-модуля - вдруг надо внеочередно обновить
     #ifdef USE_WIFI_MODULE
     // модуль Wi-Fi обновляем каждый раз после обновления очередного модуля
-     ESP.update();
+     if(module != &wifiModule) 
+     {
+        ESP.update();
+     }
     #endif
 
    #ifdef USE_SMS_MODULE
    // и модуль GSM тоже тут обновим
-    SIM800.update();
+    if(module != &smsModule)
+    {
+      SIM800.update();
+    }
    #endif     
 }
 //--------------------------------------------------------------------------------------------------------------------------------
