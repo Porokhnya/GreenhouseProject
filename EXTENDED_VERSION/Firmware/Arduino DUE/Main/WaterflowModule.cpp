@@ -153,6 +153,14 @@ void WaterflowModule::Setup()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void WaterflowModule::UpdateFlow(WaterflowStruct* wf,unsigned int delta, unsigned int pulses, uint8_t writeOffset)
 {
+
+    // проверяем, включен ли полив? Если не включен, то и расход писать не будем
+    bool waterOn = WORK_STATUS.GetStatus(WATER_STATUS_BIT);
+    if(!waterOn)
+    {
+      return;
+    }
+  
     // за delta миллисекунд у нас произошло pulses пульсаций, пересчитываем в кол-во миллилитров с момента последнего замера
     float flowRate = (((WATERFLOW_CHECK_FREQUENCY / delta) * pulses)*10) / wf->calibrationFactor;
     
