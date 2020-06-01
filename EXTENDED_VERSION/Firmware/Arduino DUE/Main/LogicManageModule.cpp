@@ -2871,10 +2871,31 @@ int32_t LogicManageModuleClass::getLux(uint8_t sensorIndex)
 //--------------------------------------------------------------------------------------------------------------------------------------
 Temperature LogicManageModuleClass::getTemperature(uint8_t sensor)
 {
+    AbstractModule* module = MainController->GetModuleByID("STATE");
+    if(module)
+    {
+      tempSensorsCount = module->State.GetStateCount(StateTemperature);
+    }
+    else
+    {
+      tempSensorsCount = 0;
+    }
+
+    module = MainController->GetModuleByID("HUMIDITY");
+    if(module)
+    {
+      humiditySensorsCount = module->State.GetStateCount(StateTemperature);
+    }
+    else
+    {
+      humiditySensorsCount = 0;   
+    }
+  
 	Temperature result;
 	
 	const char* moduleName = "STATE";
 	uint16_t sensorIndex = sensor;
+
 
 /*
 	#if defined(HEAT_MODULE_DEBUG)
@@ -2896,7 +2917,7 @@ Temperature LogicManageModuleClass::getTemperature(uint8_t sensor)
 	#endif
 */
 	
-	AbstractModule* module = MainController->GetModuleByID(moduleName);
+	module = MainController->GetModuleByID(moduleName);
 	if(!module)
  {
 		return result;
@@ -3883,15 +3904,23 @@ void LogicManageModuleClass::firstCallSetup()
 	
 	AbstractModule* module = MainController->GetModuleByID("STATE");
     if(module)
+    {
       tempSensorsCount = module->State.GetStateCount(StateTemperature);
+    }
     else
+    {
       tempSensorsCount = 0;
+    }
 
     module = MainController->GetModuleByID("HUMIDITY");
     if(module)
+    {
       humiditySensorsCount = module->State.GetStateCount(StateTemperature);
+    }
     else
+    {
       humiditySensorsCount = 0;   
+    }
   
 	GlobalSettings* settings = MainController->GetSettings();
 	
