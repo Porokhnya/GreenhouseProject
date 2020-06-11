@@ -3733,7 +3733,7 @@ void LogicManageModuleClass::makeWindowsSectionDecision(uint8_t sectionIndex, WM
 		{
 			size_t windowNumber = ourWindowsNumbers[i];
 			// берём привязку
-			if((windowNumber < SUPPORTED_WINDOWS) && windowsRainBinding.binding[windowNumber] != 0)//== (windowNumber + 1))
+			if((windowNumber < SUPPORTED_WINDOWS) && windowsRainBinding.binding[windowNumber] == 1)//== (windowNumber + 1))
 			{
 				// наше окно, и его надо закрыть при дожде
 				rainLinkedWindows.push_back(windowNumber);
