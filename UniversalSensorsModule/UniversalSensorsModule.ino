@@ -21,6 +21,7 @@ RS-485 работает через аппаратный UART (RX0 и TX0 ард�
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/power.h>
+#include <avr/wdt.h>
 #include <OneWire.h>
 #include "BH1750.h"
 #include "Max44009.h"
@@ -50,6 +51,7 @@ RS-485 работает через аппаратный UART (RX0 и TX0 ард�
 //#define USE_RANDOM_SEED_PIN // закомментировать, если не надо использовать пин для инициализации генератора псевдослучайных чисел
 #define RANDOM_SEED_PIN A0 // какой пин (АНАЛОГОВЫЙ !!!) использовать для инициализации генератора псевдослучайных чисел (пин должен быть висящим в воздухе)
 
+//#define USE_WATCHDOG // раскомментировать, если надо использовать контроль зависания при помощи внутреннего ватчдога (период 8 с)
 
 #define SOIL_MOISTURE_0_PERCENT 1023 // вольтаж для 0% влажности почвы, китайский датчик влажности (0-1023)
 #define SOIL_MOISTURE_100_PERCENT 450 // вольтаж для 100% влажности почвы, китайский датчик влажности (0-1023)
@@ -125,13 +127,13 @@ int8_t PINS_MAP[8] = { // в примере указано, что мы след
 };
 #pragma pack(pop)
 //----------------------------------------------------------------------------------------------------------------
-// настройки датчиков для модуля, МЕНЯТЬ ЗДЕСЬ!
-//----------------------------------------------------------------------------------------------------------------
 const SensorSettings Sensors[3] = {
 
-{mstSi7021,0,0}, // DS18B20 на пине A1
-{mstDS18B20,3,0}, // DS18B20 на пине A2
-{mstDS18B20,4,0} // карта пинов 
+// настройки датчиков для модуля (РОВНО 3 ШТУКИ), МЕНЯТЬ ЗДЕСЬ!
+
+{mstSi7021,0,0}, // датчик влажности Si7021 на шине I2C
+{mstDS18B20,3,0}, // DS18B20 на пине 3
+{mstDS18B20,4,0} // DS18B20 на пине 4
 /* 
  
  поддерживаемые типы датчиков: 
@@ -1282,8 +1284,22 @@ void ReadSensors()
   // читаем информацию с датчиков
     
   ReadSensor(Sensors[0],SensorDefinedData[0],&scratchpadS.sensor1);
+  
+  #ifdef USE_WATCHDOG
+    wdt_reset();
+  #endif
+  
   ReadSensor(Sensors[1],SensorDefinedData[1],&scratchpadS.sensor2);
+
+  #ifdef USE_WATCHDOG
+    wdt_reset();
+  #endif
+  
   ReadSensor(Sensors[2],SensorDefinedData[2],&scratchpadS.sensor3);
+
+  #ifdef USE_WATCHDOG
+    wdt_reset();
+  #endif
 
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -1397,7 +1413,7 @@ void MeasureSensor(const SensorSettings& sett,void* sensorDefinedData) // зап
   }  
 }
 //----------------------------------------------------------------------------------------------------------------
-void UpdatePH(const SensorSettings& sett,void* sensorDefinedData, unsigned long curMillis)
+void UpdatePH(const SensorSettings& sett,void* sensorDefinedData)
 {
   PHMeasure* pm = (PHMeasure*) sensorDefinedData;
   
@@ -1410,24 +1426,24 @@ void UpdatePH(const SensorSettings& sett,void* sensorDefinedData, unsigned long 
     return;
   }
     
-  if((curMillis - pm->samplesTimer) > PH_SAMPLES_INTERVAL)
+  if((millis() - pm->samplesTimer) > PH_SAMPLES_INTERVAL)
   {
     
-    pm->samplesTimer = curMillis; // запоминаем, когда замерили
     // пора прочитать из порта
     pm->samplesDone++;
     pm->data += analogRead(sett.Pin);
+    pm->samplesTimer = millis(); // запоминаем, когда замерили
   }
 }
 //----------------------------------------------------------------------------------------------------------------
-void UpdateSensor(const SensorSettings& sett,void* sensorDefinedData, unsigned long curMillis)
+void UpdateSensor(const SensorSettings& sett,void* sensorDefinedData)
 {
   // обновляем датчики здесь
   switch(sett.Type)
   {
 
     case mstPHMeter:
-      UpdatePH(sett,sensorDefinedData,curMillis);
+      UpdatePH(sett,sensorDefinedData);
     break;
 
     case mstNone:    
@@ -1447,9 +1463,13 @@ void UpdateSensor(const SensorSettings& sett,void* sensorDefinedData, unsigned l
 //----------------------------------------------------------------------------------------------------------------
 void UpdateSensors()
 {
-  unsigned long thisMillis = millis();
   for(byte i=0;i<3;i++)
-    UpdateSensor(Sensors[i],SensorDefinedData[i],thisMillis);  
+  {
+    UpdateSensor(Sensors[i],SensorDefinedData[i]);
+    #ifdef USE_WATCHDOG
+      wdt_reset();
+    #endif    
+  }
 }
 //----------------------------------------------------------------------------------------------------------------
 void StartMeasure()
@@ -1553,6 +1573,11 @@ void sendDataViaNRF()
 
     for(int i=0;i<5;i++) // пытаемся послать 5 раз, в разные трубы
     {
+
+      #ifdef USE_WATCHDOG
+        wdt_reset();
+      #endif
+      
       // посылаем данные через nRF
         uint8_t writePipeNum = random(0,5);
         radio.openWritingPipe(writingPipes[writePipeNum]); // открываем канал для записи
@@ -1634,6 +1659,10 @@ void sendDataViaLoRa()
 
     for(int i=0;i<5;i++) // пытаемся послать 5 раз
     {
+      #ifdef USE_WATCHDOG
+        wdt_reset();
+      #endif
+      
         // подсчитываем контрольную сумму
         scratchpadS.crc8 = OneWireSlave::crc8((const byte*)&scratchpadS,sizeof(scratchpadS)-1);  
         LoRa.beginPacket();
@@ -1748,6 +1777,11 @@ void setup()
   
   OWSlave.setReceiveCallback(&owReceive);
   OWSlave.begin(owROM, oneWireData.getPinNumber());
+
+  #ifdef USE_WATCHDOG
+    wdt_enable(WDTO_8S);
+  #endif
+  
   
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -1993,17 +2027,28 @@ void loop()
 
   #ifdef USE_RS485_GATE
     if(!connectedViaOneWire)
+    {
       ProcessIncomingRS485Packets(); // обрабатываем входящие пакеты по RS-485
+    }
   #endif  
 
+  #ifdef USE_WATCHDOG
+    wdt_reset();
+  #endif
 }
 //----------------------------------------------------------------------------------------------------------------
 void yield()
 {
    #ifdef USE_RS485_GATE
     if(!connectedViaOneWire)
+    {
       ProcessIncomingRS485Packets(); // обрабатываем входящие пакеты по RS-485
+    }
   #endif   
+
+  #ifdef USE_WATCHDOG
+    wdt_reset();
+  #endif  
 }
 //----------------------------------------------------------------------------------------------------------------
 
