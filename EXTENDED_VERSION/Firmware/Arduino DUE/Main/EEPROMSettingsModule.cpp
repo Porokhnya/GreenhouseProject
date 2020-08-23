@@ -769,7 +769,22 @@ void EEPROMSettingsModule::Setup()
         windowsIntervals.Interval[i] = -1;   
       }   
    }
-  
+
+  // читаем настройки распрыскивания
+  memset(sprayBinding,0,sizeof(sprayBinding));
+  for(uint8_t i=0;i<3;i++)
+  {
+      int addr = SPRAY_BINDING_ADDRESS + i*(sizeof(HumiditySprayBinding) + 3);  // 2 байта - заголовок, 1 - CRC8
+      if(!read(addr, sprayBinding[i]))
+      {
+         memset(&(sprayBinding[i]),0,sizeof(HumiditySprayBinding));
+         
+        sprayBinding[i].LinkType = linkUnbinded; // нет привязки
+        sprayBinding[i].Pin = UNBINDED_PIN; // нет привязки
+        sprayBinding[i].Level = LOW;        
+      }
+    
+  } // for  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void EEPROMSettingsModule::Update()
@@ -1024,6 +1039,51 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           }        
        } // F("VENT")
        #endif // #ifdef USE_VENT_MODULE
+///////////////////////////////////////////////////
+ #ifdef USE_HUMIDITY_SPRAY_MODULE
+       else
+       if(param == F("HSPRAY")) // установить настройки распрыскивания: CTSET=EES|HSPRAY|link type 1|mcp address 1|pin 1|level 1|link type 2|mcp address 2|pin 2|level 2|link type 3|mcp address 3|pin 3|level 3
+       {
+          if(argsCnt < 13)
+          {
+            if(wantAnswer)
+            {
+              PublishSingleton = PARAMS_MISSED;
+            }
+          }
+          else
+          {
+             // аргументов хватает
+             sprayBinding[0].LinkType = atoi(command.GetArg(1));
+             sprayBinding[0].MCPAddress = atoi(command.GetArg(2));
+             sprayBinding[0].Pin = atoi(command.GetArg(3));
+             sprayBinding[0].Level = atoi(command.GetArg(4));
+             
+             sprayBinding[1].LinkType = atoi(command.GetArg(5)); 
+             sprayBinding[1].MCPAddress = atoi(command.GetArg(6)); 
+             sprayBinding[1].Pin = atoi(command.GetArg(7)); 
+             sprayBinding[1].Level = atoi(command.GetArg(8)); 
+             
+             sprayBinding[2].LinkType = atoi(command.GetArg(9)); 
+             sprayBinding[2].MCPAddress = atoi(command.GetArg(10)); 
+             sprayBinding[2].Pin = atoi(command.GetArg(11)); 
+             sprayBinding[2].Level = atoi(command.GetArg(12)); 
+
+
+             for(uint8_t i=0;i<3;i++)
+             {
+                int addr = SPRAY_BINDING_ADDRESS + i*(sizeof(HumiditySprayBinding) + 3); // 2 байта - заголовок, 1 - CRC8
+                write(addr, sprayBinding[i]);
+             }
+                         
+
+             PublishSingleton.Flags.Status = true;
+             PublishSingleton = param;
+             PublishSingleton << PARAM_DELIMITER << REG_SUCC;
+          }        
+       } // F("HSPRAY")
+       #endif // #ifdef USE_HUMIDITY_SPRAY_MODULE
+///////////////////////////////////////////////////      
        #ifdef USE_CYCLE_VENT_MODULE
        else
        if(param == F("CVENT")) // установить настройки воздухообмена: CTSET=EES|CVENT|link type 1|mcp address 1|pin 1|level 1|link type 2|mcp address 2|pin 2|level 2|link type 3|mcp address 3|pin 3|level 3
@@ -2103,6 +2163,31 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           ;                  
         } // F("VENT")
         #endif // #ifdef USE_VENT_MODULE
+///////////////////////////////////////////////////////////////
+        #ifdef USE_HUMIDITY_SPRAY_MODULE
+        else
+        if(param == F("HSPRAY")) // запросили настройки опрыскивания: CTGET=EES|HSPRAY
+        {
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = param;
+          PublishSingleton << PARAM_DELIMITER << sprayBinding[0].LinkType
+          << PARAM_DELIMITER << sprayBinding[0].MCPAddress
+          << PARAM_DELIMITER << sprayBinding[0].Pin
+          << PARAM_DELIMITER << sprayBinding[0].Level
+          
+          << PARAM_DELIMITER << sprayBinding[1].LinkType
+          << PARAM_DELIMITER << sprayBinding[1].MCPAddress
+          << PARAM_DELIMITER << sprayBinding[1].Pin
+          << PARAM_DELIMITER << sprayBinding[1].Level
+          
+          << PARAM_DELIMITER << sprayBinding[2].LinkType
+          << PARAM_DELIMITER << sprayBinding[2].MCPAddress
+          << PARAM_DELIMITER << sprayBinding[2].Pin
+          << PARAM_DELIMITER << sprayBinding[2].Level
+          ;                  
+        } // F("HSPRAY")
+        #endif // #ifdef USE_HUMIDITY_SPRAY_MODULE
+//////////////////////////////////////////////////////////////
         #ifdef USE_CYCLE_VENT_MODULE
         else
         if(param == F("CVENT")) // запросили настройки воздухообмена: CTGET=EES|CVENT

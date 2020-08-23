@@ -9477,6 +9477,964 @@ void TFTVentScreen::draw(TFTMenu* menuManager)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_VENT_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_HUMIDITY_SPRAY_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTSpraySettingsScreen::TFTSpraySettingsScreen(uint8_t _channel)
+{
+  sprayOnBox = NULL;
+  sprayOffBox = NULL;
+  histeresisBox = NULL;
+  sensorBox = NULL;
+  startTimeBox = NULL;
+  endTimeBox = NULL;
+
+  channel = _channel;
+
+  sensorDataLeft = sensorDataTop = 0;
+  tickerButton = -1;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTSpraySettingsScreen::~TFTSpraySettingsScreen()
+{
+ delete screenButtons;
+ delete sprayOnBox;
+ delete sprayOffBox;
+ delete histeresisBox;
+ delete sensorBox;
+ delete startTimeBox;
+ delete endTimeBox;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::onActivate(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+  
+    GlobalSettings* settings = MainController->GetSettings();
+    
+    spraySettings = settings->GetHumiditySpraySettings(channel);
+
+    if(spraySettings.active)
+    {
+      screenButtons->setButtonBackColor(onOffButton,MODE_ON_COLOR);
+      screenButtons->relabelButton(onOffButton,WM_ON_CAPTION);
+    }
+    else
+    {
+      screenButtons->setButtonBackColor(onOffButton,MODE_OFF_COLOR);      
+      screenButtons->relabelButton(onOffButton,WM_OFF_CAPTION);
+    }
+
+    screenButtons->disableButton(saveButton);
+
+    blinkActive = false;
+    screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+    screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+
+
+    AbstractModule* module = MainController->GetModuleByID("HUMIDITY");
+    if(module)
+      humiditySensorsCount = module->State.GetStateCount(StateTemperature);
+    else
+      humiditySensorsCount = 0; 
+
+
+    getSensorData(sensorDataString);
+    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::getSensorData(String& result)
+{
+
+  result = F("h - ");
+  result += F("%    ");
+
+  
+  AbstractModule* module = MainController->GetModuleByID("HUMIDITY");
+  if(!module)
+    return;
+
+  OneState* sensorState = module->State.GetState(StateHumidity,spraySettings.sensorIndex);
+  if(!sensorState)
+    return;
+
+  if(sensorState->HasData())
+  {
+   HumidityPair tmp = *sensorState;
+   result = F("h");
+
+   result += tmp.Current;
+
+   result += '%';
+   
+  }
+
+   while(result.length() < 10)
+    result += ' ';
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::drawSensorData(TFTMenu* menuManager, String& which, int left, int top)
+{
+    UTFT* dc = menuManager->getDC();
+    dc->setFont(BigRusFont);
+
+    dc->setColor(VGA_RED);
+    dc->setBackColor(TFT_BACK_COLOR);
+
+    dc->print(which.c_str(), left,top);
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::setup(TFTMenu* menuManager)
+{
+    UTFT* dc = menuManager->getDC();
+
+  if(!dc)
+  {
+    return;
+  }
+    
+    
+    screenButtons = new UTFT_Buttons_Rus(dc, menuManager->getTouch(),menuManager->getRusPrinter());
+    screenButtons->setTextFont(BigRusFont);
+    screenButtons->setSymbolFont(SensorFont);
+    screenButtons->setButtonColors(TFT_CHANNELS_BUTTON_COLORS);
+ 
+    UTFTRus* rusPrinter = menuManager->getRusPrinter();
+    
+    int screenWidth = dc->getDisplayXSize();
+    int screenHeight = dc->getDisplayYSize();
+
+    dc->setFont(BigRusFont);
+    int textFontHeight = dc->getFontYsize();
+    int textFontWidth = dc->getFontXsize();
+
+    // вычисляем ширину всего занятого пространства
+    int widthOccupied = TFT_TEXT_INPUT_WIDTH*2 + TFT_ARROW_BUTTON_WIDTH*4 + INFO_BOX_V_SPACING*6;    
+    
+    // теперь вычисляем левую границу для начала рисования
+    int leftPos = (screenWidth - widthOccupied)/2;
+    int initialLeftPos = leftPos;
+    
+    // теперь вычисляем верхнюю границу для отрисовки кнопок
+    int topPos = INFO_BOX_V_SPACING*2;
+    int secondRowTopPos = topPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    int thirdRowTopPos = secondRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    
+    const int spacing = 10;
+
+    int buttonHeight = TFT_ARROW_BUTTON_HEIGHT;
+
+    int controlsButtonsWidth = (screenWidth - spacing*2 - initialLeftPos*2)/3;
+    int controlsButtonsTop = screenHeight - buttonHeight - spacing;
+   // первая - кнопка назад
+    backButton = screenButtons->addButton( initialLeftPos ,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
+    saveButton = screenButtons->addButton( initialLeftPos + spacing +  controlsButtonsWidth,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_SAVE_CAPTION);
+    onOffButton = screenButtons->addButton( initialLeftPos + spacing*2 +  controlsButtonsWidth*2,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_ON_CAPTION);
+    
+    screenButtons->setButtonFontColor(onOffButton,CHANNELS_BUTTONS_TEXT_COLOR);
+    screenButtons->disableButton(saveButton);
+
+
+    static char leftArrowCaption[2] = {0};
+    static char rightArrowCaption[2] = {0};
+
+    leftArrowCaption[0] = rusPrinter->mapChar(charLeftArrow);
+    rightArrowCaption[0] = rusPrinter->mapChar(charRightArrow);
+
+    int textBoxHeightWithCaption =  TFT_TEXT_INPUT_HEIGHT + textFontHeight + INFO_BOX_CONTENT_PADDING;
+    int textBoxTopPos = topPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   
+    // теперь добавляем наши кнопки
+    decStartTimeButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   startTimeBox = new TFTInfoBox("Начало работы:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incStartTimeButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+   decEndTimeButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   endTimeBox = new TFTInfoBox("Конец работы:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+   
+   incEndTimeButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+
+   // вторая строка
+   textBoxTopPos = secondRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = secondRowTopPos;
+   leftPos = initialLeftPos;
+   
+   decSprayOnButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   sprayOnBox = new TFTInfoBox("Влажность вкл, %:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incSprayOnButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+   decSprayOffButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   sprayOffBox = new TFTInfoBox("Влажность выкл, %:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+   
+   incSprayOffButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+   // третья строка
+   textBoxTopPos = thirdRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = thirdRowTopPos;
+   leftPos = initialLeftPos;
+
+   decHisteresisButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   histeresisBox = new TFTInfoBox("Гистерезис:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;   
+   incHisteresisButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+   
+   decSensorButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   const char* SBOX_CAPTION = "Датчик:";
+   sensorBox = new TFTInfoBox(SBOX_CAPTION,TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   sensorDataTop = textBoxTopPos;
+   sensorDataLeft = leftPos + textFontWidth*rusPrinter->utf8_strlen(SBOX_CAPTION) + textFontWidth*3 - (TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING);
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incSensorButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+ 
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::saveSettings()
+{
+  GlobalSettings* settings = MainController->GetSettings();
+  
+  settings->SetHumiditySpraySettings(channel,spraySettings);
+ 
+  //УВЕДОМЛЯЕМ МОДУЛЬ КОНТРОЛЯ, ЧТО ЕМУ НЕОБХОДИМО ПЕРЕЗАГРУЗИТЬ НАСТРОЙКИ
+  LogicManageModule->ReloadHumiditySpraySettings();
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::blinkSaveSettingsButton(bool bOn)
+{
+  
+  if(bOn)
+  {
+    if(blinkActive != bOn)
+    {
+      blinkActive = bOn;
+      blinkOn = true;
+      blinkTimer = millis();
+      screenButtons->setButtonFontColor(saveButton,WM_BLINK_ON_TEXT_COLOR);
+      screenButtons->setButtonBackColor(saveButton,WM_ON_BLINK_BGCOLOR);
+      screenButtons->drawButton(saveButton);
+    }
+  }
+  else
+  {
+    blinkOn = false;
+    blinkActive = false;
+    screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+    screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+    screenButtons->drawButton(saveButton);    
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::onButtonPressed(TFTMenu* menuManager,int buttonID)
+{
+  tickerButton = -1;
+  if(buttonID == decSprayOnButton || buttonID == incSprayOnButton || buttonID == decSprayOffButton
+  || buttonID == incSprayOffButton || buttonID == decHisteresisButton || buttonID == incHisteresisButton
+  || buttonID == decStartTimeButton || buttonID == incStartTimeButton || buttonID == decEndTimeButton
+  || buttonID == incEndTimeButton)
+  {
+    tickerButton = buttonID;
+    Ticker.start(this);
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::onButtonReleased(TFTMenu* menuManager,int buttonID)
+{
+  Ticker.stop();
+  tickerButton = -1;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::onTick()
+{
+  if(tickerButton == decSprayOnButton)
+    incSprayOn(-3);
+  else
+  if(tickerButton == incSprayOnButton)
+    incSprayOn(3);
+  else
+    if(tickerButton == decSprayOffButton)
+    incSprayOff(-3);
+  else
+  if(tickerButton == incSprayOffButton)
+    incSprayOff(3);
+  else
+  if(tickerButton == decHisteresisButton)
+    incHisteresis(-5);
+  else
+  if(tickerButton == incHisteresisButton)
+    incHisteresis(5);
+  else
+  if(tickerButton == decStartTimeButton)
+    incStartTime(-30);
+  else
+  if(tickerButton == incStartTimeButton)
+    incStartTime(30);
+  else
+  if(tickerButton == decEndTimeButton)
+    incEndTime(-30);
+  else
+  if(tickerButton == incEndTimeButton)
+    incEndTime(30);    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::incSprayOn(int val)
+{
+  int16_t old = spraySettings.sprayOnValue;
+  
+  spraySettings.sprayOnValue+=val;
+
+  if(spraySettings.sprayOnValue < 0)
+    spraySettings.sprayOnValue = 0;
+  
+  if(spraySettings.sprayOnValue > 100)
+    spraySettings.sprayOnValue = 100;
+
+  if(spraySettings.sprayOnValue != old)
+    drawValueInBox(sprayOnBox,spraySettings.sprayOnValue);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::incSprayOff(int val)
+{
+  int16_t old = spraySettings.sprayOffValue;
+  
+  spraySettings.sprayOffValue+=val;
+
+  if(spraySettings.sprayOffValue < 0)
+    spraySettings.sprayOffValue = 0;
+  
+  if(spraySettings.sprayOffValue > 100)
+    spraySettings.sprayOffValue = 100;
+
+  if(spraySettings.sprayOffValue != old)
+    drawValueInBox(sprayOffBox,spraySettings.sprayOffValue);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::incHisteresis(int val)
+{
+    int16_t old = spraySettings.histeresis;
+    
+    spraySettings.histeresis += val;
+    
+    if(spraySettings.histeresis < 0)
+        spraySettings.histeresis = 0;
+
+    if(spraySettings.histeresis > 100)
+        spraySettings.histeresis = 100;
+      
+    if(spraySettings.histeresis != old)
+      drawValueInBox(histeresisBox,formatHisteresis());  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::incStartTime(int val)
+{
+  uint32_t old = spraySettings.startWorkTime;
+  
+  spraySettings.startWorkTime+=val;
+
+  if(spraySettings.startWorkTime < 0)
+    spraySettings.startWorkTime = 0;
+  
+  if(spraySettings.startWorkTime > 1440)
+    spraySettings.startWorkTime = 1440;
+
+  if(spraySettings.startWorkTime != old)
+    drawTimeInBox(startTimeBox,spraySettings.startWorkTime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::incEndTime(int val)
+{
+  uint32_t old = spraySettings.endWorkTime;
+  
+  spraySettings.endWorkTime+=val;
+
+  if(spraySettings.endWorkTime < 0)
+    spraySettings.endWorkTime = 0;
+  
+  if(spraySettings.endWorkTime > 1440)
+    spraySettings.endWorkTime = 1440;
+
+  if(spraySettings.endWorkTime != old)
+    drawTimeInBox(endTimeBox,spraySettings.endWorkTime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::update(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  static uint32_t sensorUpdateTimer = millis();
+  if(millis() - sensorUpdateTimer > 2000)
+  {
+    String old1 = sensorDataString;
+    
+    getSensorData(sensorDataString);
+    
+    if(sensorDataString != old1)
+    {
+      drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+    }
+
+    sensorUpdateTimer = millis();
+  }     
+
+  if(blinkActive && screenButtons)
+  {
+    if(millis() - blinkTimer > 500)
+    {
+      blinkOn = !blinkOn;
+
+      if(blinkOn)
+      {
+        screenButtons->setButtonFontColor(saveButton,WM_BLINK_ON_TEXT_COLOR);
+        screenButtons->setButtonBackColor(saveButton,WM_ON_BLINK_BGCOLOR);
+        screenButtons->drawButton(saveButton);
+      }
+      else
+      {
+        screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+        screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+        screenButtons->drawButton(saveButton);   
+      }
+
+      blinkTimer = millis();
+    }
+  } // if(blinkActive)
+
+ if(screenButtons)
+ {
+    int pressed_button = screenButtons->checkButtons(ButtonPressed,ButtonReleased);
+
+    if(pressed_button != -1)
+    {
+      menuManager->resetIdleTimer();
+    
+   
+          if(pressed_button == backButton)
+          {
+            menuManager->switchToScreen("SPRAY");
+            return;
+          }
+          else
+          if(pressed_button == saveButton)
+          {
+            saveSettings();
+            blinkSaveSettingsButton(false);
+            screenButtons->disableButton(saveButton,true);
+            return;
+          }
+          else
+          if(pressed_button == onOffButton)
+          {
+              if(spraySettings.active)
+                spraySettings.active = false;
+              else
+                spraySettings.active = true;
+                
+              if(spraySettings.active)
+              {
+                screenButtons->setButtonBackColor(onOffButton,MODE_ON_COLOR);
+                screenButtons->relabelButton(onOffButton,WM_ON_CAPTION,true);
+              }
+              else
+              {
+                screenButtons->setButtonBackColor(onOffButton,MODE_OFF_COLOR);
+                screenButtons->relabelButton(onOffButton,WM_OFF_CAPTION,true);
+              }
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);     
+          }
+          else if(pressed_button == decSprayOnButton)
+          {
+            incSprayOn(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incSprayOnButton)
+          {
+            incSprayOn(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decSprayOffButton)
+          {
+            incSprayOff(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incSprayOffButton)
+          {
+            incSprayOff(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decStartTimeButton)
+          {
+            incStartTime(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incStartTimeButton)
+          {
+            incStartTime(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }  
+          else if(pressed_button == decEndTimeButton)
+          {
+            incEndTime(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incEndTimeButton)
+          {
+            incEndTime(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }  
+          else if(pressed_button == decHisteresisButton)
+          {
+            incHisteresis(-5);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incHisteresisButton)
+          {
+            incHisteresis(5);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decSensorButton)
+          {
+            spraySettings.sensorIndex--;
+            if(spraySettings.sensorIndex < 0)
+              spraySettings.sensorIndex = 0;
+      
+            drawValueInBox(sensorBox,spraySettings.sensorIndex);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+      
+            getSensorData(sensorDataString);
+            drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+          }
+          else if(pressed_button == incSensorButton)
+          {
+            spraySettings.sensorIndex++;
+            if(spraySettings.sensorIndex >= humiditySensorsCount)
+              spraySettings.sensorIndex = humiditySensorsCount - 1;
+      
+            if(spraySettings.sensorIndex < 0 || spraySettings.sensorIndex >= humiditySensorsCount)
+                spraySettings.sensorIndex = 0;
+      
+            drawValueInBox(sensorBox,spraySettings.sensorIndex);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+            
+            getSensorData(sensorDataString);
+            drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+          }
+
+    } // if(pressed_button != -1)
+    
+ } // if(screenButtons)
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSpraySettingsScreen::draw(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  if(screenButtons)
+  {
+    screenButtons->drawButtons(drawButtonsYield);
+  }
+
+  sprayOnBox->draw(menuManager);
+  drawValueInBox(sprayOnBox,spraySettings.sprayOnValue);
+
+  sprayOffBox->draw(menuManager);
+  drawValueInBox(sprayOffBox,spraySettings.sprayOffValue);
+
+  startTimeBox->draw(menuManager);
+  drawTimeInBox(startTimeBox,spraySettings.startWorkTime);
+
+  endTimeBox->draw(menuManager);
+  drawTimeInBox(endTimeBox,spraySettings.endWorkTime);
+  
+  histeresisBox->draw(menuManager);
+  drawValueInBox(histeresisBox,formatHisteresis());
+
+  sensorBox->draw(menuManager);
+  drawValueInBox(sensorBox,spraySettings.sensorIndex);
+
+  drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+String TFTSpraySettingsScreen::formatHisteresis()
+{
+  int16_t val = spraySettings.histeresis/10;
+  int16_t fract = spraySettings.histeresis%10;
+
+  String result;
+  result += val;
+  result += '.';
+  result += fract;
+
+  return result;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// TFTSprayScreen
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTSprayScreen::TFTSprayScreen()
+{
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTSprayScreen::~TFTSprayScreen()
+{
+ delete screenButtons;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSprayScreen::onActivate(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+  
+  updateSprayButtons(0, channel1OnOffButton, channel1AutoManualButton);
+  updateSprayButtons(1, channel2OnOffButton, channel2AutoManualButton);
+  updateSprayButtons(2, channel3OnOffButton, channel3AutoManualButton);    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSprayScreen::setup(TFTMenu* menuManager)
+{
+
+    UTFT* dc = menuManager->getDC();
+
+  if(!dc)
+  {
+    return;
+  }
+    
+    
+    screenButtons = new UTFT_Buttons_Rus(dc, menuManager->getTouch(),menuManager->getRusPrinter());
+    screenButtons->setTextFont(BigRusFont);
+    screenButtons->setSymbolFont(SensorFont);
+    screenButtons->setButtonColors(TFT_CHANNELS_BUTTON_COLORS);
+ 
+    int screenWidth = dc->getDisplayXSize();
+    int screenHeight = dc->getDisplayYSize();
+
+    dc->setFont(BigRusFont);
+
+    // вычисляем ширину всего занятого пространства
+    int widthOccupied = TFT_TEXT_INPUT_WIDTH*2 + TFT_ARROW_BUTTON_WIDTH*4 + INFO_BOX_V_SPACING*6;    
+    
+    // теперь вычисляем левую границу для начала рисования
+    int leftPos = (screenWidth - widthOccupied)/2;
+    int initialLeftPos = leftPos;
+    
+    // теперь вычисляем верхнюю границу для отрисовки кнопок
+    int topPos = INFO_BOX_V_SPACING*3;
+    int secondRowTopPos = topPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING;
+    int thirdRowTopPos = secondRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING;
+    
+    const int spacing = 10;
+
+    int buttonHeight = TFT_ARROW_BUTTON_HEIGHT;
+
+    int controlsButtonsWidth = (screenWidth - spacing*2 - initialLeftPos*2)/3;
+    int controlsButtonsTop = screenHeight - buttonHeight - spacing;
+   // первая - кнопка назад
+    backButton = screenButtons->addButton( initialLeftPos ,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
+
+
+    int leftRowButtonsWidth = TFT_ARROW_BUTTON_WIDTH*2 + INFO_BOX_V_SPACING*2 + TFT_TEXT_INPUT_WIDTH;
+   
+    // теперь добавляем наши кнопки
+
+   channel1Button = screenButtons->addButton( leftPos ,  topPos, leftRowButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, CHANNEL_N_1_CAPTION);
+
+   int channelsControlsButtonsLeft = leftPos + leftRowButtonsWidth + spacing;
+   int channelsControleButtonsWidth = 185;
+   int channelsModeButtonsLeft = channelsControlsButtonsLeft + channelsControleButtonsWidth + spacing;   
+
+   channel1OnOffButton = screenButtons->addButton( channelsControlsButtonsLeft ,  topPos, channelsControleButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, "");
+   screenButtons->setButtonFontColor(channel1OnOffButton,CHANNELS_BUTTONS_TEXT_COLOR);
+
+   channel1AutoManualButton = screenButtons->addButton( channelsModeButtonsLeft ,  topPos, channelsControleButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, "");
+   screenButtons->setButtonFontColor(channel1AutoManualButton, CHANNELS_BUTTONS_TEXT_COLOR);
+    
+ 
+   // вторая строка
+   topPos = secondRowTopPos;
+   leftPos = initialLeftPos;
+
+   channel2Button = screenButtons->addButton( leftPos ,  topPos, leftRowButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, CHANNEL_N_2_CAPTION);
+
+   channel2OnOffButton = screenButtons->addButton( channelsControlsButtonsLeft ,  topPos, channelsControleButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, "");
+   screenButtons->setButtonFontColor(channel2OnOffButton,CHANNELS_BUTTONS_TEXT_COLOR);
+
+   channel2AutoManualButton = screenButtons->addButton( channelsModeButtonsLeft ,  topPos, channelsControleButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, "");
+   screenButtons->setButtonFontColor(channel2AutoManualButton, CHANNELS_BUTTONS_TEXT_COLOR);   
+    
+   // третья строка
+   topPos = thirdRowTopPos;
+   leftPos = initialLeftPos;
+
+   channel3Button = screenButtons->addButton( leftPos ,  topPos, leftRowButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, CHANNEL_N_3_CAPTION);
+  
+   channel3OnOffButton = screenButtons->addButton( channelsControlsButtonsLeft ,  topPos, channelsControleButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, "");
+   screenButtons->setButtonFontColor(channel3OnOffButton,CHANNELS_BUTTONS_TEXT_COLOR);
+
+   channel3AutoManualButton = screenButtons->addButton( channelsModeButtonsLeft ,  topPos, channelsControleButtonsWidth,  TFT_ARROW_BUTTON_HEIGHT, "");
+   screenButtons->setButtonFontColor(channel3AutoManualButton, CHANNELS_BUTTONS_TEXT_COLOR);   
+ 
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSprayScreen::updateSprayButtons(uint8_t channel, int btnOnOff, int btnMode, bool forceRedraw)
+{
+  HumiditySpray* hs = LogicManageModule->getSpray(channel);
+  if(hs->isOn())
+  {
+    screenButtons->setButtonBackColor(btnOnOff,MODE_ON_COLOR);
+    screenButtons->relabelButton(btnOnOff,"ВЫКЛ",forceRedraw && strcmp(screenButtons->getLabel(btnOnOff),"ВЫКЛ") !=0);
+  }
+  else
+  {
+    screenButtons->setButtonBackColor(btnOnOff,MODE_OFF_COLOR);
+    screenButtons->relabelButton(btnOnOff,"ВКЛ",forceRedraw && strcmp(screenButtons->getLabel(btnOnOff),"ВКЛ") !=0);    
+  }
+
+  HSMWorkMode wm = hs->getWorkMode();
+  if(wm == hsmAuto)
+  {
+    screenButtons->setButtonBackColor(btnMode,MODE_ON_COLOR);
+    screenButtons->relabelButton(btnMode,"АВТО",forceRedraw && strcmp(screenButtons->getLabel(btnMode),"АВТО") !=0);    
+  }
+  else
+  {
+    screenButtons->setButtonBackColor(btnMode,MODE_OFF_COLOR);
+    screenButtons->relabelButton(btnMode,"РУЧНОЙ",forceRedraw && strcmp(screenButtons->getLabel(btnMode),"РУЧНОЙ") !=0);        
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSprayScreen::update(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+ if(screenButtons)
+ {
+
+  HumiditySpray* spray1 = LogicManageModule->getSpray(0);
+  HumiditySpray* spray2 = LogicManageModule->getSpray(1);
+  HumiditySpray* spray3 = LogicManageModule->getSpray(2);
+  
+  static bool sprayIsOn1 = spray1->isOn();
+  static bool sprayIsOn2 = spray2->isOn();
+  static bool sprayIsOn3 = spray3->isOn();
+
+  static HSMWorkMode sprayMode1 = spray1->getWorkMode();
+  static HSMWorkMode sprayMode2 = spray2->getWorkMode();
+  static HSMWorkMode sprayMode3 = spray3->getWorkMode();
+    
+    int pressed_button = screenButtons->checkButtons(ButtonPressed,ButtonReleased);
+
+    if(pressed_button != -1)
+    {
+      menuManager->resetIdleTimer();
+   
+      if(pressed_button == backButton)
+      {
+        menuManager->switchToScreen("DRIVE");
+        return;
+      }
+
+      else
+      if(pressed_button == channel1Button)
+      {
+        menuManager->switchToScreen("SPRAY1");
+        return;        
+      }
+      else
+      if(pressed_button == channel2Button)
+      {
+        menuManager->switchToScreen("SPRAY2");
+        return;        
+      }
+      else
+      if(pressed_button == channel3Button)
+      {
+        menuManager->switchToScreen("SPRAY3");
+        return;        
+      }
+      else
+      if(pressed_button == channel1AutoManualButton)
+      {
+        HumiditySpray* hs = LogicManageModule->getSpray(0);
+        if(hs->getWorkMode() == hsmAuto)
+          hs->switchToMode(hsmManual);
+        else
+          hs->switchToMode(hsmAuto);
+
+        sprayMode1 = hs->getWorkMode();
+
+        updateSprayButtons(0, channel1OnOffButton, channel1AutoManualButton,true);
+        return;
+      }
+      else
+      if(pressed_button == channel2AutoManualButton)
+      {
+        HumiditySpray* hs = LogicManageModule->getSpray(1);
+        if(hs->getWorkMode() == hsmAuto)
+          hs->switchToMode(hsmManual);
+        else
+          hs->switchToMode(hsmAuto);
+
+        sprayMode2 = hs->getWorkMode();
+
+        updateSprayButtons(1, channel2OnOffButton, channel2AutoManualButton,true);
+        return;
+      }
+      else
+      if(pressed_button == channel3AutoManualButton)
+      {
+        HumiditySpray* hs = LogicManageModule->getSpray(2);
+        if(hs->getWorkMode() == hsmAuto)
+          hs->switchToMode(hsmManual);
+        else
+          hs->switchToMode(hsmAuto);
+
+        sprayMode3 = hs->getWorkMode();
+
+        updateSprayButtons(2, channel3OnOffButton, channel3AutoManualButton,true);
+        return;
+      }
+      else
+      if(pressed_button == channel1OnOffButton)
+      {
+        HumiditySpray* hs = LogicManageModule->getSpray(0);
+        bool onFlag = !hs->isOn();
+        hs->switchToMode(hsmManual);
+        hs->turn(onFlag);
+
+        sprayMode1 = hs->getWorkMode();
+        sprayIsOn1 = hs->isOn();
+        
+        updateSprayButtons(0, channel1OnOffButton, channel1AutoManualButton,true);
+        return;        
+      }
+      else
+      if(pressed_button == channel2OnOffButton)
+      {
+        HumiditySpray* hs = LogicManageModule->getSpray(1);
+        bool onFlag = !hs->isOn();
+        hs->switchToMode(hsmManual);
+        hs->turn(onFlag);
+
+        sprayMode2 = hs->getWorkMode();
+        sprayIsOn2 = hs->isOn();
+        
+        updateSprayButtons(1, channel2OnOffButton, channel2AutoManualButton,true);
+        return;      
+      }
+      else
+      if(pressed_button == channel3OnOffButton)
+      {
+        HumiditySpray* hs = LogicManageModule->getSpray(2);
+        bool onFlag = !hs->isOn();
+        hs->switchToMode(hsmManual);
+        hs->turn(onFlag);
+
+        sprayMode3 = hs->getWorkMode();
+        sprayIsOn3 = hs->isOn();
+        
+        updateSprayButtons(2, channel3OnOffButton, channel3AutoManualButton,true);
+        return;       
+      }
+      
+    } // if(pressed_button != -1)
+
+    if(sprayIsOn1 != spray1->isOn() || sprayMode1 != spray1->getWorkMode())
+    {
+      sprayIsOn1 = spray1->isOn();
+      sprayMode1 = spray1->getWorkMode();
+      updateSprayButtons(0, channel1OnOffButton, channel1AutoManualButton,true);
+    }
+
+    if(sprayIsOn2 != spray2->isOn() || sprayMode2 != spray2->getWorkMode())
+    {
+      sprayIsOn2 = spray2->isOn();
+      sprayMode2 = spray2->getWorkMode();
+      updateSprayButtons(1, channel2OnOffButton, channel2AutoManualButton,true);
+    }
+
+    if(sprayIsOn3 != spray3->isOn() || sprayMode3 != spray3->getWorkMode())
+    {
+      sprayIsOn3 = spray3->isOn();
+      sprayMode3 = spray3->getWorkMode();
+      updateSprayButtons(2, channel3OnOffButton, channel3AutoManualButton,true);
+    }
+    
+    
+ } // if(screenButtons)
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTSprayScreen::draw(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  drawScreenCaption(menuManager,"УВЛАЖНЕНИЕ ВОЗДУХА");
+
+  if(screenButtons)
+  {
+    screenButtons->drawButtons(drawButtonsYield);
+  }
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_HUMIDITY_SPRAY_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_PH_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 TFTPHSettingsScreen::TFTPHSettingsScreen()
@@ -13948,17 +14906,15 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     int initialLeftPos = (screenWidth - widthOccupied)/2;
     
     // теперь вычисляем верхнюю границу для отрисовки кнопок
-    int topPos = INFO_BOX_V_SPACING;//////////////////*2;
+    int topPos = INFO_BOX_V_SPACING;
    
     const int spacing = 10;
 
-    const int buttonHeight = 73;///////////////TFT_ARROW_BUTTON_HEIGHT;
+    const int buttonHeight = 73;
 
     int controlsButtonsWidth = (screenWidth - spacing*2 - initialLeftPos*2)/3;
 
    int leftPos = initialLeftPos;
-   // первая - кнопка назад
-    backButton = screenButtons->addButton( leftPos ,  (buttonHeight + INFO_BOX_V_SPACING)*4 + topPos, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
     
     
     // кнопки управления
@@ -14026,7 +14982,6 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
 
     thermostatButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, THERMOSTAT_BUTTON_CAPTION);
     screenButtons->setButtonHasIcon(thermostatButton);
-//    leftPos += controlsButtonsWidth + spacing;
     #ifndef USE_THERMOSTAT_MODULE
     screenButtons->disableButton(thermostatButton);
     #endif
@@ -14034,7 +14989,6 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
 
     // четвёртая строка
     topPos += buttonHeight + INFO_BOX_V_SPACING;
-    //leftPos -= controlsButtonsWidth + spacing;
     leftPos = initialLeftPos;
 
     co2Button = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, CONTROL_CO2_CAPTION);
@@ -14058,6 +15012,22 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     screenButtons->disableButton(doorButton);
     #endif    
 
+
+    // пятый ряд
+    topPos += buttonHeight + INFO_BOX_V_SPACING;
+    leftPos = initialLeftPos;
+    
+   // первая - кнопка назад
+    backButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
+    leftPos += controlsButtonsWidth + spacing;
+
+    // кнопка распрыскивания
+    sprayButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, "СПРИНКЛЕРЫ");
+    leftPos += controlsButtonsWidth + spacing;
+    #ifndef USE_HUMIDITY_SPRAY_MODULE
+    screenButtons->disableButton(sprayButton);
+    #endif
+   
   
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -14128,6 +15098,11 @@ void TFTDriveScreen::update(TFTMenu* menuManager)
         if(pressed_button == ventButton)
         {
           menuManager->switchToScreen("VENT");
+        }
+        else
+        if(pressed_button == sprayButton)
+        {
+          menuManager->switchToScreen("SPRAY");
         }
         else
         if(pressed_button == thermostatButton)
@@ -18355,6 +19330,36 @@ void TFTMenu::setup()
     screens.push_back(ventS);
     
     #endif // USE_VENT_MODULE    
+
+
+ #ifdef USE_HUMIDITY_SPRAY_MODULE
+    
+    AbstractTFTScreen* sprayScreen = new TFTSprayScreen();
+    sprayScreen->setup(this);
+    TFTScreenInfo sprayS; 
+    sprayS.screenName = "SPRAY"; 
+    sprayS.screen = sprayScreen;  
+    screens.push_back(sprayS);
+
+    sprayScreen = new TFTSpraySettingsScreen(0);
+    sprayScreen->setup(this);
+    sprayS.screenName = "SPRAY1"; 
+    sprayS.screen = sprayScreen;  
+    screens.push_back(sprayS);
+
+    sprayScreen = new TFTSpraySettingsScreen(1);
+    sprayScreen->setup(this);
+    sprayS.screenName = "SPRAY2"; 
+    sprayS.screen = sprayScreen;  
+    screens.push_back(sprayS);
+
+    sprayScreen = new TFTSpraySettingsScreen(2);
+    sprayScreen->setup(this);
+    sprayS.screenName = "SPRAY3"; 
+    sprayS.screen = sprayScreen;  
+    screens.push_back(sprayS);
+    
+    #endif // USE_HUMIDITY_SPRAY_MODULE        
 
 
   #ifdef USE_THERMOSTAT_MODULE

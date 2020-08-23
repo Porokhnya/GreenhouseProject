@@ -564,6 +564,344 @@ void Vent::checkWantOn()
 //--------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_VENT_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_HUMIDITY_SPRAY_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
+HumiditySpray::HumiditySpray()
+{
+  channel = 0;
+  settings.active = false;
+  onFlag = false;
+  machineState = hsmIdle;
+  workMode = hsmAuto;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void HumiditySpray::setup(uint8_t _channel)
+{
+  #ifdef HUMIDITY_SPRAY_DEBUG
+  Serial.print(F("SPRAY SETUP: CHANNEL #"));
+  Serial.println(_channel);
+  #endif
+
+  channel = _channel;
+
+// настраиваем выхода
+  HumiditySprayBinding bnd = HardwareBinding->GetHumiditySprayBinding(channel);
+
+  if(bnd.LinkType == linkDirect)
+  {
+    if(bnd.Pin != UNBINDED_PIN)
+    {
+      if(EEPROMSettingsModule::SafePin(bnd.Pin))
+      {
+        WORK_STATUS.PinMode(bnd.Pin,OUTPUT);
+        WORK_STATUS.PinWrite(bnd.Pin,!bnd.Level);
+      }
+    }
+  }
+  else if(bnd.LinkType == linkMCP23S17)
+  {
+    #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
+    if(bnd.Pin != UNBINDED_PIN)
+    {
+          WORK_STATUS.MCP_SPI_PinMode(bnd.MCPAddress,bnd.Pin,OUTPUT);
+          WORK_STATUS.MCP_SPI_PinWrite(bnd.MCPAddress,bnd.Pin,!bnd.Level);      
+    }
+    #endif
+  }
+  else if(bnd.LinkType == linkMCP23017)
+  {
+    #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
+    if(bnd.Pin != UNBINDED_PIN)
+    {
+          WORK_STATUS.MCP_I2C_PinMode(bnd.MCPAddress,bnd.Pin,OUTPUT);
+          WORK_STATUS.MCP_I2C_PinWrite(bnd.MCPAddress,bnd.Pin,!bnd.Level);
+    }
+    #endif
+  }
+  reloadSettings();
+  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void HumiditySpray::setState(bool on)
+{
+  if(on && onFlag) // попросили включиться, но мы уже включены
+    return;
+
+  if(!on && !onFlag) // попросили выключиться, но мы уже выключены
+    return;
+
+  #ifdef HUMIDITY_SPRAY_DEBUG
+  Serial.print(F("SPRAY SET STATE, CHANNEL #"));
+  Serial.print(channel);
+  Serial.print(F("; STATE = "));
+  Serial.println(on);
+  #endif
+
+  onFlag = on;
+  HumiditySprayBinding bnd = HardwareBinding->GetHumiditySprayBinding(channel);
+  
+  if(bnd.LinkType == linkUnbinded) // нет привязки
+  {
+    return;
+  }
+
+  uint8_t level = on ? bnd.Level : !bnd.Level;
+
+  if(bnd.LinkType == linkDirect)
+    {
+      if(bnd.Pin != UNBINDED_PIN)
+      {
+        if(EEPROMSettingsModule::SafePin(bnd.Pin))
+        {
+          WORK_STATUS.PinWrite(bnd.Pin,level);
+        }
+      }
+    }
+    else if(bnd.LinkType == linkMCP23S17)
+    {
+      #if defined(USE_MCP23S17_EXTENDER) && COUNT_OF_MCP23S17_EXTENDERS > 0
+      if(bnd.Pin != UNBINDED_PIN)
+      {
+            WORK_STATUS.MCP_SPI_PinWrite(bnd.MCPAddress,bnd.Pin,level);   
+      }
+      #endif
+    }
+    else if(bnd.LinkType == linkMCP23017)
+    {
+      #if defined(USE_MCP23017_EXTENDER) && COUNT_OF_MCP23017_EXTENDERS > 0
+      if(bnd.Pin != UNBINDED_PIN)
+      {
+             WORK_STATUS.MCP_I2C_PinWrite(bnd.MCPAddress,bnd.Pin,level);
+      }
+      #endif
+    }
+
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void HumiditySpray::reloadSettings()
+{
+  #ifdef HUMIDITY_SPRAY_DEBUG
+  Serial.print(F("SPRAY RELOAD SETTINGS: CHANNEL #"));
+  Serial.println(channel);
+  #endif
+  
+  GlobalSettings* sett = MainController->GetSettings();
+  settings = sett->GetHumiditySpraySettings(channel);
+
+  if(!settings.active) // выключаем, если неактивны
+  {
+    if(workMode == vwmAuto)
+    {
+      setState(false);      
+    }
+    
+    machineState = hsmIdle;
+  }
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void HumiditySpray::update()
+{
+  if(workMode == vwmManual) // ручной режим работы, ничего не надо делать
+  {
+    return;
+  }
+
+  if(!settings.active) // выключены в настройках
+  {
+    // выключаем выход
+    setState(false);
+    return;
+  }
+
+  switch(machineState)
+  {
+    case hsmIdle: // в режиме ожидания
+    {
+      if(canWork()) // можем работать в этом диапазоне
+      {
+          // проверяем влажность
+          Humidity hum = LogicManageModule->getHumidity(settings.sensorIndex);
+          if(hum.Value == NO_TEMPERATURE_DATA)
+          {
+              #ifdef HUMIDITY_SPRAY_DEBUG
+                Serial.print(F("SPRAY: NO SENSOR DATA, CHANNEL #"));
+                Serial.println(channel);
+              #endif
+
+              setState(false); // выключаем, т.к. нет показаний с датчика влажности
+              
+              return;
+          }
+
+           // получили влажность, проверяем уставки
+            int32_t tVal = 100l*hum.Value;
+            if(tVal < 0)
+              tVal -= hum.Fract;
+            else
+              tVal += hum.Fract;
+          
+            int32_t tOnBorder = 100l*settings.sprayOnValue;
+            tOnBorder -= 10l*settings.histeresis;
+          
+            if(tVal <= tOnBorder)
+            {
+              // влажность ниже уставки, надо включать !!!
+              #ifdef HUMIDITY_SPRAY_DEBUG
+              Serial.print(F("SPRAY: CHANNEL #"));
+              Serial.print(channel);
+              Serial.println(F(" WANTS ON!"));
+              #endif
+          
+              // включаем вывод МК
+              setState(true);
+          
+              // переходим в режим проверки порога на выключение
+              machineState = hsmCheckOff;
+              
+            } // if                    
+      }
+      else
+      {
+        // не можем работать в этом диапазоне, выключаемся
+        setState(false);
+      }
+    }
+    break; // hsmIdle
+
+    case hsmCheckOff:
+    {
+      // проверяем выключение
+      
+      if(!canWork()) // если не можем работать - выключаем выход
+      {
+        setState(false);
+        machineState = hsmIdle;
+        return;
+      }
+
+      // тут проверяем уставку на выключение
+      
+        // гистерезис у нас хранится в десятых долях
+        Humidity hum = LogicManageModule->getHumidity(settings.sensorIndex);
+        if(hum.Value == NO_TEMPERATURE_DATA)
+        {
+          // нет влажности, переключаемся на режим ожидания, и выключаем всё
+          #ifdef HUMIDITY_SPRAY_DEBUG
+            Serial.print(F("SPRAY: NO SENSOR DATA, CHANNEL #"));
+            Serial.println(channel);
+          #endif
+
+          // выключаем
+          setState(false);
+  
+          machineState = hsmIdle;
+        } // if
+        else
+        {
+          // есть влажность, получаем её, формируем уставку выключения и проверяем
+          int32_t tVal = 100l*hum.Value;
+          if(tVal < 0)
+            tVal -= hum.Fract;
+          else
+            tVal += hum.Fract;
+        
+          int32_t tOffBorder = 100l*settings.sprayOffValue;
+          tOffBorder += 10l*settings.histeresis;
+  
+          if(tVal >= tOffBorder)
+          {
+            // достигли нижнего порога, надо выключать!
+            #ifdef HUMIDITY_SPRAY_DEBUG
+            Serial.print(F("SPRAY WANT OFF: CHANNEL #"));
+            Serial.println(channel);
+            #endif
+   
+            // выключаем
+            setState(false);
+            // и переключаемся на ожидание
+            machineState = hsmIdle;
+          } // if
+          
+        } // else
+
+      
+      
+    }
+    break; // hsmCheckOff
+    
+  } // switch(machineState)
+  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+bool HumiditySpray::canWork()
+{
+   // получаем текущее время
+      RealtimeClock rtc = MainController->GetClock();
+      RTCTime currentTime = rtc.getTime();        
+
+      // формируем диапазоны, в минутах
+      uint32_t startDia = settings.startWorkTime;
+      uint32_t endDia = settings.endWorkTime;
+      uint32_t nowMins = 60ul*currentTime.hour + currentTime.minute;
+
+      if(/*bitRead(sett.weekdays,currentTime.dayOfWeek-1) &&*/ (nowMins >= startDia && nowMins < endDia))
+      {
+        return true;
+      }
+
+     return false;
+
+  
+/*  
+  #ifdef HUMIDITY_SPRAY_DEBUG
+  Serial.print(F("SPRAY CHECK WANT ON: CHANNEL #"));
+  Serial.println(channel);
+  #endif
+
+  Temperature temp = LogicManageModule->getHimidity(settings.sensorIndex);
+  if(temp.Value == NO_TEMPERATURE_DATA)
+  {
+      #ifdef HUMIDITY_SPRAY_DEBUG
+        Serial.print(F("SPRAY: NO SENSOR DATA, CHANNEL #"));
+        Serial.println(channel);
+      #endif
+
+      return;
+  }
+
+  // получили температуру, проверяем уставки
+  int32_t tVal = 100l*temp.Value;
+  if(tVal < 0)
+    tVal -= temp.Fract;
+  else
+    tVal += temp.Fract;
+
+  int32_t tOnBorder = 100l*settings.temp;
+
+  if(tVal >= tOnBorder)
+  {
+    // мы превысили порог включения, надо включать !!!
+    #ifdef HUMIDITY_SPRAY_DEBUG
+    Serial.print(F("SPRAY: CHANNEL #"));
+    Serial.print(channel);
+    Serial.println(F(" WANTS ON!"));
+    #endif
+
+    // включаем вывод МК
+    setState(true);
+
+    // запоминаем время начала работы
+    workStartedAt = millis();
+
+    // переходим в режим проверки порога на выключение
+    machineState = ventCheckOff;
+    
+  } // if
+*/  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_HUMIDITY_SPRAY_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_CYCLE_VENT_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
 CycleVent::CycleVent()
@@ -1043,6 +1381,24 @@ LogicManageModuleClass::LogicManageModuleClass() : AbstractModule("LOGIC")
   heatSection2LastI = 0;
   heatSection3LastI = 0;
 }
+//--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_HUMIDITY_SPRAY_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
+void LogicManageModuleClass::ReloadHumiditySpraySettings()
+{
+  spray1.reloadSettings();
+  spray2.reloadSettings();
+  spray3.reloadSettings();  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void LogicManageModuleClass::makeSprayDecision()
+{
+  spray1.update();
+  spray2.update();
+  spray3.update();  
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_HUMIDITY_SPRAY_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_VENT_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -2939,6 +3295,36 @@ Temperature LogicManageModuleClass::getTemperature(uint8_t sensor)
    	
 }	
 //--------------------------------------------------------------------------------------------------------------------------------------
+Humidity LogicManageModuleClass::getHumidity(uint8_t sensorIndex)
+{
+  Humidity result;
+  
+    AbstractModule* module = MainController->GetModuleByID("HUMIDITY");
+    if(module)
+    {
+      humiditySensorsCount = module->State.GetStateCount(StateHumidity);
+
+      OneState* sensorState = module->State.GetState(StateHumidity,sensorIndex);
+      if(!sensorState)
+      {
+        return result;
+      }
+    
+      if(sensorState->HasData())
+      {
+        HumidityPair tmp = *sensorState;
+        result = tmp.Current;
+      }
+      
+    } // if(module)
+    else
+    {
+      humiditySensorsCount = 0;   
+    }
+
+  return result;   
+} 
+//--------------------------------------------------------------------------------------------------------------------------------------
 void LogicManageModuleClass::applyCycleVentDecision()
 {
   #ifdef USE_CYCLE_VENT_MODULE
@@ -3147,6 +3533,10 @@ void LogicManageModuleClass::Setup()
   #ifdef USE_THERMOSTAT_MODULE
     ReloadThermostatSettings();
   #endif  
+
+  #ifdef USE_HUMIDITY_SPRAY_MODULE
+    ReloadHumiditySpraySettings();
+  #endif
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -3246,6 +3636,11 @@ void LogicManageModuleClass::Update()
    #ifdef USE_THERMOSTAT_MODULE
     makeThermostatDecision();
    #endif
+
+   #ifdef USE_HUMIDITY_SPRAY_MODULE
+    makeSprayDecision();
+   #endif
+   
       
   // тут принятие других решений
   
@@ -3986,7 +4381,14 @@ void LogicManageModuleClass::firstCallSetup()
     thermostat1.setup(0);
     thermostat2.setup(1);
     thermostat3.setup(2);
-   #endif   
+   #endif 
+
+
+   #ifdef USE_HUMIDITY_SPRAY_MODULE
+    spray1.setup(0);
+    spray2.setup(1);
+    spray3.setup(2);
+   #endif     
   
 }	
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -4807,6 +5209,179 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
           } // argsCount > 1
         #endif // USE_VENT_MODULE
      } // if(which == F("VENT"))
+////////////////////////////////////////////////////////////////////////////
+     else
+     if(which == F("HSPRAY"))
+     {
+        #ifdef USE_HUMIDITY_SPRAY_MODULE
+        if(argsCount > 1)
+          {
+            String param = command.GetArg(1);
+           
+            if(param == STATE_ON) // CTSET=LOGIC|HSPRAY|ON|channel (optional)
+            {
+              // включить распрыскивание по каналу
+              if(argsCount < 3) // все каналы
+              {
+                spray1.turn(true);
+                spray2.turn(true);
+                spray3.turn(true);
+
+                spray1.switchToMode(hsmManual);
+                spray2.switchToMode(hsmManual);
+                spray3.switchToMode(hsmManual);
+              }
+              else
+              {
+                HumiditySpray* cv = getSpray(atoi(command.GetArg(2)));
+                if(cv)
+                {
+                  cv->turn(true);
+                  cv->switchToMode(hsmManual);
+                }
+              }
+              
+              PublishSingleton.Flags.Status = true;
+              PublishSingleton = which;
+              PublishSingleton << PARAM_DELIMITER << param;
+            }
+            else 
+            if(param == STATE_OFF) // CTSET=LOGIC|HSPRAY|OFF|channel (optional)
+            {
+              // выключить распрыскивание по каналу
+              if(argsCount < 3) // все каналы
+              {
+                spray1.turn(false);
+                spray2.turn(false);
+                spray3.turn(false);
+
+                spray1.switchToMode(hsmManual);
+                spray2.switchToMode(hsmManual);
+                spray3.switchToMode(hsmManual);
+              }
+              else
+              {
+                HumiditySpray* cv = getSpray(atoi(command.GetArg(2)));
+                if(cv)
+                {
+                  cv->turn(false);
+                  cv->switchToMode(hsmManual);
+                }
+              }
+              
+              PublishSingleton.Flags.Status = true;
+              PublishSingleton = which;
+              PublishSingleton << PARAM_DELIMITER << param;
+            }
+            else
+            if(param == WORK_MODE) // CTSET=LOGIC|HSPRAY|MODE|(AUTO or MANUAL)
+            {
+              if(argsCount > 2)
+              {
+                String mode = command.GetArg(2);
+
+                if(argsCount > 3)
+                {
+                  int channel = atoi(command.GetArg(3));
+                  HumiditySpray* cv = channel == 0 ? &spray1 : channel == 1 ? &spray2 : &spray3;
+                  
+                  if(mode == WM_AUTOMATIC)
+                    cv->switchToMode(hsmAuto);
+                  else
+                   cv->switchToMode(hsmManual);
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << mode << PARAM_DELIMITER << channel;   
+                }
+                else
+                {
+                    if(mode == WM_AUTOMATIC) // CTSET=LOGIC|HSPRAY|MODE|AUTO
+                    {
+                      spray1.switchToMode(hsmAuto);
+                      spray2.switchToMode(hsmAuto);
+                      spray3.switchToMode(hsmAuto);
+                      
+                      PublishSingleton.Flags.Status = true;
+                      PublishSingleton = which;
+                      PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << mode;
+                    }
+                    else
+                    if(mode == WM_MANUAL) // CTSET=LOGIC|HSPRAY|MODE|MANUAL
+                    {
+                      spray1.switchToMode(hsmManual);
+                      spray2.switchToMode(hsmManual);
+                      spray3.switchToMode(hsmManual);
+                      
+                      PublishSingleton.Flags.Status = true;
+                      PublishSingleton = which;
+                      PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << mode;
+                    }
+                }
+              } // argsCount > 2
+            } // if(param == WORK_MODE)
+            else
+           if(param == F("ACTIVE")) // вкл/выкл модуль канала распрыскивания, CTSET=LOGIC|HSPRAY|ACTIVE|num|active flag
+           {
+              if(argsCount > 3)
+              {
+                int channelNum = atoi(command.GetArg(2));
+                if(channelNum >= 0 && channelNum <= 2)
+                {
+                  HumiditySpray* v = channelNum == 0 ? &spray1 : channelNum == 1 ? &spray2 : &spray3;
+                  HumiditySpraySettings vs = v->getSettings();
+                  vs.active = atoi(command.GetArg(3));
+                  
+                  MainController->GetSettings()->SetHumiditySpraySettings(channelNum,vs);
+
+                  // перезагружаем настройки распрыскивания
+                  ReloadHumiditySpraySettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum << PARAM_DELIMITER << command.GetArg(3);
+
+                }
+              }
+           } // if(param == F("ACTIVE"))
+           else
+           if(param == F("CHANNEL")) // настройки канала вентиляции, СTSET=LOGIC|HSPRAY|CHANNEL|num|active|sensorIndex|sprayOnValue|sprayOffValue|histeresis|startWorkTime|endWorkTime
+           {
+              if(argsCount > 9)
+              {
+                int channelNum = atoi(command.GetArg(2));
+                if(channelNum >= 0 && channelNum <= 2)
+                {
+                  HumiditySpray* v = channelNum == 0 ? &spray1 : channelNum == 1 ? &spray2 : &spray3;
+                  HumiditySpraySettings vs = v->getSettings();
+                  
+                  vs.active = atoi(command.GetArg(3));
+                  vs.sensorIndex = atoi(command.GetArg(4));
+                  vs.sprayOnValue = atoi(command.GetArg(5));
+                  vs.sprayOffValue = atoi(command.GetArg(6));
+                  vs.histeresis = atoi(command.GetArg(7));
+                  vs.startWorkTime = atoi(command.GetArg(8));
+                  vs.endWorkTime = atoi(command.GetArg(9));
+
+                  MainController->GetSettings()->SetHumiditySpraySettings(channelNum,vs);
+
+                  // перезагружаем настройки вентиляции
+                  ReloadHumiditySpraySettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum << PARAM_DELIMITER << REG_SUCC;
+                  
+                } // if(channelNum >= 0 && channelNum <= 2)
+                
+              } // if(argsCount > 9)
+            
+           } // if(param == F("CHANNEL"))
+           
+          } // argsCount > 1
+        #endif // USE_HUMIDITY_SPRAY_MODULE
+     } // if(which == F("HSPRAY"))
+////////////////////////////////////////////////////////////////////////////     
      else
      if(which == F("THERMOSTAT"))
      {
@@ -5464,6 +6039,87 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
           } // if(argsCount > 1)        
         #endif // USE_VENT_MODULE
       } // if(which == F("VENT"))
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      else
+      if(which == F("HSPRAY"))
+      {
+        #ifdef USE_HUMIDITY_SPRAY_MODULE
+        if(argsCount > 1)
+          {
+            String param = command.GetArg(1);
+            
+            if(param == F("STATUS")) // CTGET=LOGIC|HSPRAY|STATUS, returns OK=LOGIC|HSPRAY|STATUS|section1 on| section2 on|section3 on
+            {
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param;
+
+                  PublishSingleton << PARAM_DELIMITER << spray1.isOn();                  
+                  PublishSingleton << PARAM_DELIMITER << spray2.isOn();
+                  PublishSingleton << PARAM_DELIMITER << spray3.isOn();
+                  
+            } //if(param == F("STATUS"))
+            else
+            if(param == F("STATE")) // CTGET=LOGIC|HSPRAY|STATE, returns OK=LOGIC|HSPRAY|STATE|section1 on|section1 work mode|section2 on|section2 work mode|section3 on|section3 work mode
+            {
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param;
+
+                  PublishSingleton << PARAM_DELIMITER << spray1.isOn();
+                  PublishSingleton << PARAM_DELIMITER << (spray1.getWorkMode() == hsmAuto ? F("AUTO") : F("MANUAL"));
+
+                  PublishSingleton << PARAM_DELIMITER << spray2.isOn();
+                  PublishSingleton << PARAM_DELIMITER << (spray2.getWorkMode() == hsmAuto ? F("AUTO") : F("MANUAL"));
+
+                  PublishSingleton << PARAM_DELIMITER << spray3.isOn();
+                  PublishSingleton << PARAM_DELIMITER << (spray3.getWorkMode() == hsmAuto ? F("AUTO") : F("MANUAL"));
+
+            }            
+            else
+            if(param == F("ACTIVE")) // CTGET=LOGIC|HSPRAY|ACTIVE, returns OK=LOGIC|HSPRAY|ACTIVE|section1 active| section2 active|section3 active
+            {
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param;
+
+                  PublishSingleton << PARAM_DELIMITER << spray1.getSettings().active;
+                  PublishSingleton << PARAM_DELIMITER << spray2.getSettings().active;
+                  PublishSingleton << PARAM_DELIMITER << spray3.getSettings().active;
+                  
+            } //if(param == F("ACTIVE"))
+            else
+            if(param == F("CHANNEL")) // CTGET=LOGIC|HSPRAY|CHANNEL|num, returns OK=LOGIC|HSPRAY|CHANNEL|num|active|sensorIndex|sprayOnValue|sprayOffValue|histeresis|startWorkTime|endWorkTime
+            {
+                  if(argsCount > 2)
+                  {
+                    int channelNum = atoi(command.GetArg(2));
+                    if(channelNum >= 0 && channelNum <= 2)
+                    {
+                        HumiditySpray* v = channelNum == 0 ? &spray1 : channelNum == 1 ? &spray2 : &spray3;
+                        HumiditySpraySettings vs = v->getSettings();
+                  
+                        PublishSingleton.Flags.Status = true;
+                        PublishSingleton = which;
+                        PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum;
+
+                        PublishSingleton << PARAM_DELIMITER << vs.active 
+                        << PARAM_DELIMITER << vs.sensorIndex 
+                        << PARAM_DELIMITER << vs.sprayOnValue 
+                        << PARAM_DELIMITER << vs.sprayOffValue
+                        << PARAM_DELIMITER << vs.histeresis
+                        << PARAM_DELIMITER << vs.startWorkTime
+                        << PARAM_DELIMITER << vs.endWorkTime
+                        ;
+                    }
+                  }
+                  
+            } // if(param == F("CHANNEL"))
+            
+          } // if(argsCount > 1)        
+        #endif // USE_HUMIDITY_SPRAY_MODULE
+      } // if(which == F("HSPRAY"))
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////      
       else
       if(which == F("THERMOSTAT"))
       {

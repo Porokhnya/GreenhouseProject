@@ -106,6 +106,19 @@ typedef struct
 {
   bool active;
   int8_t sensorIndex;
+  uint8_t sprayOnValue;
+  uint8_t sprayOffValue;
+  int8_t histeresis;
+  int32_t startWorkTime;
+  int32_t endWorkTime;
+} HumiditySpraySettings; 
+#pragma pack(pop)
+//--------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  bool active;
+  int8_t sensorIndex;
   int16_t temp;
   int16_t histeresis;
 } ThermostatSettings; 
@@ -427,6 +440,10 @@ class GlobalSettings
 
     DoorSettings GetDoorSettings(uint8_t channel);
     void SetDoorSettings(uint8_t channel,DoorSettings& val);
+
+    HumiditySpraySettings GetHumiditySpraySettings(uint8_t channel);
+    void SetHumiditySpraySettings(uint8_t channel,HumiditySpraySettings& val);
+    
     
 };
 

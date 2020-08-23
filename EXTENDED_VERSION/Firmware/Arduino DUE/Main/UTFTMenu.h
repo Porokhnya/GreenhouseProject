@@ -197,6 +197,7 @@ private:
   int phButton;
   int co2Button;
   int doorButton;
+  int sprayButton;
   
 };
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1356,6 +1357,103 @@ class TFTVentSettingsScreen : public AbstractTFTScreen, public ITickHandler
 };
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_VENT_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_HUMIDITY_SPRAY_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class TFTSprayScreen : public AbstractTFTScreen
+{
+  public:
+  
+    TFTSprayScreen();
+    ~TFTSprayScreen();
+    
+    void setup(TFTMenu* menuManager);
+    void update(TFTMenu* menuManager);
+    void draw(TFTMenu* menuManager);
+    void onActivate(TFTMenu* menuManager);
+
+    private:
+
+      int backButton;
+      int channel1Button, channel2Button, channel3Button;
+
+      void updateSprayButtons(uint8_t channel, int btnOnOff, int btnMode, bool forceRedraw=false);
+      int channel1OnOffButton, channel2OnOffButton, channel3OnOffButton;
+      int channel1AutoManualButton, channel2AutoManualButton, channel3AutoManualButton;
+  
+      UTFT_Buttons_Rus* screenButtons;
+};
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class TFTSpraySettingsScreen : public AbstractTFTScreen, public ITickHandler
+{
+  public:
+  
+    TFTSpraySettingsScreen(uint8_t channel);
+    ~TFTSpraySettingsScreen();
+    
+    void setup(TFTMenu* menuManager);
+    void update(TFTMenu* menuManager);
+    void draw(TFTMenu* menuManager);
+    void onActivate(TFTMenu* menuManager);
+    void onButtonPressed(TFTMenu* menuManager,int buttonID);
+    void onButtonReleased(TFTMenu* menuManager,int buttonID);
+    void onTick();    
+
+    private:
+
+      uint8_t channel;
+      int tickerButton;
+    
+      int backButton, saveButton, onOffButton;
+      UTFT_Buttons_Rus* screenButtons;
+
+      // уставка влажности
+      TFTInfoBox* sprayOnBox;
+      int decSprayOnButton, incSprayOnButton;
+      void incSprayOn(int val);
+
+      TFTInfoBox* sprayOffBox;
+      int decSprayOffButton, incSprayOffButton;
+      void incSprayOff(int val);
+
+      // гистерезис
+      TFTInfoBox* histeresisBox;
+      int decHisteresisButton, incHisteresisButton;
+      void incHisteresis(int val);
+      String formatHisteresis();
+
+      // датчик влажности
+      TFTInfoBox* sensorBox;
+      int decSensorButton, incSensorButton;
+
+      TFTInfoBox* startTimeBox;
+      int decStartTimeButton, incStartTimeButton;
+      void incStartTime(int val);
+
+      TFTInfoBox* endTimeBox;
+      int decEndTimeButton, incEndTimeButton;
+      void incEndTime(int val);
+
+      void saveSettings();
+
+      uint32_t blinkTimer;
+      bool blinkOn, blinkActive;
+      
+      void blinkSaveSettingsButton(bool bOn);
+
+      int sensorDataLeft, sensorDataTop;
+      String sensorDataString;
+
+      void drawSensorData(TFTMenu* menuManager, String& which, int left, int top);
+      void getSensorData(String& result);
+
+      uint16_t humiditySensorsCount;
+
+      HumiditySpraySettings spraySettings;
+
+};
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_HUMIDITY_SPRAY_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_PH_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -427,6 +427,54 @@ class Thermostat
 //--------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_THERMOSTAT_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_HUMIDITY_SPRAY_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
+typedef enum
+{
+  hsmIdle,
+  hsmCheckOff,  
+} HSMMachineState;
+//--------------------------------------------------------------------------------------------------------------------------------------
+typedef enum
+{
+  hsmAuto,
+  hsmManual
+  
+} HSMWorkMode;
+//--------------------------------------------------------------------------------------------------------------------------------------
+class HumiditySpray
+{
+  public:
+    HumiditySpray();
+
+    void setup(uint8_t channel);
+    void reloadSettings();
+    void update();
+
+    bool isOn() { return onFlag; }
+    HSMWorkMode getWorkMode() { return workMode; }
+
+    // управление в ручном режиме
+    void switchToMode(HSMWorkMode mode) { workMode = mode; machineState = hsmIdle; }
+    void turn(bool isOn) { setState(isOn); machineState = hsmIdle; }
+    
+    HumiditySpraySettings& getSettings() { return settings; }
+
+  private:
+    HumiditySpraySettings settings;
+    uint8_t channel;
+    bool onFlag;
+    HSMMachineState machineState;
+
+    HSMWorkMode workMode;
+
+    void setState(bool on);
+    bool canWork();
+  
+};
+//--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_HUMIDITY_SPRAY_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
 class LogicManageModuleClass : public AbstractModule
 {
   private:
@@ -529,6 +577,13 @@ class LogicManageModuleClass : public AbstractModule
     void makeVentDecision();
   #endif
 
+  #ifdef USE_HUMIDITY_SPRAY_MODULE
+    HumiditySpray spray1;
+    HumiditySpray spray2;
+    HumiditySpray spray3;
+    void makeSprayDecision();
+  #endif
+
   #ifdef USE_THERMOSTAT_MODULE
     Thermostat thermostat1;
     Thermostat thermostat2;
@@ -605,6 +660,7 @@ class LogicManageModuleClass : public AbstractModule
     LogicManageModuleClass();
 
     Temperature getTemperature(uint8_t sensorIndex);
+    Humidity getHumidity(uint8_t sensorIndex);
     int32_t getLux(uint8_t sensorIndex);
   
     bool ExecCommand(const Command& command, bool wantAnswer);
@@ -644,6 +700,11 @@ class LogicManageModuleClass : public AbstractModule
   #ifdef USE_VENT_MODULE
     void ReloadVentSettings();
     Vent* getVent(uint8_t channel) { if(channel == 1) return &vent2; else if(channel == 2) return &vent3; return &vent1; }
+  #endif
+
+  #ifdef USE_HUMIDITY_SPRAY_MODULE
+    void ReloadHumiditySpraySettings();
+    HumiditySpray* getSpray(uint8_t channel) { if(channel == 1) return &spray2; else if(channel == 2) return &spray3; return &spray1; }
   #endif
 
   #ifdef USE_THERMOSTAT_MODULE

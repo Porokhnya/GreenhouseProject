@@ -608,6 +608,45 @@ void GlobalSettings::SetVentSettings(uint8_t channel,VentSettings& val)
 
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+HumiditySpraySettings GlobalSettings::GetHumiditySpraySettings(uint8_t channel)
+{
+  HumiditySpraySettings result;
+  memset(&result,0,sizeof(HumiditySpraySettings));
+
+  result.active = true;
+  result.histeresis = 5;
+  
+  uint16_t addr = WM_HUMIDITY_SPRAY_SETTINGS_ADDRESS + channel*(sizeof(HumiditySpraySettings) + sizeof(uint16_t));
+  if(!checkHeader(addr))
+    return result;
+
+  addr += sizeof(int16_t);
+
+  uint8_t* ptr = (uint8_t*)&result;
+  for(size_t i=0;i<sizeof(HumiditySpraySettings);i++)
+  {
+    *ptr++ = MemRead(addr++);
+  }
+
+  result.active = (bool) result.active;
+
+  return result;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void GlobalSettings::SetHumiditySpraySettings(uint8_t channel,HumiditySpraySettings& val)
+{
+  uint16_t addr = WM_HUMIDITY_SPRAY_SETTINGS_ADDRESS + channel*(sizeof(HumiditySpraySettings) + sizeof(uint16_t));
+  writeHeader(addr);
+  addr += sizeof(int16_t);
+
+  uint8_t* ptr = (uint8_t*)&val;
+  for(size_t i=0;i<sizeof(HumiditySpraySettings);i++)
+  {
+    MemWrite(addr++,*ptr++);
+  }
+
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
 ThermostatSettings GlobalSettings::GetThermostatSettings(uint8_t channel)
 {
   ThermostatSettings result;

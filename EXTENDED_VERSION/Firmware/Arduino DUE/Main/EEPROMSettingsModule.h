@@ -84,6 +84,17 @@ typedef struct
   uint8_t Pin; // номер пина
   uint8_t Level; // уровень включения
   
+} HumiditySprayBinding; // настройки железа для модуля распрыскивания
+#pragma pack(pop)
+//--------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  uint8_t LinkType; // режим управления
+  uint8_t MCPAddress; // адрес MCP
+  uint8_t Pin; // номер пина
+  uint8_t Level; // уровень включения
+  
 } CycleVentBinding; // настройки железа для модуля воздухообмена
 #pragma pack(pop)
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -525,6 +536,7 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
   PHBinding phBinding;
   ThermostatBinding thermostatBinding[3];
   VentBinding ventBinding[3];
+  HumiditySprayBinding sprayBinding[3];
   CycleVentBinding cycleVentBinding[3];
   ShadowBinding shadowBinding[3];
   HeatBinding heatBinding[3];
@@ -573,6 +585,9 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
 
     // возвращает настройки привязки модуля вентиляции к железу
     VentBinding& GetVentBinding(uint8_t channel){return ventBinding[channel];}
+
+    // возвращает настройки привязки модуля распрыскивания к железу
+    HumiditySprayBinding& GetHumiditySprayBinding(uint8_t channel){return sprayBinding[channel];}
 
     // возвращает настройки привязки модуля воздухообмена к железу
     CycleVentBinding& GetCycleVentBinding(uint8_t channel){return cycleVentBinding[channel];}
