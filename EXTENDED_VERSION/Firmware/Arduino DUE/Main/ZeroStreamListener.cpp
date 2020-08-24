@@ -670,6 +670,11 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
           PublishSingleton << F("THERMOSTAT");   
           #endif          
   		  
+          #ifdef USE_HUMIDITY_SPRAY_MODULE
+          if(PublishSingleton.Text.length())
+                PublishSingleton << PARAM_DELIMITER;
+          PublishSingleton << F("SPRAY");   
+          #endif            		  
 		  
         }
         else
