@@ -57,11 +57,13 @@ class DS18B20Dispatcher
 		void saveBinding(int recordIndex);
 		
 		int findFree(uint8_t pin, int& scanResultsIndex);
+
+    int baseEEPROMAddress;
 		
 	public:
 		DS18B20Dispatcher();
 		
-		void begin();
+		void begin(int eepromEddress);
 		void addBinding(uint8_t pin, uint8_t sensorIndex);
 		
 		void beginConversion();

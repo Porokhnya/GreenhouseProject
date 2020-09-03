@@ -248,6 +248,16 @@ typedef struct
 #pragma pack(push,1)
 typedef struct
 {
+  uint8_t Pin[20]; // номера пинов для датчиков-эмуляторов DS18B20
+  uint8_t Type[20]; // типы датчиков (0-нет, 1 - влажность, 2 - влажность почвы, 3 - освещённость)
+  uint8_t Index[20]; // индексы датчиков в результирующих модулях
+  
+} DS18B20EmulationBinding;
+#pragma pack(pop)
+//--------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
   uint8_t RegistrationLine; // пин линии регистрации универсальных модулей
   uint8_t Pin[5]; // номера пинов для линий 1-Wire
   
@@ -548,6 +558,7 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
   LoraBinding loraBinding;
   TimerBinding timerBinding;
   DallasBinding dallasBinding;
+  DS18B20EmulationBinding ds18B20EmulationBinding;
   OneWireBinding oneWireBinding;
   DiodesBinding diodesBinding;
   WindowsBinding windowsBinding;
@@ -621,6 +632,9 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
 
     // возвращает настройки привязки DS18B20 к железу
     DallasBinding& GetDallasBinding() { return dallasBinding; }
+
+    // возвращает настройки привязки эмуляторов DS18B20 к железу
+    DS18B20EmulationBinding& GetDS18B20EmulationBinding() { return ds18B20EmulationBinding; }
 
     // возвращает настройки привязки 1-Wire к железу
     OneWireBinding& GetOneWireBinding() { return oneWireBinding; }

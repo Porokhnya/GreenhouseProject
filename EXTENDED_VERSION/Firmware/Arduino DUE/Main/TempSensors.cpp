@@ -1125,7 +1125,7 @@ void TempSensors::Setup()
   
    // добавляем датчики температуры
 
-   DS18B20LineManager.begin();
+   DS18B20LineManager.begin(DS18B20_BINDING_ADDRESS);
    DS18B20LineManager.beginConversion();
    DS18B20LineManager.beginSetResolution();
 

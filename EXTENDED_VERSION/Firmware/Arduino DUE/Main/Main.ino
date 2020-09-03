@@ -176,6 +176,10 @@
 #include "DoorModule.h"
 #endif
 
+#ifdef USE_DS18B20_EMULATION_MODULE
+#include "OneWireEmulationModule.h"
+#endif
+
 
 #include "LogicManageModule.h"
 #include "EEPROMSettingsModule.h"
@@ -321,6 +325,10 @@ TFTModule tftModule;
 
 #ifdef USE_DOOR_MODULE
 DoorModule doorModule;
+#endif
+
+#ifdef USE_DS18B20_EMULATION_MODULE
+OneWireEmulationModule oneWireEmulation;
 #endif
 
 BlinkModeInterop readyDiodeBlinker;
@@ -677,6 +685,10 @@ void setup()
 
   #ifdef USE_DOOR_MODULE
   controller.RegisterModule(&doorModule);
+  #endif
+
+  #ifdef USE_DS18B20_EMULATION_MODULE
+  controller.RegisterModule(&oneWireEmulation);
   #endif
 
   START_LOG(25);

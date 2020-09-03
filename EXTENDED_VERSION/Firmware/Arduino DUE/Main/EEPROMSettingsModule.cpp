@@ -461,6 +461,13 @@ void EEPROMSettingsModule::Setup()
       memset(&dallasBinding,UNBINDED_PIN,sizeof(dallasBinding));
   }  
 
+  // читаем настройки эмуляторов DS18B20
+  memset(&ds18B20EmulationBinding,UNBINDED_PIN,sizeof(ds18B20EmulationBinding));
+  if(!read(DS18B20_EMULATION_BINDING_ADDRESS, ds18B20EmulationBinding))
+  {
+      memset(&ds18B20EmulationBinding,UNBINDED_PIN,sizeof(ds18B20EmulationBinding));
+  }  
+
   // читаем настройки 1-Wire
   memset(&oneWireBinding,UNBINDED_PIN,sizeof(oneWireBinding));
   if(!read(ONEWIRE_BINDING_ADDRESS, oneWireBinding))
@@ -1486,6 +1493,42 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           }
         
        } // if(param == F("WPOWER"))
+       #ifdef USE_DS18B20_EMULATION_MODULE
+       else
+       if(param == F("1WEMUL")) // установить настройки эмуляторов DS18B20: CTSET=EES|1WEMUL|pin1|..|pin20|type1|..|type20|index1|..|index20
+       {
+          if(argsCnt < 61)
+          {
+            PublishSingleton = PARAMS_MISSED;
+          }
+          else
+          {
+            // аргументов хватает
+             uint8_t cntr = 0;
+
+             for(size_t i=0;i<sizeof(ds18B20EmulationBinding.Pin)/sizeof(ds18B20EmulationBinding.Pin[0]);i++)
+             {
+                ds18B20EmulationBinding.Pin[i] =  atoi(command.GetArg(++cntr));
+             }
+
+             for(size_t i=0;i<sizeof(ds18B20EmulationBinding.Type)/sizeof(ds18B20EmulationBinding.Type[0]);i++)
+             {
+                ds18B20EmulationBinding.Type[i] =  atoi(command.GetArg(++cntr));
+             }
+
+             for(size_t i=0;i<sizeof(ds18B20EmulationBinding.Index)/sizeof(ds18B20EmulationBinding.Index[0]);i++)
+             {
+                ds18B20EmulationBinding.Index[i] =  atoi(command.GetArg(++cntr));
+             }
+            
+              write(DS18B20_EMULATION_BINDING_ADDRESS, ds18B20EmulationBinding);
+
+             PublishSingleton.Flags.Status = true;
+             PublishSingleton = param;
+             PublishSingleton << PARAM_DELIMITER << REG_SUCC;
+          }
+       } // if(param == F("1WEMUL"))
+       #endif // USE_DS18B20_EMULATION_MODULE
        #ifdef USE_TEMP_SENSORS
        else
        if(param == F("DS18B20")) // установить настройки DS18B20 CTSET=EES|DS18B20|pin1|..|pin20
@@ -2411,6 +2454,30 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
             ;
           
         } // if(param == F("WPOWER"))
+        #ifdef USE_DS18B20_EMULATION_MODULE
+        else
+        if(param == F("1WEMUL")) // запросили настройки эмуляторов DS18B20: CTGET=EES|1WEMUL
+        {
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = param;
+
+          for(size_t i=0;i<sizeof(ds18B20EmulationBinding.Pin)/sizeof(ds18B20EmulationBinding.Pin[0]);i++)
+          {
+            PublishSingleton << PARAM_DELIMITER << ds18B20EmulationBinding.Pin[i];
+          }
+
+          for(size_t i=0;i<sizeof(ds18B20EmulationBinding.Type)/sizeof(ds18B20EmulationBinding.Type[0]);i++)
+          {
+            PublishSingleton << PARAM_DELIMITER << ds18B20EmulationBinding.Type[i];
+          }
+
+          for(size_t i=0;i<sizeof(ds18B20EmulationBinding.Index)/sizeof(ds18B20EmulationBinding.Index[0]);i++)
+          {
+            PublishSingleton << PARAM_DELIMITER << ds18B20EmulationBinding.Index[i];
+          }
+          
+        } // if(param == F("1WEMUL"))
+        #endif // USE_DS18B20_EMULATION_MODULE        
         #ifdef USE_TEMP_SENSORS
         else
         if(param == F("DS18B20")) // запросили настройки DS18B20: CTGET=EES|DS18B20

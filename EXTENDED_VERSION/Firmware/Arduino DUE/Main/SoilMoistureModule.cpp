@@ -2,6 +2,10 @@
 #include "ModuleController.h"
 #include "EEPROMSettingsModule.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_DYNAMIC_SENSORS_RESET_MODULE
+#include "DynamicSensorsResetModule.h"
+#endif   
+//--------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_SOIL_MOISTURE_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
 #define PULSE_TIMEOUT 50000 // 50 миллисекунд на чтение фронта максимум
@@ -318,6 +322,52 @@ bool  SoilMoistureModule::ExecCommand(const Command& command, bool wantAnswer)
     
   if(command.GetType() == ctSET) // установка свойств
   {
+    uint8_t argsCnt = command.GetArgsCount();
+    if(argsCnt > 0)
+    {
+      String param = command.GetArg(0);
+      if(param == F("DATA")) // установить значение на датчике, CTSET=SOIL|DATA|idx|value
+      {
+        if (argsCnt > 2)
+        {
+          uint8_t sensorIndex = (uint8_t) atoi(command.GetArg(1));
+          int16_t humidity =  (int16_t) atoi(command.GetArg(2));
+          
+          uint8_t _tCnt = State.GetStateCount(StateSoilMoisture);
+          if(sensorIndex >= _tCnt)
+          {
+            uint8_t toAdd = (sensorIndex - _tCnt) + 1;
+  
+              for(uint8_t qa = 0; qa < toAdd; qa++)
+              {
+                State.AddState(StateSoilMoisture,_tCnt + qa);
+              }
+           } 
+
+          Temperature t;
+          t.Value = humidity/100;    
+          t.Fract = abs(humidity%100);
+          State.UpdateState(StateSoilMoisture,sensorIndex,(void*)&t);
+
+                  ///////////////////////////// КОД СБРОСА ДИНАМИЧЕСКИХ ДАТЧИКОВ ////////////////////////////////////////
+                  #ifdef USE_DYNAMIC_SENSORS_RESET_MODULE
+                  OneState* dynReset = State.GetState(StateSoilMoisture,sensorIndex);
+                  if(dynReset)
+                  {
+                    DynamicSensorsReset->Observe(dynReset);
+                  }
+                  #endif
+                  ///////////////////////////// КОД СБРОСА ДИНАМИЧЕСКИХ ДАТЧИКОВ ////////////////////////////////////////
+        
+                PublishSingleton.Flags.Status = true;
+                PublishSingleton = param;
+                PublishSingleton << PARAM_DELIMITER << sensorIndex << PARAM_DELIMITER << REG_SUCC;                
+                    
+        } // if (argsCnt > 2)
+        
+      } // if(param == F("DATA"))
+      
+    } // if(argsCnt > 0)
     
   } // ctSET    
   else
