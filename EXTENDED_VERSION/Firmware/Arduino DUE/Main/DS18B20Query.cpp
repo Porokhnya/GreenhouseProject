@@ -689,14 +689,14 @@ bool DS18B20Dispatcher::getType(uint8_t sensorIndex, uint8_t pin, ModuleStates& 
         resultType = StateTemperature;
      break;
 
-     case 0xA1: // датчик влажности и температуры, скратчпад - 11 байт
+     case 0xA1: // датчик влажности и температуры, скратчпад - 9 байт
 #ifdef DS18B20_DEBUG      
         DEBUG_LOGLN(F("1-Wire: Humidity sensor"));
 #endif
         resultType = StateHumidity;
      break;
 
-     case 0xA2: // датчик освещённости, скратчпад - 11 байт
+     case 0xA2: // датчик освещённости, скратчпад - 9 байт
 #ifdef DS18B20_DEBUG      
         DEBUG_LOGLN(F("1-Wire: Luminosity sensor"));
 #endif
@@ -772,6 +772,7 @@ DS18B20Temperature DS18B20Dispatcher::asTemperature(uint8_t* data, size_t dataLe
         type_s = 1;
         break;
       case 0x28:
+      case 0xA0: // датчик влажности почвы
 #ifdef DS18B20_DEBUG      
         DEBUG_LOGLN(F("1-Wire: Chip = DS18B20"));
 #endif  
@@ -783,6 +784,7 @@ DS18B20Temperature DS18B20Dispatcher::asTemperature(uint8_t* data, size_t dataLe
 #endif
         type_s = 0;
         break;
+
       default:
 #ifdef DS18B20_DEBUG      
         DEBUG_LOGLN(F("1-Wire: Device is not a DS18x20 family device."));
