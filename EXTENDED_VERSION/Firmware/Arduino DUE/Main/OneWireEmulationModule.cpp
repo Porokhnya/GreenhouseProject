@@ -8,7 +8,7 @@ void OneWireEmulationModule::Setup()
   // настройка модуля тут
    lineManager.begin(DS18B20_EMULATION_STORE_ADDRESS);
    lineManager.beginConversion();
-   lineManager.beginSetResolution();
+//   lineManager.beginSetResolution();
 
    DS18B20EmulationBinding bnd = HardwareBinding->GetDS18B20EmulationBinding();
 
@@ -36,7 +36,7 @@ void OneWireEmulationModule::Setup()
   
       WORK_STATUS.PinMode(pin,INPUT,false);
       
-      lineManager.setResolution(pin,temp12bit);
+//      lineManager.setResolution(pin,temp12bit);
   
       // запускаем конвертацию с датчиков при старте, через 2 секунды нам вернётся измеренная температура
       lineManager.startConversion(pin);
@@ -110,6 +110,154 @@ void OneWireEmulationModule::Update()
       {
         continue;
       }
+
+      // читаем тип датчика
+      ModuleStates sensorType;
+      OneWireAddress sensorAddress;
+      if(lineManager.getType(sensorCounter,pin,sensorType,sensorAddress))
+      {
+        if(bnd.Index[i] != 0xFF) // если индекс датчику назначен
+        {
+            // получили тип датчика на линии, теперь можем читать его скратчпад
+            size_t rawDataLength = lineManager.getRawDataLength(sensorType);
+            uint8_t* rawData = new uint8_t[rawDataLength];
+    
+            // теперь читаем сырые данные с датчика
+            if(lineManager.getRawData(pin,sensorAddress,sensorType,rawData))
+            {
+               // прочитали сырые данные с датчика, можно их конвертировать в нужный тип данных
+               Temperature temperatureData;
+               Humidity    humidityData;
+               long        luminosityData = NO_LUMINOSITY_DATA;
+               
+               
+               switch(sensorType) // какой тип датчика у нас на линии?
+               {
+                  case StateTemperature:
+                  case StateSoilMoisture:
+                  {
+                    // температура и влажность почвы - передаются как показания с DS18B20
+                    DS18B20Temperature tempData = lineManager.asTemperature(rawData,rawDataLength,sensorAddress);
+                    temperatureData.Value = tempData.Whole;
+        
+                    if(tempData.Negative)
+                      temperatureData.Value = -temperatureData.Value;
+              
+                    temperatureData.Fract = tempData.Fract;
+                  }
+                  break;
+
+                  case StateHumidity:
+                  {
+                    // температура - в TemperatureValue, влажность - в HumidityValue
+                    HumidityCompositeData tData = lineManager.asHumidity(rawData,rawDataLength,sensorAddress);
+                    temperatureData.Value = tData.TemperatureValue.Whole;
+        
+                    if(tData.TemperatureValue.Negative)
+                      temperatureData.Value = -temperatureData.Value;
+              
+                    temperatureData.Fract = tData.TemperatureValue.Fract;  
+
+                    humidityData = tData.HumidityValue;
+                  }
+                  break;
+
+                  case StateLuminosity:
+                  {
+                      luminosityData = lineManager.asLuminosity(rawData,rawDataLength,sensorAddress);
+                  }
+                  break;
+
+                  //TODO: Тут другие типы данных !!!
+                
+               } // switch
+
+               // теперь пытаемся сконвертировать полученные данные в указанный пользователем тип
+               String cmd;
+               
+                  switch(bnd.Type[i])
+                  {
+                    case 1: // влажность
+                    {
+                      int32_t rawTemperatureVal = abs(temperatureData.Value)*100;
+                      rawTemperatureVal += temperatureData.Fract;
+        
+                      if(temperatureData.Value < 0)
+                      {
+                        rawTemperatureVal = -rawTemperatureVal;
+                      }
+
+                      int32_t rawHumidityVal = abs(humidityData.Value)*100;
+                      rawHumidityVal += humidityData.Fract;
+        
+                      if(humidityData.Value < 0)
+                      {
+                        rawHumidityVal = -rawHumidityVal;
+                      }
+        
+                      cmd = "HUMIDITY";
+                      cmd += PARAM_DELIMITER;
+                      cmd += "DATA";
+                      cmd += PARAM_DELIMITER;
+                      cmd += bnd.Index[i]; 
+                      cmd += PARAM_DELIMITER;
+                      cmd += rawTemperatureVal;
+                      cmd += PARAM_DELIMITER;
+                      cmd += rawHumidityVal;
+                    }
+                    break;
+            
+                    case 2: // влажность почвы
+                    {
+                      int32_t rawVal = abs(temperatureData.Value)*100;
+                      rawVal += temperatureData.Fract;
+        
+                      if(temperatureData.Value < 0)
+                      {
+                        rawVal = -rawVal;
+                      }
+        
+                      cmd = "SOIL";
+                      cmd += PARAM_DELIMITER;
+                      cmd += "DATA";
+                      cmd += PARAM_DELIMITER;
+                      cmd += bnd.Index[i]; 
+                      cmd += PARAM_DELIMITER;
+                      cmd += rawVal;
+                    }
+                    break;
+            
+                    case 3: // освещённость
+                    {
+                      cmd = "LIGHT";
+                      cmd += PARAM_DELIMITER;
+                      cmd += "DATA";
+                      cmd += PARAM_DELIMITER;
+                      cmd += bnd.Index[i]; 
+                      cmd += PARAM_DELIMITER;
+                      cmd += luminosityData;
+                    }
+                    break; 
+                    
+                    case 0: // нет привязки
+                    default:
+                    break;
+                } // switch               
+
+                // ну и в оконцове - посылаем команду в нужный модуль
+                if(cmd.length() > 0)
+                {
+                  ModuleInterop.QueryCommand(ctSET,cmd,false);
+                }
+            } // if(lineManager.getRawData(pin,sensorAddress,sensorType,rawData))
+    
+            delete[] rawData;
+
+        } // if(bnd.Index[i] != 0xFF) // если индекс датчику назначен
+        
+      } // if(lineManager.getType(sensorCounter,pin,sensorType,sensorAddress))
+
+      /*
       
       DS18B20Temperature tempData;
       Temperature t;
@@ -126,7 +274,6 @@ void OneWireEmulationModule::Update()
           
         }      
 
-      //State.UpdateState(StateTemperature,sensorCounter,(void*)&t); // обновляем состояние температуры, индексы датчиков у нас идут без дырок, поэтому с итератором цикла вызывать можно
 
       String cmd; // команда для скармливания
 
@@ -204,6 +351,7 @@ void OneWireEmulationModule::Update()
           }
           
       } // if(bnd.Index[i] != 0xFF)
+      */
       
       sensorCounter++;
    } // for
