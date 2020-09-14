@@ -18953,6 +18953,12 @@ void TFTIdleScreen::draw(TFTMenu* menuManager)
   int screenWidth = dc->getDisplayXSize();
   dc->drawLine(10,40,screenWidth-10,40);
 
+  // рисуем номер версии
+  dc->setFont(SmallRusFont);
+  dc->setColor(INFO_BOX_CAPTION_COLOR);
+  dc->setBackColor(TFT_BACK_COLOR);
+  menuManager->getRusPrinter()->print(PROGRAM_VERSION,10,5);    
+
 
   drawCurrentScreen(menuManager);
 

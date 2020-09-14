@@ -772,7 +772,7 @@ DS18B20Temperature DS18B20Dispatcher::asTemperature(uint8_t* data, size_t dataLe
         type_s = 1;
         break;
       case 0x28:
-      case 0xA0: // датчик влажности почвы
+      case 0xA0: // датчик влажности почвы, который идентичен DS18B20
 #ifdef DS18B20_DEBUG      
         DEBUG_LOGLN(F("1-Wire: Chip = DS18B20"));
 #endif  
