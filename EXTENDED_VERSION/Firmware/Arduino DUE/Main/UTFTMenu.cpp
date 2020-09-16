@@ -18957,7 +18957,7 @@ void TFTIdleScreen::draw(TFTMenu* menuManager)
   dc->setFont(SmallRusFont);
   dc->setColor(INFO_BOX_CAPTION_COLOR);
   dc->setBackColor(TFT_BACK_COLOR);
-  menuManager->getRusPrinter()->print(PROGRAM_VERSION,10,5);    
+  menuManager->getRusPrinter()->print(PROGRAM_VERSION,10,14);    
 
 
   drawCurrentScreen(menuManager);
