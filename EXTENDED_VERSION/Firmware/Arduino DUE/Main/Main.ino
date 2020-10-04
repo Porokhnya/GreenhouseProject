@@ -180,6 +180,10 @@
 #include "OneWireEmulationModule.h"
 #endif
 
+#ifdef USE_SCHEDULE_MODULE
+#include "ScheduleModule.h"
+#endif
+
 
 #include "LogicManageModule.h"
 #include "EEPROMSettingsModule.h"
@@ -330,6 +334,11 @@ DoorModule doorModule;
 #ifdef USE_DS18B20_EMULATION_MODULE
 OneWireEmulationModule oneWireEmulation;
 #endif
+
+#ifdef USE_SCHEDULE_MODULE
+ScheduleModule scheduleModule;
+#endif
+
 
 BlinkModeInterop readyDiodeBlinker;
 bool canWorkWithReadyDiode = false;
@@ -751,6 +760,11 @@ void setup()
   controller.RegisterModule(&alertsModule);
 
  START_LOG(33);
+
+#ifdef USE_SCHEDULE_MODULE // регистрируем модуль расписаний последним, чтобы он обновлялся последним, и сообщал уже обновившим своё состояние модулям о возможных сменах настроек
+  controller.RegisterModule(&scheduleModule);
+#endif
+ 
 
   controller.begin(); // начинаем работу
 

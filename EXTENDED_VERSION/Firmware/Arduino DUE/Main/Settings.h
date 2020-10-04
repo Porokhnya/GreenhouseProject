@@ -251,6 +251,8 @@ class GlobalSettings
    bool canSendControllerStatusToHTTP;
 
    String key;
+
+   bool scheduleActiveFlag;
  
   public:
     GlobalSettings();
@@ -443,6 +445,9 @@ class GlobalSettings
 
     HumiditySpraySettings GetHumiditySpraySettings(uint8_t channel);
     void SetHumiditySpraySettings(uint8_t channel,HumiditySpraySettings& val);
+
+    bool isScheduleActive();
+    void setScheduleActive(bool en);
     
     
 };

@@ -157,6 +157,8 @@ void GlobalSettings::setup()
     } // for
   } // checkHeader
 
+  scheduleActiveFlag = read8(SCHEDULE_ACTIVE_FLAG_ADDRESS,0) == 1;  
+
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::setTimeSyncSettings(TimeSyncSettings& val)
@@ -1517,5 +1519,16 @@ void GlobalSettings::SetHttpApiKey(const char* val)
     
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+bool GlobalSettings::isScheduleActive()
+{
+  return scheduleActiveFlag;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void GlobalSettings::setScheduleActive(bool val)
+{
+   scheduleActiveFlag = val;
+   MemWrite(SCHEDULE_ACTIVE_FLAG_ADDRESS, val ? 1 : 0); 
+}
+//--------------------------------------------------------------------------------------------------------------------------------------        
 
 
