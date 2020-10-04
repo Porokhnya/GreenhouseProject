@@ -1047,6 +1047,22 @@ bool  PhModule::ExecCommand(const Command& command, bool wantAnswer)
              PublishSingleton = REG_SUCC;
           }
        } // PH_SETTINGS_COMMAND
+       else
+       if(param == F("TARGET")) // установить настройки результирующего pH, CTSET=PH|TARGET|ph_target
+       {
+          if(argsCnt < 2)
+          {
+              PublishSingleton = PARAMS_MISSED;
+          }
+          else
+          {
+               phTarget = atoi(command.GetArg(1));
+               SaveSettings();
+
+               PublishSingleton.Flags.Status = true;
+               PublishSingleton = REG_SUCC;
+          }
+       } // if(param == F("TARGET"))
        
      } // else argsCount >= 1
      

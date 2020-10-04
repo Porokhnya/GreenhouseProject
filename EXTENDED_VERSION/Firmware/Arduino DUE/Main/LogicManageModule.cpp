@@ -4563,7 +4563,31 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
                   
                 } // if(channelNum >= 0 && channelNum <= 2)
                 
-              } // if(argsCount > 9)
+              } // if(argsCount > 10)
+              else
+              if(argsCount > 5) // настройки канала отопления, СTSET=LOGIC|HEAT|CHANNEL|num|minTemp|maxTemp|ethalonTemp
+              {
+                
+                int channelNum = atoi(command.GetArg(2));
+                if(channelNum >= 0 && channelNum <= 2)
+                {
+                  HeatSettings* h = channelNum == 0 ? &heatSection1 : channelNum == 1 ? &heatSection2 : &heatSection3;
+                  
+                  h->minTemp = atoi(command.GetArg(3));
+                  h->maxTemp = atoi(command.GetArg(4));
+                  h->ethalonTemp = atoi(command.GetArg(5));
+
+                  MainController->GetSettings()->SetHeatSettings(channelNum,*h);
+
+                  // перезагружаем настройки отопления
+                  ReloadHeatSettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum << PARAM_DELIMITER << REG_SUCC;
+                }
+                  
+              } // if(argsCount > 5)
             
            } // if(param == F("CHANNEL"))
            
@@ -4673,7 +4697,7 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
           uint8_t t100 = atoi(command.GetArg(5));
           int16_t histeresis = atoi(command.GetArg(6));
           int16_t sensorIndex = atoi(command.GetArg(7));
-		  bool active  = atoi(command.GetArg(8)) != 0;
+		      bool active  = atoi(command.GetArg(8)) != 0;
 
           GlobalSettings* settings = MainController->GetSettings();
           settings->Set25PercentsOpenTemp(sectionNum,t25);
@@ -4691,10 +4715,71 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
           PublishSingleton.Flags.Status = true;
           PublishSingleton = which;
           PublishSingleton << PARAM_DELIMITER << sectionNum << PARAM_DELIMITER << REG_SUCC;
-        }
+        } // if(argsCount > 8)
+        
       #endif // #ifdef USE_WINDOW_MANAGE_MODULE
       
      } // if(which == F("TSETT"))
+     else
+     if(which == F("TTEMP")) // установить температуры открытия для секций фрамуг: CTSET=LOGIC|TTEMP|section number|25% temp|50% temp|75% temp|100% temp
+     {
+      #ifdef USE_WINDOW_MANAGE_MODULE
+        if(argsCount > 5)
+        {
+          uint8_t sectionNum = atoi(command.GetArg(1));
+          if(sectionNum > 3)
+          {
+            sectionNum = 3;
+          }
+
+          uint8_t t25 = atoi(command.GetArg(2));
+          uint8_t t50 = atoi(command.GetArg(3));
+          uint8_t t75 = atoi(command.GetArg(4));
+          uint8_t t100 = atoi(command.GetArg(5));
+
+          GlobalSettings* settings = MainController->GetSettings();
+          settings->Set25PercentsOpenTemp(sectionNum,t25);
+          settings->Set50PercentsOpenTemp(sectionNum,t50);
+          settings->Set75PercentsOpenTemp(sectionNum,t75);
+          settings->Set100PercentsOpenTemp(sectionNum,t100);
+      
+          ReloadWindowsSettings();
+
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = which;
+          PublishSingleton << PARAM_DELIMITER << sectionNum << PARAM_DELIMITER << REG_SUCC;
+        } // if(argsCount > 5)
+        
+      #endif // #ifdef USE_WINDOW_MANAGE_MODULE
+      
+     } // if(which == F("TTEMP"))     
+     else
+     if(which == F("TACTIVE")) // вкл/выкл модуль управления окнами, CTSET=LOGIC|TACTIVE|section number|active
+     {
+      
+      #ifdef USE_WINDOW_MANAGE_MODULE
+        if(argsCount > 2)
+        {
+          uint8_t sectionNum = atoi(command.GetArg(1));
+          if(sectionNum > 3)
+          {
+            sectionNum = 3;
+          }
+
+          bool active  = atoi(command.GetArg(2)) != 0;
+          
+          GlobalSettings* settings = MainController->GetSettings();
+          settings->SetWMActive(sectionNum,active);
+
+          ReloadWindowsSettings();
+
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = which;
+          PublishSingleton << PARAM_DELIMITER << sectionNum << PARAM_DELIMITER << REG_SUCC;
+        }
+      #endif // #ifdef USE_WINDOW_MANAGE_MODULE
+      
+     } // if(which == F("TACTIVE"))
 	  else
       if(which == F("WINDSETT")) // CTSET=LOGIC|WINDSETT|wind speed close border|hurricane close border
       {
@@ -4861,7 +4946,30 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
                   
                 } // if(channelNum >= 0 && channelNum <= 2)
                 
-              } // if(argsCount > 9)
+              } // if(argsCount > 7)
+              else
+              if(argsCount > 3) // настройки канала затенения, СTSET=LOGIC|SHADOW|CHANNEL|num|lux
+              {
+                int channelNum = atoi(command.GetArg(2));
+                if(channelNum >= 0 && channelNum <= 2)
+                {
+                  
+                  ShadowSettings* h = channelNum == 0 ? &shadowSection1 : channelNum == 1 ? &shadowSection2 : &shadowSection3;
+                  
+                  h->lux = atol(command.GetArg(3));
+
+                  MainController->GetSettings()->SetShadowSettings(channelNum,*h);
+
+                  // перезагружаем настройки затенения
+                  ReloadShadowSettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum << PARAM_DELIMITER << REG_SUCC;
+                  
+                } // if(channelNum >= 0 && channelNum <= 2)
+                
+              } // if(argsCount > 3)
             
            } // if(param == F("CHANNEL"))
            
@@ -5030,7 +5138,7 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
                   
                 } // if(channelNum >= 0 && channelNum <= 2)
                 
-              } // if(argsCount > 9)
+              } // if(argsCount > 8)
             
            } // if(param == F("CHANNEL"))
            
@@ -5345,7 +5453,7 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
               }
            } // if(param == F("ACTIVE"))
            else
-           if(param == F("CHANNEL")) // настройки канала вентиляции, СTSET=LOGIC|HSPRAY|CHANNEL|num|active|sensorIndex|sprayOnValue|sprayOffValue|histeresis|startWorkTime|endWorkTime
+           if(param == F("CHANNEL")) // настройки канала распрыскивания, СTSET=LOGIC|HSPRAY|CHANNEL|num|active|sensorIndex|sprayOnValue|sprayOffValue|histeresis|startWorkTime|endWorkTime
            {
               if(argsCount > 9)
               {
@@ -5375,6 +5483,29 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
                 } // if(channelNum >= 0 && channelNum <= 2)
                 
               } // if(argsCount > 9)
+              else
+              if(argsCount > 4) // настройки канала распрыскивания, СTSET=LOGIC|HSPRAY|CHANNEL|num|sprayOnValue|sprayOffValue
+              {
+                int channelNum = atoi(command.GetArg(2));
+                if(channelNum >= 0 && channelNum <= 2)
+                {
+                  HumiditySpray* v = channelNum == 0 ? &spray1 : channelNum == 1 ? &spray2 : &spray3;
+                  HumiditySpraySettings vs = v->getSettings();
+                  
+                  vs.sprayOnValue = atoi(command.GetArg(3));
+                  vs.sprayOffValue = atoi(command.GetArg(4));
+
+                  MainController->GetSettings()->SetHumiditySpraySettings(channelNum,vs);
+
+                  // перезагружаем настройки вентиляции
+                  ReloadHumiditySpraySettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum << PARAM_DELIMITER << REG_SUCC;
+                  
+                } // if(channelNum >= 0 && channelNum <= 2)                
+              } // if(argsCount > 4)
             
            } // if(param == F("CHANNEL"))
            
@@ -5548,7 +5679,28 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
                   
                 } // if(channelNum >= 0 && channelNum <= 2)
                 
-              } // if(argsCount > 9)
+              } // if(argsCount > 6)
+              else
+              if(argsCount > 3) // настройки канала термостата, СTSET=LOGIC|THERMOSTAT|CHANNEL|num|temp
+              {
+                int channelNum = atoi(command.GetArg(2));
+                if(channelNum >= 0 && channelNum <= 2)
+                {
+                  Thermostat* v = channelNum == 0 ? &thermostat1 : channelNum == 1 ? &thermostat2 : &thermostat3;
+                  ThermostatSettings vs = v->getSettings();
+                  
+                  vs.temp = atoi(command.GetArg(3));
+
+                  MainController->GetSettings()->SetThermostatSettings(channelNum,vs);
+
+                  // перезагружаем настройки термостатов
+                  ReloadThermostatSettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param << PARAM_DELIMITER << channelNum << PARAM_DELIMITER << REG_SUCC; 
+                }               
+              } // if(argsCount > 3)
             
            } // if(param == F("CHANNEL"))
            
@@ -5580,7 +5732,22 @@ bool  LogicManageModuleClass::ExecCommand(const Command& command, bool wantAnswe
                   PublishSingleton.Flags.Status = true;
                   PublishSingleton = which;
                   PublishSingleton << PARAM_DELIMITER << param  << PARAM_DELIMITER << REG_SUCC;
-              }
+              } // if(argsCount > 6)
+              else
+              if(argsCount > 2) // CTSET=LOGIC|LIGHT|SETTINGS|lux
+              {
+                  lightSettings.lux = atol(command.GetArg(2));
+
+                  MainController->GetSettings()->SetLightSettings(lightSettings);
+
+                  // перезагружаем настройки по контролю света
+                  ReloadLightSettings();
+
+                  PublishSingleton.Flags.Status = true;
+                  PublishSingleton = which;
+                  PublishSingleton << PARAM_DELIMITER << param  << PARAM_DELIMITER << REG_SUCC;                
+              } // if(argsCount > 2)
+              
             } // if(param == F("SETTINGS"))
              else
            if(param == F("ACTIVE")) // вкл/выкл модуль управления досветкой, CTSET=LOGIC|LIGHT|ACTIVE|active flag

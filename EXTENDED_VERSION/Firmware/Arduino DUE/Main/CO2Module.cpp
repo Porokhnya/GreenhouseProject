@@ -588,6 +588,20 @@ bool  CO2Module::ExecCommand(const Command& command, bool wantAnswer)
             PublishSingleton << PARAM_DELIMITER << settings.active;
           }
       } // if(which == F("ACTIVE"))
+       else
+      if(which == F("PPM")) // CTSET=CO2|PPM|ppm value
+      {
+          if(argsCount > 1)
+          {
+            settings.ppm = atoi(command.GetArg(1));
+            MainController->GetSettings()->SetCO2Settings(settings);
+            ReloadSettings();
+            
+            PublishSingleton.Flags.Status = true;
+            PublishSingleton = which;
+            PublishSingleton << PARAM_DELIMITER << settings.ppm;
+          }
+      } // if(which == F("PPM"))
       
   } // ctSET
 
