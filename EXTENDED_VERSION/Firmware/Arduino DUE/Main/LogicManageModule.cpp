@@ -690,7 +690,7 @@ void HumiditySpray::reloadSettings()
 
   if(!settings.active) // выключаем, если неактивны
   {
-    if(workMode == vwmAuto)
+    if(workMode == hsmAuto)
     {
       setState(false);      
     }
@@ -701,7 +701,7 @@ void HumiditySpray::reloadSettings()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void HumiditySpray::update()
 {
-  if(workMode == vwmManual) // ручной режим работы, ничего не надо делать
+  if(workMode == hsmManual) // ручной режим работы, ничего не надо делать
   {
     return;
   }
