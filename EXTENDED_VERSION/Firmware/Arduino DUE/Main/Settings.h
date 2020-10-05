@@ -225,9 +225,11 @@ class GlobalSettings
    uint8_t wateringStopBorder;
    uint8_t turnOnPump;
    uint8_t turnWateringToAutoAfterMidnight;
+   uint8_t wateringStartBorder;
 
 
    WateringChannelOptions wateringChannels[WATER_RELAYS_COUNT];
+   uint8_t wateringChannelsStartBorders[WATER_RELAYS_COUNT];
 
    IoTSettings iotSettings;
 
@@ -308,6 +310,9 @@ class GlobalSettings
      uint8_t GetWateringStopBorder();
      void SetWateringStopBorder(uint8_t val);
 
+     uint8_t GetWateringStartBorder();
+     void SetWateringStartBorder(uint8_t val);
+
     uint8_t GetTurnOnPump();
     void SetTurnOnPump(uint8_t val);
 
@@ -329,6 +334,8 @@ class GlobalSettings
      uint8_t GetChannelWateringStopBorder(uint8_t idx);
      void SetChannelWateringStopBorder(uint8_t idx,uint8_t val);
 
+     uint8_t GetChannelWateringStartBorder(uint8_t idx);
+     void SetChannelWateringStartBorder(uint8_t idx,uint8_t val);
 
 
     uint8_t GetOpenTemp();

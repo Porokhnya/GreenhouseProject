@@ -37,6 +37,15 @@ void GlobalSettings::setup()
 
     }
 
+    // читаем настройки нижних порогов включения каналов
+    uint16_t sAddr = WATERING_START_BORDER_ADDRESS;
+    wateringStartBorder = read8(sAddr,0); sAddr++;
+
+     for(uint8_t idx=0;idx < WATER_RELAYS_COUNT; idx++)
+     {
+        wateringChannelsStartBorders[idx] = read8(sAddr,0); sAddr++;
+     }
+
     // настройки по умолчанию для каналов
     for(uint8_t idx=0;idx < WATER_RELAYS_COUNT; idx++)
     {
@@ -49,7 +58,7 @@ void GlobalSettings::setup()
       if((uint8_t)wateringChannels[idx].sensorIndex == 0xFF)
         wateringChannels[idx].sensorIndex = -1;
 
-      if(wateringChannels[idx].stopBorder> 100)
+      if(wateringChannels[idx].stopBorder > 100)
         wateringChannels[idx].stopBorder = 0;
         
     } // for
@@ -1157,6 +1166,18 @@ void GlobalSettings::SetChannelWateringStopBorder(uint8_t idx,uint8_t val)
   MemWrite(writeAddr,val);     
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+uint8_t GlobalSettings::GetChannelWateringStartBorder(uint8_t idx)
+{
+  return wateringChannelsStartBorders[idx];
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void GlobalSettings::SetChannelWateringStartBorder(uint8_t idx,uint8_t val)
+{
+  wateringChannelsStartBorders[idx] = val;
+  uint16_t writeAddr = WATERING_START_BORDER_ADDRESS + idx + 1; // в первом байте - настройки для всех каналов. Со второго - идут настройки для отдельных каналов.
+  MemWrite(writeAddr,val);     
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
 String GlobalSettings::GetStationPassword()
 {
   return stationPassword;
@@ -1335,6 +1356,17 @@ void GlobalSettings::SetWateringStopBorder(uint8_t val)
 {
   wateringStopBorder = val;
   MemWrite(WATERING_STOP_BORDER_EEPROM_ADDR,val);
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+uint8_t GlobalSettings::GetWateringStartBorder()
+{
+  return wateringStartBorder;
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+void GlobalSettings::SetWateringStartBorder(uint8_t val)
+{
+  wateringStartBorder = val;
+  MemWrite(WATERING_START_BORDER_ADDRESS,val);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 int8_t GlobalSettings::GetWateringSensorIndex()

@@ -138,6 +138,7 @@ void WateringChannel::Setup(byte index)
     flags.index = index;
     flags.isON = flags.lastIsON = false;
     flags.wateringTimer = 0;
+    state = moistureWaitLowBorder; // ждём, пока влажность почвы упадёт ниже нижнего порога
   
     WTR_LOG(F("[WTR] - setup channel "));
     WTR_LOG(String(flags.index));
@@ -378,6 +379,7 @@ void WateringChannel::Update(WateringModule* m,WateringWorkMode currentWorkMode,
      uint32_t timeToWatering = currentWateringOption == wateringWeekDays ? settings->GetWateringTime() : settings->GetChannelWateringTime(flags.index); // время полива (в минутах!)
      int8_t sensorIndex = currentWateringOption == wateringWeekDays ? settings->GetWateringSensorIndex() : settings->GetChannelWateringSensorIndex(flags.index);
      int8_t stopBorder = currentWateringOption == wateringWeekDays ? settings->GetWateringStopBorder() : settings->GetChannelWateringStopBorder(flags.index);
+     int8_t startBorder = currentWateringOption == wateringWeekDays ? settings->GetWateringStartBorder() : settings->GetChannelWateringStartBorder(flags.index);
      
 
       // переход через день недели мы фиксируем однократно, поэтому нам важно его не пропустить.
@@ -393,28 +395,69 @@ void WateringChannel::Update(WateringModule* m,WateringWorkMode currentWorkMode,
     uint16_t currentTimeInMinutes = currentTime.hour*60 + currentTime.minute;
     bool canWork = bitRead(weekDays,currentTime.dayOfWeek-1) && (currentTimeInMinutes >= startWateringTime);
 
+    #ifdef USE_SOIL_MOISTURE_MODULE // только если модуль влажности почвы есть в прошивке
+    
     if(canWork)
     {
-      // проверяем, можем ли мы работать по условию с датчика влажности почвы
-      if(sensorIndex > -1 && stopBorder > 0)
+      // мы можем работать по времени, теперь проверяем, можем ли мы работать по условию с датчика влажности почвы
+            
+      if(sensorIndex > -1) // есть привязка к датчику влажности почвы
       {
+
+        // по датчику почвы следует работать по следующему алгоритму:
+        // 1. если влажность почвы ниже нижнего порога - то включаемся, и работаем, пока влажность почвы не достигнет верхнего порога.
+        // 2. По превышению верхнего порога - однозначно выключаемся.
+        
         AbstractModule* mod = MainController->GetModuleByID("SOIL");
         if(mod)
         {
            OneState* os = mod->State.GetState(StateSoilMoisture,sensorIndex);
+           
            if(os && os->HasData())
            {
               HumidityPair hp = *os;
 
-                // выключаем по превышению МАКСИМАЛЬНОГО порога влажности почвы
-              if(hp.Current.Value >= stopBorder) // показания с датчика больше или равны порогу выключения
+              // проверяем состояние работы с влажностью почвы
+              switch(state)
               {
-                canWork = false;
-              }
+                case moistureWaitLowBorder: // ждём, пока влажность не опустится ниже нижнего порога
+                {                  
+                  if(hp.Current.Value <= startBorder)
+                  {
+                    // влажность упала ниже нижнего порога, можно включать.
+                    // переменная canWork в этой ветке - true, значит, мы и так можем работать по времени.
+                    // следовательно - достаточно переключиться на другую ветку конечного автомата.
+                    state = moistureWaitHighBorder;
+                  }
+                }
+                break; // moistureWaitLowBorder
+
+                case moistureWaitHighBorder: // ждём превышения верхнего порога влажности почвы
+                {
+                  if(hp.Current.Value >= stopBorder)
+                  {
+                    // верхний порог превышен, надо выключаться, и переключаться на ожидание падения влажности почвы на минимальный порог
+                    canWork = false;
+                    state = moistureWaitLowBorder;
+                  }
+                }
+                break; // moistureWaitHighBorder
+                
+              } // switch
+
+               
+           } // if(os && os->HasData())
+           else
+           {
+             canWork = false; // нет данных с датчика влажности почвы, а он прописан - поэтому немедленно останавливаемся !!!
            }
         }
-      } // if
-    }
+      } // if(sensorIndex > -1)
+      
+      
+    } // if(canWork)
+    
+   #endif // USE_SOIL_MOISTURE_MODULE    
   
     if(!canWork)
      { 
@@ -1228,7 +1271,7 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
         String which = command.GetArg(0);
         //which.toUpperCase();
 
-        if(which == WATER_SETTINGS_COMMAND) // CTSET=WATER|T_SETT|WateringOption|WateringDays|WateringTime|StartTime|TurnOnPump|wateringSensorIndex|wateringStopBorder|switchToAutoAfterMidnight
+        if(which == WATER_SETTINGS_COMMAND) // CTSET=WATER|T_SETT|WateringOption|WateringDays|WateringTime|StartTime|TurnOnPump|wateringSensorIndex|wateringStopBorder|switchToAutoAfterMidnight|wateringStartBorder(optional)
         {
           if(argsCount > 5)
           {
@@ -1258,6 +1301,12 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
                 switchToAutoAfterMidnight = (uint8_t) atoi(command.GetArg(8));             
               }
 
+              uint8_t wateringStartBorder = 0;
+              if(argsCount > 9)
+              {
+                wateringStartBorder = (uint8_t) atoi(command.GetArg(9));             
+              }
+
               GlobalSettings* settings = MainController->GetSettings();
 
               uint8_t oldWateringOption = settings->GetWateringOption();
@@ -1271,6 +1320,7 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
               settings->SetWateringSensorIndex(wateringSensorIndex);
               settings->SetWateringStopBorder(wateringStopBorder);
               settings->SetTurnWateringToAutoAfterMidnight(switchToAutoAfterMidnight);
+              settings->SetWateringStartBorder(wateringStartBorder);
 
               if(oldWateringOption != wateringOption)
               {
@@ -1306,7 +1356,7 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
           
         } // WATER_SETTINGS_COMMAND
         else
-        if(which == WATER_CHANNEL_SETTINGS) // настройки канала CTSET=WATER|CH_SETT|IDX|WateringDays|WateringTime|StartTime|wateringSensorIndex|wateringStopBorder
+        if(which == WATER_CHANNEL_SETTINGS) // настройки канала CTSET=WATER|CH_SETT|IDX|WateringDays|WateringTime|StartTime|wateringSensorIndex|wateringStopBorder|wateringStartBorder(optional)
         {
            if(argsCount > 4)
            {
@@ -1331,6 +1381,13 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
                     wateringStopBorder = (uint8_t) atoi(command.GetArg(6));
                   }
 
+                  uint8_t wateringStartBorder = 0;
+                  if(argsCount > 7)
+                  {
+                    wateringStartBorder = (uint8_t) atoi(command.GetArg(7));
+                  }
+                  
+
                   GlobalSettings* settings = MainController->GetSettings();
                   
                   settings->SetChannelWateringWeekDays(channelIdx,wDays);
@@ -1338,6 +1395,7 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
                   settings->SetChannelStartWateringTime(channelIdx,sTime);
                   settings->SetChannelWateringSensorIndex(channelIdx,wateringSensorIndex);
                   settings->SetChannelWateringStopBorder(channelIdx,wateringStopBorder);
+                  settings->SetChannelWateringStartBorder(channelIdx,wateringStartBorder);
 				  
                   
                   PublishSingleton.Flags.Status = true;
@@ -1670,7 +1728,8 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
           PublishSingleton << (settings->GetTurnOnPump()) << PARAM_DELIMITER;
           PublishSingleton << (settings->GetWateringSensorIndex()) << PARAM_DELIMITER;
           PublishSingleton << (settings->GetWateringStopBorder()) << PARAM_DELIMITER;
-          PublishSingleton << (settings->GetTurnWateringToAutoAfterMidnight());
+          PublishSingleton << (settings->GetTurnWateringToAutoAfterMidnight()) << PARAM_DELIMITER;
+          PublishSingleton << (settings->GetWateringStartBorder());
         }
         else
         if(t == WATER_CHANNELS_COUNT_COMMAND)
@@ -1738,7 +1797,8 @@ bool  WateringModule::ExecCommand(const Command& command, bool wantAnswer)
                     << (settings->GetChannelWateringTime(idx)) << PARAM_DELIMITER
                     << (settings->GetChannelStartWateringTime(idx)) << PARAM_DELIMITER
                     << (settings->GetChannelWateringSensorIndex(idx)) << PARAM_DELIMITER
-                    << (settings->GetChannelWateringStopBorder(idx));
+                    << (settings->GetChannelWateringStopBorder(idx))  << PARAM_DELIMITER
+                    << (settings->GetChannelWateringStartBorder(idx));
                   }
                   else
                   {
