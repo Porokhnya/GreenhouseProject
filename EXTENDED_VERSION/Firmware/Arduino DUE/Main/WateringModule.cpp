@@ -429,6 +429,10 @@ void WateringChannel::Update(WateringModule* m,WateringWorkMode currentWorkMode,
                     // следовательно - достаточно переключиться на другую ветку конечного автомата.
                     state = moistureWaitHighBorder;
                   }
+                  else
+                  {
+                    canWork = false; // влажность выше нижнего порога, не надо работать
+                  }
                 }
                 break; // moistureWaitLowBorder
 
