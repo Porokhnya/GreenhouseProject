@@ -844,60 +844,14 @@ bool HumiditySpray::canWork()
       uint32_t endDia = settings.endWorkTime;
       uint32_t nowMins = 60ul*currentTime.hour + currentTime.minute;
 
-      if(/*bitRead(sett.weekdays,currentTime.dayOfWeek-1) &&*/ (nowMins >= startDia && nowMins < endDia))
+      if((nowMins >= startDia && nowMins < endDia))
       {
         return true;
       }
 
      return false;
 
-  
-/*  
-  #ifdef HUMIDITY_SPRAY_DEBUG
-  Serial.print(F("SPRAY CHECK WANT ON: CHANNEL #"));
-  Serial.println(channel);
-  #endif
-
-  Temperature temp = LogicManageModule->getHimidity(settings.sensorIndex);
-  if(temp.Value == NO_TEMPERATURE_DATA)
-  {
-      #ifdef HUMIDITY_SPRAY_DEBUG
-        Serial.print(F("SPRAY: NO SENSOR DATA, CHANNEL #"));
-        Serial.println(channel);
-      #endif
-
-      return;
-  }
-
-  // получили температуру, проверяем уставки
-  int32_t tVal = 100l*temp.Value;
-  if(tVal < 0)
-    tVal -= temp.Fract;
-  else
-    tVal += temp.Fract;
-
-  int32_t tOnBorder = 100l*settings.temp;
-
-  if(tVal >= tOnBorder)
-  {
-    // мы превысили порог включения, надо включать !!!
-    #ifdef HUMIDITY_SPRAY_DEBUG
-    Serial.print(F("SPRAY: CHANNEL #"));
-    Serial.print(channel);
-    Serial.println(F(" WANTS ON!"));
-    #endif
-
-    // включаем вывод МК
-    setState(true);
-
-    // запоминаем время начала работы
-    workStartedAt = millis();
-
-    // переходим в режим проверки порога на выключение
-    machineState = ventCheckOff;
-    
-  } // if
-*/  
+   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_HUMIDITY_SPRAY_MODULE
