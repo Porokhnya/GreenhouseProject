@@ -748,6 +748,7 @@ function editWateringChannel(channel, row)
       $('#watering_time').val(channel.WateringTime); 
       $('#watering_sensor_index').val(channel.WateringSensorIndex); 
       $('#watering_stop_border').val(channel.WateringStopBorder); 
+      $('#watering_start_border').val(channel.WateringStartBorder); 
 
 
 
@@ -793,6 +794,18 @@ function editWateringChannel(channel, row)
         watering_stop_border = 0;
         
        channel.WateringStopBorder = (watering_stop_border);
+	   
+      var watering_start_border = parseInt($('#watering_start_border').val());
+      if(isNaN(watering_start_border))
+        watering_start_border = channel.WateringStartBorder;
+        
+      if(watering_start_border > 100)
+        watering_start_border = 100;
+       
+       if(watering_start_border < 0)
+        watering_start_border = 0;
+        
+       channel.WateringStartBorder = (watering_start_border);	   
 
         
        channel.WateringDays = 0;
@@ -1659,6 +1672,21 @@ function saveAllChannelsWateringOptions(watering_option)
       }
       else
         $('#all_watering_stop_border').val(wateringSettings.WateringStopBorder);
+		
+		
+      wBorder = parseInt($('#all_watering_start_border').val());
+      if(!isNaN(wBorder))
+      {
+        if(wBorder < 0)
+          wBorder = 0;
+        
+        if(wBorder > 100)
+          wBorder = 100;
+          
+        wateringSettings.WateringStartBorder = (wBorder);
+      }
+      else
+        $('#all_watering_start_border').val(wateringSettings.WateringStartBorder);		
 
         
       var wStart = parseInt($('#all_watering_start_hour').val());
@@ -1717,7 +1745,7 @@ function saveAllChannelsWateringOptions(watering_option)
      {
         var channel = wateringSettings.Channels[i];
         var cmd = "WATER|CH_SETT|" + i + '|' + channel.WateringDays + '|' + channel.WateringTime + '|' + channel.StartTime
-        + '|' + channel.WateringSensorIndex + '|' + channel.WateringStopBorder;
+        + '|' + channel.WateringSensorIndex + '|' + channel.WateringStopBorder + '|' + channel.WateringStartBorder;
         
         controller.queryCommand(false,cmd,function(obj,answer){
                 
@@ -1747,7 +1775,7 @@ function saveAllChannelsWateringOptions(watering_option)
     var cmd = "WATER|T_SETT|" + wateringSettings.WateringOption + '|' +   wateringSettings.WateringDays + '|' +
                wateringSettings.WateringTime + '|' + wateringSettings.StartTime + '|' + wateringSettings.TurnOnPump
                + '|' + wateringSettings.WateringSensorIndex + '|' + wateringSettings.WateringStopBorder + '|' +
-               wateringSettings.SwitchToAutoAfterMidnight;
+               wateringSettings.SwitchToAutoAfterMidnight + '|' + wateringSettings.WateringStartBorder;
                
 //     console.log(cmd);
                                   
@@ -2437,7 +2465,7 @@ controller.OnGetModulesList = function(obj)
               {           
                 //  console.log(answer);
               
-                  wateringSettings = new WateringSettings(answer.Params[2],answer.Params[3],answer.Params[4],answer.Params[5],answer.Params[6],answer.Params[7],answer.Params[8], answer.Params[9]);
+                  wateringSettings = new WateringSettings(answer.Params[2],answer.Params[3],answer.Params[4],answer.Params[5],answer.Params[6],answer.Params[7],answer.Params[8], answer.Params[9], answer.Params[10]);
                   
                   $('#all_watering_start_hour').val(parseInt(wateringSettings.StartTime/60));
                   $('#all_watering_start_minute').val(parseInt(wateringSettings.StartTime%60));
@@ -2445,6 +2473,7 @@ controller.OnGetModulesList = function(obj)
                   $('#all_watering_time').val(wateringSettings.WateringTime);
                   $('#all_watering_sensor_index').val(wateringSettings.WateringSensorIndex);
                   $('#all_watering_stop_border').val(wateringSettings.WateringStopBorder);
+                  $('#all_watering_start_border').val(wateringSettings.WateringStartBorder);
                   
                   var lst = $('#all_watering_channels_days').find('div #all_watering_channels_day');
 
@@ -2472,7 +2501,7 @@ controller.OnGetModulesList = function(obj)
                             
                                 if(channelData.IsOK)
                                 {
-                                  var channel = new WaterChannelSettings(channelData.Params[3], channelData.Params[4], channelData.Params[5], channelData.Params[6], channelData.Params[7]);
+                                  var channel = new WaterChannelSettings(channelData.Params[3], channelData.Params[4], channelData.Params[5], channelData.Params[6], channelData.Params[7], channelData.Params[8]);
                                   wateringSettings.Add(channel);
                                 } // if
                             
@@ -3283,7 +3312,7 @@ $(document).ready(function(){
     $('#iot_interval, #cc_param, #flow_calibraton1, #flow_calibraton2, #rule_pin_number, #timerPin1, #timerPin2, #timerPin3, #timerPin4, #timerOnMin1, #timerOnMin2, #timerOnMin3, #timerOnMin4, #timerOnSec1, #timerOnSec2, #timerOnSec3, #timerOnSec4, #timerOffMin1, #timerOffMin2, #timerOffMin3, #timerOffMin4, #timerOffSec1, #timerOffSec2, #timerOffSec3, #timerOffSec4, #rule_wnd_interval_input, #rule_sensor_index_input').forceNumericOnly();     
 
     $('#all_watering_start_hour, #all_watering_start_minute, #all_watering_time, #ph_calibraton, #ph4Voltage, #ph7Voltage, #ph10Voltage, #phTemperatureSensor, #phCalibrationTemperature, #phTarget, #phHisteresis, #phMixPumpTime, #phReagentPumpTime').forceNumericOnly();
-    $('#watering_start_hour, #watering_start_minute, #watering_time, #watering_sensor_index, #watering_stop_border, #all_watering_sensor_index, #all_watering_stop_border').forceNumericOnly(); 
+    $('#watering_start_hour, #watering_start_minute, #watering_time, #watering_sensor_index, #watering_stop_border, #watering_start_border, #all_watering_sensor_index, #all_watering_stop_border, #all_watering_start_border').forceNumericOnly(); 
 
     $('#rule_work_time_input, #rule_start_time_input').forceNumericOnly();
 //    $('#rule_work_time_input, #rule_start_time_input, #rule_sensor_value_input').forceNumericOnly();

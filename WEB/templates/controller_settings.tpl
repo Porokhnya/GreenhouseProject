@@ -528,7 +528,12 @@
     </div>    
 
     <div>
-      Порог выключения, %:<br/>
+      Влажность мин, %:<br/>
+      <input type='text' maxlength='5' id='watering_start_border' style='width:100%;'/>
+    </div>    
+	
+    <div>
+      Влажность макс, %:<br/>
       <input type='text' maxlength='5' id='watering_stop_border' style='width:100%;'/>
     </div>    
 
@@ -965,9 +970,15 @@
                                       Датчик влажности почвы:<br/>
                                       <input type='text' maxlength='5' id='all_watering_sensor_index' style='width:100%;'/>
                                     </div>
-                                                                        
+
                                     <div>
-                                      Порог выключения, %:<br/>
+                                      Влажность мин, %:<br/>
+                                      <input type='text' maxlength='5' id='all_watering_start_border' style='width:100%;'/>
+                                    </div>
+									
+									
+                                    <div>
+                                      Влажность макс, %:<br/>
                                       <input type='text' maxlength='5' id='all_watering_stop_border' style='width:100%;'/>
                                     </div>
 
