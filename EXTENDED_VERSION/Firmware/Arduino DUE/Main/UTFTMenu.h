@@ -698,6 +698,11 @@ class TFTWateringChannelSettingsScreen : public AbstractTFTScreen, public ITickH
       int decHumidityBorderButton, incHumidityBorderButton;
       void incHumidityBorder(int val);
 
+      TFTInfoBox* humidityBorderMinBox;
+      int decHumidityBorderMinButton, incHumidityBorderMinButton;
+      void incHumidityBorderMin(int val);
+      
+
       TFTInfoBox* sensorIndexBox;
       int decSensorIndexButton, incSensorIndexButton;
       void incSensorIndex(int val);
@@ -710,6 +715,7 @@ class TFTWateringChannelSettingsScreen : public AbstractTFTScreen, public ITickH
       uint16_t startWateringTime;
       int8_t wateringSensorIndex;
       uint8_t wateringStopBorder;
+      uint8_t wateringStartBorder;
 
       uint8_t humiditySensorsCount;
 

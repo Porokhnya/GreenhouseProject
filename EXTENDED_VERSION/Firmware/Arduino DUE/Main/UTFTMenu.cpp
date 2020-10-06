@@ -1264,6 +1264,7 @@ TFTWateringChannelSettingsScreen::TFTWateringChannelSettingsScreen()
   hourBox = NULL;
   durationBox = NULL;
   humidityBorderBox = NULL;
+  humidityBorderMinBox = NULL;
   sensorIndexBox = NULL;
 
   sensorDataLeft = sensorDataTop = 0;
@@ -1277,6 +1278,7 @@ TFTWateringChannelSettingsScreen::~TFTWateringChannelSettingsScreen()
  delete hourBox;
  delete durationBox;
  delete humidityBorderBox;
+ delete humidityBorderMinBox;
  delete sensorIndexBox;
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1284,7 +1286,8 @@ void TFTWateringChannelSettingsScreen::onButtonPressed(TFTMenu* menuManager,int 
 {
   tickerButton = -1;
   if(buttonID == decHourButton || buttonID == incHourButton || buttonID == decDurationButton || buttonID == incDurationButton
-  || buttonID == decHumidityBorderButton || buttonID == incHumidityBorderButton)
+  || buttonID == decHumidityBorderButton || buttonID == incHumidityBorderButton
+  || buttonID == decHumidityBorderMinButton || buttonID == incHumidityBorderMinButton)
   {
     tickerButton = buttonID;
     Ticker.start(this);
@@ -1317,6 +1320,12 @@ void TFTWateringChannelSettingsScreen::onTick()
   else
   if(tickerButton == incHumidityBorderButton)
     incHumidityBorder(1);
+  else
+  if(tickerButton == decHumidityBorderMinButton)
+    incHumidityBorderMin(-1);
+  else
+  if(tickerButton == incHumidityBorderMinButton)
+    incHumidityBorderMin(1);
 
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1344,6 +1353,7 @@ void TFTWateringChannelSettingsScreen::onActivate(TFTMenu* menuManager)
     startWateringTime = settings->GetChannelStartWateringTime(channelNumber) / 60;
     wateringSensorIndex = settings->GetChannelWateringSensorIndex(channelNumber);
     wateringStopBorder = settings->GetChannelWateringStopBorder(channelNumber);
+    wateringStartBorder = settings->GetChannelWateringStartBorder(channelNumber);
 
     // теперь смотрим, какие дни недели установлены для канала
     for(uint8_t i=0;i<7;i++)
@@ -1407,16 +1417,17 @@ void TFTWateringChannelSettingsScreen::setup(TFTMenu* menuManager)
     int initialLeftPos = leftPos;
     
     // теперь вычисляем верхнюю границу для отрисовки кнопок
-    int topPos = INFO_BOX_V_SPACING*2;
+    int topPos = INFO_BOX_V_SPACING;
     int secondRowTopPos = topPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
     int thirdRowTopPos = secondRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    int fourthRowTopPos = thirdRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
     
     const int spacing = 10;
 
     int buttonHeight = TFT_ARROW_BUTTON_HEIGHT;
 
-    int controlsButtonsWidth = (screenWidth - spacing*2 - initialLeftPos*2)/3;
-    int controlsButtonsTop = screenHeight - buttonHeight - spacing;
+    int controlsButtonsWidth = 170;//(screenWidth - spacing*2 - initialLeftPos*2)/3;
+    int controlsButtonsTop = fourthRowTopPos;//screenHeight - buttonHeight - spacing;
    // первая - кнопка назад
     backButton = screenButtons->addButton( initialLeftPos ,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
 
@@ -1475,7 +1486,18 @@ void TFTWateringChannelSettingsScreen::setup(TFTMenu* menuManager)
    textBoxTopPos = thirdRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
    topPos = thirdRowTopPos;
    leftPos = initialLeftPos;
+
+
+   decHumidityBorderMinButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
    
+   humidityBorderMinBox = new TFTInfoBox(TFT_WATERING_SETT_HUM_BORDER_MIN,TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incHumidityBorderMinButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
    decHumidityBorderButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
    leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
    
@@ -1483,8 +1505,14 @@ void TFTWateringChannelSettingsScreen::setup(TFTMenu* menuManager)
    leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
  
    incHumidityBorderButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
- 
-   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+
+// ЧЕТВЁРТАЯ СТРОКА
+   textBoxTopPos = fourthRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = fourthRowTopPos;
+   leftPos = initialLeftPos;
+   
+   leftPos += INFO_BOX_V_SPACING*4 + TFT_ARROW_BUTTON_WIDTH*2 + TFT_TEXT_INPUT_WIDTH;
 
    decSensorIndexButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
    leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
@@ -1500,6 +1528,8 @@ void TFTWateringChannelSettingsScreen::setup(TFTMenu* menuManager)
    #ifndef USE_SOIL_MOISTURE_MODULE
     screenButtons->disableButton(decHumidityBorderButton);
     screenButtons->disableButton(incHumidityBorderButton);
+    screenButtons->disableButton(decHumidityBorderMinButton);
+    screenButtons->disableButton(incHumidityBorderMinButton);
     screenButtons->disableButton(decSensorIndexButton);
     screenButtons->disableButton(incSensorIndexButton);
    #endif
@@ -1533,6 +1563,11 @@ void TFTWateringChannelSettingsScreen::saveSettings()
   if(settings->GetChannelWateringStopBorder(channelNumber) != wateringStopBorder)
   {
     settings->SetChannelWateringStopBorder(channelNumber, wateringStopBorder);
+  }
+
+  if(settings->GetChannelWateringStartBorder(channelNumber) != wateringStartBorder)
+  {
+    settings->SetChannelWateringStartBorder(channelNumber, wateringStartBorder);
   }
 
   // ну и, напоследок - если опция полива отлична от "раздельное управление каналами" - то включаем раздельное управление каналами
@@ -1606,6 +1641,20 @@ void TFTWateringChannelSettingsScreen::incHumidityBorder(int val)
   
   if(wateringStopBorder != oldW)
     drawValueInBox(humidityBorderBox,wateringStopBorder); 
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTWateringChannelSettingsScreen::incHumidityBorderMin(int val)
+{
+ 
+  uint8_t oldW = wateringStartBorder;
+  wateringStartBorder+=val;
+    
+  if(wateringStartBorder > 100)
+    wateringStartBorder = 100;
+  
+  if(wateringStartBorder != oldW)
+    drawValueInBox(humidityBorderMinBox,wateringStartBorder); 
 
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1734,6 +1783,18 @@ void TFTWateringChannelSettingsScreen::update(TFTMenu* menuManager)
       screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
       blinkSaveSettingsButton(true);
     }
+    else if(pressed_button == decHumidityBorderMinButton)
+    {
+      incHumidityBorderMin(-1);
+      screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+      blinkSaveSettingsButton(true);
+    }
+    else if(pressed_button == incHumidityBorderMinButton)
+    {
+      incHumidityBorderMin(1);
+      screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+      blinkSaveSettingsButton(true);
+    }
     else if(pressed_button == decSensorIndexButton)
     {
       incSensorIndex(-1);
@@ -1856,6 +1917,9 @@ void TFTWateringChannelSettingsScreen::draw(TFTMenu* menuManager)
 
   durationBox->draw(menuManager);
   drawValueInBox(durationBox,wateringTime);  
+
+  humidityBorderMinBox->draw(menuManager);
+  drawValueInBox(humidityBorderMinBox,wateringStartBorder);  
 
   humidityBorderBox->draw(menuManager);
   drawValueInBox(humidityBorderBox,wateringStopBorder);  
