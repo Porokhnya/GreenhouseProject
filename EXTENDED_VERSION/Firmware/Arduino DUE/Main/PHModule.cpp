@@ -361,7 +361,7 @@ bool PhModule::isLevelSensorTriggered(byte data)
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void PhModule::SaveSettings()
 {
-  uint16_t addr = PH_SETTINGS_EEPROM_ADDR;
+  uint32_t addr = PH_SETTINGS_EEPROM_ADDR;
 
   MemWrite(addr++,SETT_HEADER1);
   MemWrite(addr++,SETT_HEADER2);
@@ -424,7 +424,7 @@ void PhModule::SaveSettings()
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void PhModule::ReadSettings()
 {
-  uint16_t addr = PH_SETTINGS_EEPROM_ADDR;
+  uint32_t addr = PH_SETTINGS_EEPROM_ADDR;
   if(MemRead(addr++) != SETT_HEADER1)
     return;
 

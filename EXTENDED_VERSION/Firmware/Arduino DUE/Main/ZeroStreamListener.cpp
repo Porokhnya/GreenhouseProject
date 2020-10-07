@@ -191,7 +191,7 @@ void ZeroStreamListener::PrintSensorsValues(uint8_t totalCount,ModuleStates want
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 String ZeroStreamListener::GetGUID(const char* passedGuid)
 {
-    uint16_t address = GUID_ADDRESS;
+    uint32_t address = GUID_ADDRESS;
     
     byte header1 = MemRead(address++);
     byte header2 = MemRead(address++);
@@ -747,7 +747,7 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
         else
         if(t == F("RSTUNI"))
         {
-            uint16_t addr = UNI_SENSOR_INDICIES_EEPROM_ADDR;  
+            uint32_t addr = UNI_SENSOR_INDICIES_EEPROM_ADDR;  
             MemWrite(addr++,0);
             MemWrite(addr++,0);
             MemWrite(addr++,0);

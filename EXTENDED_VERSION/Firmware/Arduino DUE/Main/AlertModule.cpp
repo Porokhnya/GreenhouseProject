@@ -835,9 +835,9 @@ const char* AlertRule::GetAlertRule() // конструируем правило
   return SD_BUFFER;
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-uint8_t AlertRule::Save(uint16_t writeAddr) // сохраняем себя в EEPROM, возвращаем кол-во записанных байт
+uint8_t AlertRule::Save(uint32_t writeAddr) // сохраняем себя в EEPROM, возвращаем кол-во записанных байт
 {
-  uint16_t curWriteAddr = writeAddr;
+  uint32_t curWriteAddr = writeAddr;
 
   // сохраняем настройки
   byte* bPtr = (byte*) &Settings;
@@ -875,10 +875,10 @@ uint8_t AlertRule::Save(uint16_t writeAddr) // сохраняем себя в EE
   
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-uint8_t AlertRule::Load(uint16_t readAddr)
+uint8_t AlertRule::Load(uint32_t readAddr)
 {
   // загружаем правило из EEPROM
-  uint16_t curReadAddr = readAddr;
+  uint32_t curReadAddr = readAddr;
   linkedRulesIndices.clear();
   delete[] rawCommand; rawCommand = NULL;
 
@@ -1231,7 +1231,7 @@ void AlertModule::LoadRules() // читаем настройки из EEPROM
   }
   InitRules(); // инициализируем массив
 
- uint16_t readAddr = EEPROM_RULES_START_ADDR; // пишем с этого смещения
+ uint32_t readAddr = EEPROM_RULES_START_ADDR; // пишем с этого смещения
 
   // сначала читаем заголовок
   uint8_t h1, h2;
@@ -1285,7 +1285,7 @@ void AlertModule::ClearParams()
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void AlertModule::SaveRules() // сохраняем настройки в EEPROM
 {
-  uint16_t writeAddr = EEPROM_RULES_START_ADDR; // пишем с этого смещения
+  uint32_t writeAddr = EEPROM_RULES_START_ADDR; // пишем с этого смещения
 
   // сначала пишем заголовок
   MemWrite(writeAddr++,RULE_SETT_HEADER1);

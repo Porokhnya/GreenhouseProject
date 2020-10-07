@@ -139,8 +139,8 @@ class AlertRule
     size_t GetLinkedRulesCount();
     const char* GetLinkedRuleName(uint8_t idx);
 
-    uint8_t Save(uint16_t writeAddr); // сохраняем себя в EEPROM, возвращаем кол-во записанных байт
-    uint8_t Load(uint16_t readAddr); // читаем себя из EEPROM, возвращаем кол-во прочитанных байт
+    uint8_t Save(uint32_t writeAddr); // сохраняем себя в EEPROM, возвращаем кол-во записанных байт
+    uint8_t Load(uint32_t readAddr); // читаем себя из EEPROM, возвращаем кол-во прочитанных байт
 
     void Update(uint16_t dt
   #ifdef USE_DS3231_REALTIME_CLOCK 

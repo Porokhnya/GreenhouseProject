@@ -32,7 +32,7 @@ void CompositeCommandsModule::LoadCommands()
 {
   Clear();
   
-  uint16_t addr = COMPOSITE_COMMANDS_START_ADDR;
+  uint32_t addr = COMPOSITE_COMMANDS_START_ADDR;
   // читаем кол-во команд
   uint8_t cnt = MemRead(addr++);
   
@@ -72,7 +72,7 @@ void CompositeCommandsModule::LoadCommands()
 void CompositeCommandsModule::SaveCommands()
 {
   // сохраняем команды в EEPROM
-    uint16_t addr = COMPOSITE_COMMANDS_START_ADDR;
+    uint32_t addr = COMPOSITE_COMMANDS_START_ADDR;
     
     size_t cnt = commands.size();
   // сначала пишем кол-во команд

@@ -13,7 +13,7 @@ void ReservationModule::LoadReservations()
 {
   ClearReservations();
 
-  uint16_t addr = RESERVATION_ADDR;
+  uint32_t addr = RESERVATION_ADDR;
   
   uint8_t header1, header2;
   header1 = MemRead(addr++);
@@ -60,7 +60,7 @@ void ReservationModule::ClearReservations()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void ReservationModule::SaveReservations()
 {
-  uint16_t addr = RESERVATION_ADDR;
+  uint32_t addr = RESERVATION_ADDR;
 
   // пишем заголовок
   MemWrite(addr++,SETT_HEADER1);

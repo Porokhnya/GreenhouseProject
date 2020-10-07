@@ -500,7 +500,7 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
   private:
 
     template< typename T >
-    bool read(uint16_t address, T& result)
+    bool read(uint32_t address, T& result)
     {
         if(MemRead(address++) != SETT_HEADER1)
         {
@@ -525,7 +525,7 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
     }
 
     template< typename T >
-    void write(uint16_t address, T& val)
+    void write(uint32_t address, T& val)
     {
         MemWrite(address++,SETT_HEADER1);
         MemWrite(address++,SETT_HEADER2);

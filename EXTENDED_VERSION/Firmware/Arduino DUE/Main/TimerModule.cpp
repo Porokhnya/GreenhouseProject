@@ -230,7 +230,7 @@ void PeriodicTimer::Update()
 //--------------------------------------------------------------------------------------------------------------------------------
 void TimerModule::LoadTimers()
 {
-  uint16_t addr = TIMERS_EEPROM_ADDR;
+  uint32_t addr = TIMERS_EEPROM_ADDR;
   if(MemRead(addr++) != SETT_HEADER1)
     return;
 
@@ -251,7 +251,7 @@ void TimerModule::LoadTimers()
 //--------------------------------------------------------------------------------------------------------------------------------
 void TimerModule::SaveTimers()
 {
-  uint16_t addr = TIMERS_EEPROM_ADDR;
+  uint32_t addr = TIMERS_EEPROM_ADDR;
   MemWrite(addr++,SETT_HEADER1);
   MemWrite(addr++,SETT_HEADER2);
 

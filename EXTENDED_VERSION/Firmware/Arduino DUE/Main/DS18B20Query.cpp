@@ -26,7 +26,7 @@ void DS18B20Dispatcher::addBinding(uint8_t pin, uint8_t sensorIndex)
 	bnd.index = sensorIndex;
 	
 	// теперь вычитываем с EEPROM сохранённый адрес для этой записи
-	int readAddr = baseEEPROMAddress + savedBindings.size()*sizeof(DS18B20Binding);
+	uint32_t readAddr = baseEEPROMAddress + savedBindings.size()*sizeof(DS18B20Binding);
 	DS18B20Binding saved;
 	uint8_t* writePtr = (uint8_t*)&saved;
 	for(size_t i=0;i<sizeof(DS18B20Binding);i++)
@@ -352,7 +352,7 @@ int DS18B20Dispatcher::findFree(uint8_t pin, int& scanResultsIndex) // ищем 
 void DS18B20Dispatcher::saveBinding(int recordIndex)
 {
 	//СОХРАНЕНИЕ В EEPROM
-	int writeAddr = baseEEPROMAddress + recordIndex*sizeof(DS18B20Binding);
+	uint32_t writeAddr = baseEEPROMAddress + recordIndex*sizeof(DS18B20Binding);
 	uint8_t* readAddr = (uint8_t*)&(savedBindings[recordIndex]);
 	
 	for(size_t i=0;i<sizeof(DS18B20Binding);i++)

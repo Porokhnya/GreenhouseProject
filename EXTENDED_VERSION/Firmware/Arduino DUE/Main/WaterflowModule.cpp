@@ -40,7 +40,7 @@ void WaterflowModule::Setup()
   
   // читаем  сохранённые показания первого датчика
    byte* wrAddr = (byte*) &tmp;
-   uint16_t readPtr = WATERFLOW_EEPROM_ADDR;
+   uint32_t readPtr = WATERFLOW_EEPROM_ADDR;
   
   *wrAddr++ = MemRead(readPtr++);
   *wrAddr++ = MemRead(readPtr++);
@@ -182,7 +182,7 @@ void WaterflowModule::UpdateFlow(WaterflowStruct* wf,unsigned int delta, unsigne
     if(litresChanged && !(wf->totalLitres % bnd.SaveDelta) ) // сохраняем каждые N литров 
     {
       //сохраняем в EEPROM данные с датчика, чтобы не потерять при перезагрузке
-        uint16_t addr = WATERFLOW_EEPROM_ADDR + writeOffset;
+        uint32_t addr = WATERFLOW_EEPROM_ADDR + writeOffset;
         unsigned long toWrite = wf->totalLitres;
           
         const byte* readAddr = (const byte*) &toWrite;
@@ -320,7 +320,7 @@ bool  WaterflowModule::ExecCommand(const Command& command, bool wantAnswer)
                   pin2Flow.calibrationFactor = (uint8_t) atoi(command.GetArg(1));
                   pin3Flow.calibrationFactor = (uint8_t) atoi(command.GetArg(2));
                   
-                  uint16_t addr = WATERFLOW_EEPROM_ADDR + sizeof(uint32_t)*2;
+                  uint32_t addr = WATERFLOW_EEPROM_ADDR + sizeof(uint32_t)*2;
                   
                   MemWrite(addr++,pin2Flow.calibrationFactor);
                   MemWrite(addr++,pin3Flow.calibrationFactor);
@@ -337,7 +337,7 @@ bool  WaterflowModule::ExecCommand(const Command& command, bool wantAnswer)
           if(t == RESET_COMMAND)
           {
             // сбросить показания датчиков расхода
-            uint16_t addr = WATERFLOW_EEPROM_ADDR;
+            uint32_t addr = WATERFLOW_EEPROM_ADDR;
             for(uint8_t i=0;i<sizeof(uint32_t)*2;i++)
             {
               MemWrite(addr++,0xFF);
@@ -362,7 +362,7 @@ bool  WaterflowModule::ExecCommand(const Command& command, bool wantAnswer)
               uint8_t fNum = (uint8_t) atoi(command.GetArg(1));
               
               // сбросить показания датчика расхода
-              uint16_t addr = WATERFLOW_EEPROM_ADDR + sizeof(uint32_t)*fNum;
+              uint32_t addr = WATERFLOW_EEPROM_ADDR + sizeof(uint32_t)*fNum;
               for(uint8_t i=0;i<sizeof(uint32_t);i++)
               {
                 MemWrite(addr++,0xFF);

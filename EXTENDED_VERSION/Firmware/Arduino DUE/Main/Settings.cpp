@@ -27,7 +27,7 @@ void GlobalSettings::setup()
 
     for(uint8_t idx=0;idx < WATER_RELAYS_COUNT; idx++)
     {
-      uint16_t readAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions);
+      uint32_t readAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions);
       uint8_t* writeAddr = (uint8_t*) &(wateringChannels[idx]);
 
       for(size_t i=0;i<sizeof(WateringChannelOptions);i++)
@@ -38,7 +38,7 @@ void GlobalSettings::setup()
     }
 
     // читаем настройки нижних порогов включения каналов
-    uint16_t sAddr = WATERING_START_BORDER_ADDRESS;
+    uint32_t sAddr = WATERING_START_BORDER_ADDRESS;
     wateringStartBorder = read8(sAddr,0); sAddr++;
 
      for(uint8_t idx=0;idx < WATER_RELAYS_COUNT; idx++)
@@ -63,7 +63,7 @@ void GlobalSettings::setup()
         
     } // for
 
-    uint16_t readPtr = IOT_SETTINGS_EEPROM_ADDR;
+    uint32_t readPtr = IOT_SETTINGS_EEPROM_ADDR;
     memset(&iotSettings,0,sizeof(IoTSettings));
 
     byte* writePtr = (byte*) &iotSettings;
@@ -83,7 +83,7 @@ void GlobalSettings::setup()
    stationPassword = readString(STATION_PASSWORD_EEPROM_ADDR,20);
 
 
-  uint16_t addr = HTTP_API_KEY_ADDRESS;
+  uint32_t addr = HTTP_API_KEY_ADDRESS;
   
   byte header1 = MemRead(addr++);
   byte header2 = MemRead(addr++);
@@ -173,7 +173,7 @@ void GlobalSettings::setup()
 void GlobalSettings::setTimeSyncSettings(TimeSyncSettings& val)
 {
   memcpy(&timeSyncSettings,&val,sizeof(TimeSyncSettings));
-  uint16_t addr = SYNC_SETTINGS_ADDRESS;
+  uint32_t addr = SYNC_SETTINGS_ADDRESS;
   writeHeader(addr);
   addr += 2;
 
@@ -202,7 +202,7 @@ void GlobalSettings::WriteDeltaSettings(DeltaCountFunction OnDeltaGetCount, Delt
   if(!(OnDeltaGetCount && OnDeltaWrite)) // обработчики не заданы
     return;
 
-  uint16_t writeAddr = DELTA_SETTINGS_EEPROM_ADDR;
+  uint32_t writeAddr = DELTA_SETTINGS_EEPROM_ADDR;
 
   // записываем заголовок
   MemWrite(writeAddr++,SETT_HEADER1);
@@ -279,7 +279,7 @@ void GlobalSettings::ReadDeltaSettings(DeltaCountFunction OnDeltaSetCount, Delta
   if(!(OnDeltaSetCount && OnDeltaRead)) // обработчики не заданы
     return;
 
-  uint16_t readAddr = DELTA_SETTINGS_EEPROM_ADDR;
+  uint32_t readAddr = DELTA_SETTINGS_EEPROM_ADDR;
   uint8_t h1,h2;
   
   h1 = MemRead(readAddr++);
@@ -355,7 +355,7 @@ void GlobalSettings::ReadDeltaSettings(DeltaCountFunction OnDeltaSetCount, Delta
     
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-WindowsChannelsBinding GlobalSettings::readWBinding(uint16_t addr)
+WindowsChannelsBinding GlobalSettings::readWBinding(uint32_t addr)
 {
   WindowsChannelsBinding result;
    memset(&result,0,sizeof(WindowsChannelsBinding));
@@ -373,7 +373,7 @@ WindowsChannelsBinding GlobalSettings::readWBinding(uint16_t addr)
     return result;  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void GlobalSettings::writeWBinding(uint16_t addr, WindowsChannelsBinding& val)
+void GlobalSettings::writeWBinding(uint32_t addr, WindowsChannelsBinding& val)
 {
   writeHeader(addr);
   addr += sizeof(int16_t);
@@ -416,7 +416,7 @@ void GlobalSettings::SetWMBinding(WindowsChannelsBinding& val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::GetWindSpeed(int16_t defVal)
 {
-   uint16_t addr = WM_WIND_SPEED_ADDRESS;
+   uint32_t addr = WM_WIND_SPEED_ADDRESS;
   if(!checkHeader(addr))
     return defVal;
 
@@ -427,7 +427,7 @@ int16_t GlobalSettings::GetWindSpeed(int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetWindSpeed(int16_t val)
 {
-  uint16_t addr = WM_WIND_SPEED_ADDRESS;
+  uint32_t addr = WM_WIND_SPEED_ADDRESS;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);  
@@ -435,7 +435,7 @@ void GlobalSettings::SetWindSpeed(int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------    
 int16_t GlobalSettings::GetHurricaneSpeed(int16_t defVal)
 {
-   uint16_t addr = WM_HURRICANE_SPEED_ADDRESS;
+   uint32_t addr = WM_HURRICANE_SPEED_ADDRESS;
   if(!checkHeader(addr))
     return defVal;
 
@@ -446,7 +446,7 @@ int16_t GlobalSettings::GetHurricaneSpeed(int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetHurricaneSpeed(int16_t val)
 {
-  uint16_t addr = WM_HURRICANE_SPEED_ADDRESS;
+  uint32_t addr = WM_HURRICANE_SPEED_ADDRESS;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);  
@@ -457,7 +457,7 @@ LightSettings GlobalSettings::GetLightSettings()
   LightSettings result;
   memset(&result,0,sizeof(LightSettings));
 
-  uint16_t addr = WM_LIGHT_SETTINGS_ADDRESS;
+  uint32_t addr = WM_LIGHT_SETTINGS_ADDRESS;
   if(!checkHeader(addr))
     return result;
 
@@ -491,7 +491,7 @@ LightSettings GlobalSettings::GetLightSettings()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetLightSettings(LightSettings& val)
 {
-  uint16_t addr = WM_LIGHT_SETTINGS_ADDRESS;
+  uint32_t addr = WM_LIGHT_SETTINGS_ADDRESS;
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -510,7 +510,7 @@ DoorSettings GlobalSettings::GetDoorSettings(uint8_t channel)
 
   result.active = false;
   
-  uint16_t addr = WM_DOOR_SETTINGS_ADDRESS + channel*(sizeof(DoorSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_DOOR_SETTINGS_ADDRESS + channel*(sizeof(DoorSettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -529,7 +529,7 @@ DoorSettings GlobalSettings::GetDoorSettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetDoorSettings(uint8_t channel,DoorSettings& val)
 {
-  uint16_t addr = WM_DOOR_SETTINGS_ADDRESS + channel*(sizeof(DoorSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_DOOR_SETTINGS_ADDRESS + channel*(sizeof(DoorSettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -548,7 +548,7 @@ ShadowSettings GlobalSettings::GetShadowSettings(uint8_t channel)
 
   result.active = true;
   
-  uint16_t addr = WM_SHADOW_SETTINGS_ADDRESS + channel*(sizeof(ShadowSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_SHADOW_SETTINGS_ADDRESS + channel*(sizeof(ShadowSettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -567,7 +567,7 @@ ShadowSettings GlobalSettings::GetShadowSettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetShadowSettings(uint8_t channel,ShadowSettings& val)
 {
-  uint16_t addr = WM_SHADOW_SETTINGS_ADDRESS + channel*(sizeof(ShadowSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_SHADOW_SETTINGS_ADDRESS + channel*(sizeof(ShadowSettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -588,7 +588,7 @@ VentSettings GlobalSettings::GetVentSettings(uint8_t channel)
   result.histeresis = 5;
   result.maxWorkTime = VENT_MAX_WORK_TIME;
   
-  uint16_t addr = WM_VENT_SETTINGS_ADDRESS + channel*(sizeof(VentSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_VENT_SETTINGS_ADDRESS + channel*(sizeof(VentSettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -607,7 +607,7 @@ VentSettings GlobalSettings::GetVentSettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetVentSettings(uint8_t channel,VentSettings& val)
 {
-  uint16_t addr = WM_VENT_SETTINGS_ADDRESS + channel*(sizeof(VentSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_VENT_SETTINGS_ADDRESS + channel*(sizeof(VentSettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -627,7 +627,7 @@ HumiditySpraySettings GlobalSettings::GetHumiditySpraySettings(uint8_t channel)
   result.active = true;
   result.histeresis = 5;
   
-  uint16_t addr = WM_HUMIDITY_SPRAY_SETTINGS_ADDRESS + channel*(sizeof(HumiditySpraySettings) + sizeof(uint16_t));
+  uint32_t addr = WM_HUMIDITY_SPRAY_SETTINGS_ADDRESS + channel*(sizeof(HumiditySpraySettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -646,7 +646,7 @@ HumiditySpraySettings GlobalSettings::GetHumiditySpraySettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetHumiditySpraySettings(uint8_t channel,HumiditySpraySettings& val)
 {
-  uint16_t addr = WM_HUMIDITY_SPRAY_SETTINGS_ADDRESS + channel*(sizeof(HumiditySpraySettings) + sizeof(uint16_t));
+  uint32_t addr = WM_HUMIDITY_SPRAY_SETTINGS_ADDRESS + channel*(sizeof(HumiditySpraySettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -666,7 +666,7 @@ ThermostatSettings GlobalSettings::GetThermostatSettings(uint8_t channel)
   result.active = true;
   result.histeresis = 5;
   
-  uint16_t addr = WM_THERMOSTAT_SETTINGS_ADDRESS + channel*(sizeof(ThermostatSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_THERMOSTAT_SETTINGS_ADDRESS + channel*(sizeof(ThermostatSettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -685,7 +685,7 @@ ThermostatSettings GlobalSettings::GetThermostatSettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetThermostatSettings(uint8_t channel,ThermostatSettings& val)
 {
-  uint16_t addr = WM_THERMOSTAT_SETTINGS_ADDRESS + channel*(sizeof(ThermostatSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_THERMOSTAT_SETTINGS_ADDRESS + channel*(sizeof(ThermostatSettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -704,7 +704,7 @@ CycleVentSettings GlobalSettings::GetCycleVentSettings(uint8_t channel)
 
   result.active = true;
   
-  uint16_t addr = WM_CYCLE_SETTINGS_ADDRESS + channel*(sizeof(CycleVentSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_CYCLE_SETTINGS_ADDRESS + channel*(sizeof(CycleVentSettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -723,7 +723,7 @@ CycleVentSettings GlobalSettings::GetCycleVentSettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetCycleVentSettings(uint8_t channel,CycleVentSettings& val)
 {
-  uint16_t addr = WM_CYCLE_SETTINGS_ADDRESS + channel*(sizeof(CycleVentSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_CYCLE_SETTINGS_ADDRESS + channel*(sizeof(CycleVentSettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -742,7 +742,7 @@ CO2Settings GlobalSettings::GetCO2Settings()
 
   result.active = true;
   
-  uint16_t addr = WM_CO2_SETTINGS_ADDRESS;
+  uint32_t addr = WM_CO2_SETTINGS_ADDRESS;
   if(!checkHeader(addr))
     return result;
 
@@ -761,7 +761,7 @@ CO2Settings GlobalSettings::GetCO2Settings()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetCO2Settings(CO2Settings& val)
 {
-  uint16_t addr = WM_CO2_SETTINGS_ADDRESS;
+  uint32_t addr = WM_CO2_SETTINGS_ADDRESS;
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -784,7 +784,7 @@ HeatSettings GlobalSettings::GetHeatSettings(uint8_t channel)
   result.ethalonTemp = HEAT_DEFAULT_ETHALON_TEMP;
   result.histeresis = HEAT_DEFAULT_HISTERESIS;
   
-  uint16_t addr = WM_HEAT_SETTINGS_ADDRESS + channel*(sizeof(HeatSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_HEAT_SETTINGS_ADDRESS + channel*(sizeof(HeatSettings) + sizeof(uint16_t));
   if(!checkHeader(addr))
     return result;
 
@@ -803,7 +803,7 @@ HeatSettings GlobalSettings::GetHeatSettings(uint8_t channel)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetHeatSettings(uint8_t channel,HeatSettings& val)
 {
-  uint16_t addr = WM_HEAT_SETTINGS_ADDRESS + channel*(sizeof(HeatSettings) + sizeof(uint16_t));
+  uint32_t addr = WM_HEAT_SETTINGS_ADDRESS + channel*(sizeof(HeatSettings) + sizeof(uint16_t));
   writeHeader(addr);
   addr += sizeof(int16_t);
 
@@ -817,7 +817,7 @@ void GlobalSettings::SetHeatSettings(uint8_t channel,HeatSettings& val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::GetSealevel(int16_t defVal)
 {
-  uint16_t addr = WM_SEALEVEL_ADDRESS;
+  uint32_t addr = WM_SEALEVEL_ADDRESS;
   if(!checkHeader(addr))
     return defVal;
 
@@ -828,7 +828,7 @@ int16_t GlobalSettings::GetSealevel(int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetSealevel(int16_t val)
 {
-  uint16_t addr = WM_SEALEVEL_ADDRESS;
+  uint32_t addr = WM_SEALEVEL_ADDRESS;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -836,7 +836,7 @@ void GlobalSettings::SetSealevel(int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::GetHeatDriveWorkTime(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_HEAT_WORKTIME_ADDRESS + channel*4;
+  uint32_t addr = WM_HEAT_WORKTIME_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -847,7 +847,7 @@ int16_t GlobalSettings::GetHeatDriveWorkTime(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetHeatDriveWorkTime(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_HEAT_WORKTIME_ADDRESS + channel*4;
+  uint32_t addr = WM_HEAT_WORKTIME_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -855,7 +855,7 @@ void GlobalSettings::SetHeatDriveWorkTime(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::GetShadowDriveWorkTime(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_SHADOW_WORKTIME_ADDRESS + channel*4;
+  uint32_t addr = WM_SHADOW_WORKTIME_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -866,7 +866,7 @@ int16_t GlobalSettings::GetShadowDriveWorkTime(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetShadowDriveWorkTime(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_SHADOW_WORKTIME_ADDRESS + channel*4;
+  uint32_t addr = WM_SHADOW_WORKTIME_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -874,7 +874,7 @@ void GlobalSettings::SetShadowDriveWorkTime(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::GetWMHisteresis(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_HISTERESIS_ADDRESS + channel*4;
+  uint32_t addr = WM_HISTERESIS_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -885,7 +885,7 @@ int16_t GlobalSettings::GetWMHisteresis(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetWMHisteresis(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_HISTERESIS_ADDRESS + channel*4;
+  uint32_t addr = WM_HISTERESIS_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -893,7 +893,7 @@ void GlobalSettings::SetWMHisteresis(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::GetWMSensor(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_SENSOR_ADDRESS + channel*4;
+  uint32_t addr = WM_SENSOR_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -904,7 +904,7 @@ int16_t GlobalSettings::GetWMSensor(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetWMSensor(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_SENSOR_ADDRESS + channel*4;
+  uint32_t addr = WM_SENSOR_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -912,7 +912,7 @@ void GlobalSettings::SetWMSensor(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 bool GlobalSettings::GetWMActive(uint8_t channel,bool defVal)
 {
-  uint16_t addr = WM_ACTIVE_ADDRESS + channel*3;
+  uint32_t addr = WM_ACTIVE_ADDRESS + channel*3;
   if(!checkHeader(addr))
     return defVal;
 
@@ -923,7 +923,7 @@ bool GlobalSettings::GetWMActive(uint8_t channel,bool defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::SetWMActive(uint8_t channel,bool val)
 {
-  uint16_t addr = WM_ACTIVE_ADDRESS + channel*3;
+  uint32_t addr = WM_ACTIVE_ADDRESS + channel*3;
   writeHeader(addr);
   addr += sizeof(int16_t);
   MemWrite(addr,val ? 1 : 0);
@@ -931,7 +931,7 @@ void GlobalSettings::SetWMActive(uint8_t channel,bool val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::Get25PercentsOpenTemp(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_T25_ADDRESS + channel*4;
+  uint32_t addr = WM_T25_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -942,7 +942,7 @@ int16_t GlobalSettings::Get25PercentsOpenTemp(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::Set25PercentsOpenTemp(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_T25_ADDRESS + channel*4;
+  uint32_t addr = WM_T25_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -950,7 +950,7 @@ void GlobalSettings::Set25PercentsOpenTemp(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::Get50PercentsOpenTemp(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_T50_ADDRESS + channel*4;
+  uint32_t addr = WM_T50_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -961,7 +961,7 @@ int16_t GlobalSettings::Get50PercentsOpenTemp(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::Set50PercentsOpenTemp(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_T50_ADDRESS + channel*4;
+  uint32_t addr = WM_T50_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -969,7 +969,7 @@ void GlobalSettings::Set50PercentsOpenTemp(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::Get75PercentsOpenTemp(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_T75_ADDRESS + channel*4;
+  uint32_t addr = WM_T75_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -980,7 +980,7 @@ int16_t GlobalSettings::Get75PercentsOpenTemp(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::Set75PercentsOpenTemp(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_T75_ADDRESS + channel*4;
+  uint32_t addr = WM_T75_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
@@ -988,7 +988,7 @@ void GlobalSettings::Set75PercentsOpenTemp(uint8_t channel,int16_t val)
 //--------------------------------------------------------------------------------------------------------------------------------------
 int16_t GlobalSettings::Get100PercentsOpenTemp(uint8_t channel,int16_t defVal)
 {
-  uint16_t addr = WM_T100_ADDRESS + channel*4;
+  uint32_t addr = WM_T100_ADDRESS + channel*4;
   if(!checkHeader(addr))
     return defVal;
 
@@ -999,13 +999,13 @@ int16_t GlobalSettings::Get100PercentsOpenTemp(uint8_t channel,int16_t defVal)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::Set100PercentsOpenTemp(uint8_t channel,int16_t val)
 {
-  uint16_t addr = WM_T100_ADDRESS + channel*4;
+  uint32_t addr = WM_T100_ADDRESS + channel*4;
   writeHeader(addr);
   addr += sizeof(int16_t);
   write16(addr,val);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-bool GlobalSettings::checkHeader(uint16_t address)
+bool GlobalSettings::checkHeader(uint32_t address)
 {
   if(MemRead(address++) != SETT_HEADER1)
     return false;
@@ -1013,13 +1013,13 @@ bool GlobalSettings::checkHeader(uint16_t address)
   return MemRead(address) == SETT_HEADER2;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void GlobalSettings::writeHeader(uint16_t addr)
+void GlobalSettings::writeHeader(uint32_t addr)
 {
   MemWrite(addr++,SETT_HEADER1);
   MemWrite(addr,SETT_HEADER2);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-uint8_t GlobalSettings::read8(uint16_t address, uint8_t defaultVal)
+uint8_t GlobalSettings::read8(uint32_t address, uint8_t defaultVal)
 {
     uint8_t curVal = MemRead(address);
     if(curVal == 0xFF)
@@ -1028,7 +1028,7 @@ uint8_t GlobalSettings::read8(uint16_t address, uint8_t defaultVal)
    return curVal;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-uint16_t GlobalSettings::read16(uint16_t address, uint16_t defaultVal)
+uint16_t GlobalSettings::read16(uint32_t address, uint16_t defaultVal)
 {
     uint16_t val = 0;
     byte* b = (byte*) &val;
@@ -1042,7 +1042,7 @@ uint16_t GlobalSettings::read16(uint16_t address, uint16_t defaultVal)
     return val;  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void GlobalSettings::write16(uint16_t address, uint16_t val)
+void GlobalSettings::write16(uint32_t address, uint16_t val)
 {
   byte* b = (byte*) &val;
 
@@ -1051,7 +1051,7 @@ void GlobalSettings::write16(uint16_t address, uint16_t val)
       
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-unsigned long GlobalSettings::read32(uint16_t address, unsigned long defaultVal)
+unsigned long GlobalSettings::read32(uint32_t address, unsigned long defaultVal)
 {
    unsigned long val = 0;
     byte* b = (byte*) &val;
@@ -1065,7 +1065,7 @@ unsigned long GlobalSettings::read32(uint16_t address, unsigned long defaultVal)
     return val;    
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void GlobalSettings::write32(uint16_t address, unsigned long val)
+void GlobalSettings::write32(uint32_t address, unsigned long val)
 {
   byte* b = (byte*) &val;
 
@@ -1073,7 +1073,7 @@ void GlobalSettings::write32(uint16_t address, unsigned long val)
     MemWrite(address + i, *b++);  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-String GlobalSettings::readString(uint16_t address, byte maxlength)
+String GlobalSettings::readString(uint32_t address, byte maxlength)
 {
   String result;
   for(byte i=0;i<maxlength;i++)
@@ -1088,7 +1088,7 @@ String GlobalSettings::readString(uint16_t address, byte maxlength)
   return result;  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void GlobalSettings::writeString(uint16_t address, const String& v, byte maxlength)
+void GlobalSettings::writeString(uint32_t address, const String& v, byte maxlength)
 {
 
   for(byte i=0;i<maxlength;i++)
@@ -1113,7 +1113,7 @@ void GlobalSettings::SetChannelWateringWeekDays(uint8_t idx, uint8_t val)
 {
     // вычисляем начало адреса
     wateringChannels[idx].wateringWeekDays = val;
-    uint16_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions);
+    uint32_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions);
     MemWrite(writeAddr, val);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1125,7 +1125,7 @@ uint16_t GlobalSettings::GetChannelWateringTime(uint8_t idx)
 void GlobalSettings::SetChannelWateringTime(uint8_t idx,uint16_t val)
 {
     wateringChannels[idx].wateringTime = val;
-    uint16_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 1; // со второго байта в структуре идёт время продолжительности полива
+    uint32_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 1; // со второго байта в структуре идёт время продолжительности полива
     write16(writeAddr,val);  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1137,7 +1137,7 @@ uint16_t GlobalSettings::GetChannelStartWateringTime(uint8_t idx)
 void GlobalSettings::SetChannelStartWateringTime(uint8_t idx,uint16_t val)
 {
     wateringChannels[idx].startWateringTime = val;
-    uint16_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 3; // с четвёртого байта в структуре идёт время начала полива
+    uint32_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 3; // с четвёртого байта в структуре идёт время начала полива
     write16(writeAddr,val);    
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1149,7 +1149,7 @@ int8_t GlobalSettings::GetChannelWateringSensorIndex(uint8_t idx)
 void GlobalSettings::SetChannelWateringSensorIndex(uint8_t idx,int8_t val)
 {
    wateringChannels[idx].sensorIndex = val;
-   uint16_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 5; // с шестого байта в структуре идёт индекс датчика
+   uint32_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 5; // с шестого байта в структуре идёт индекс датчика
   MemWrite(writeAddr,val);   
   
 }
@@ -1162,7 +1162,7 @@ uint8_t GlobalSettings::GetChannelWateringStopBorder(uint8_t idx)
 void GlobalSettings::SetChannelWateringStopBorder(uint8_t idx,uint8_t val)
 {
   wateringChannels[idx].stopBorder = val;
-  uint16_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 6; // с седьмого байта в структуре идёт значение показаний датчика
+  uint32_t writeAddr = WATERING_CHANNELS_SETTINGS_EEPROM_ADDR + idx*sizeof(WateringChannelOptions) + 6; // с седьмого байта в структуре идёт значение показаний датчика
   MemWrite(writeAddr,val);     
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1174,7 +1174,7 @@ uint8_t GlobalSettings::GetChannelWateringStartBorder(uint8_t idx)
 void GlobalSettings::SetChannelWateringStartBorder(uint8_t idx,uint8_t val)
 {
   wateringChannelsStartBorders[idx] = val;
-  uint16_t writeAddr = WATERING_START_BORDER_ADDRESS + idx + 1; // в первом байте - настройки для всех каналов. Со второго - идут настройки для отдельных каналов.
+  uint32_t writeAddr = WATERING_START_BORDER_ADDRESS + idx + 1; // в первом байте - настройки для всех каналов. Со второго - идут настройки для отдельных каналов.
   MemWrite(writeAddr,val);     
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1236,7 +1236,7 @@ void GlobalSettings::SetSmsPhoneNumber(const String& v)
 void GlobalSettings::SetIoTSettings(IoTSettings& sett)
 {
     iotSettings = sett;
-    byte writePtr = IOT_SETTINGS_EEPROM_ADDR;
+    uint32_t writePtr = IOT_SETTINGS_EEPROM_ADDR;
     byte* readPtr = (byte*) &sett;
 
      for(size_t i=0;i<sizeof(IoTSettings);i++)
@@ -1472,7 +1472,7 @@ bool GlobalSettings::IsHttpApiEnabled()
 void GlobalSettings::SetHttpApiEnabled(bool val)
 {
   isHTTPEnabled = val;
-  uint16_t addr = HTTP_API_KEY_ADDRESS + 34;
+  uint32_t addr = HTTP_API_KEY_ADDRESS + 34;
   MemWrite(addr,val ? 1 : 0);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1485,7 +1485,7 @@ void GlobalSettings::SetTimezone(int16_t val)
 {
   timezone = val;
   
-  uint16_t addr = TIMEZONE_ADDRESS;
+  uint32_t addr = TIMEZONE_ADDRESS;
   
   MemWrite(addr++,SETT_HEADER1);
   MemWrite(addr++,SETT_HEADER2);
@@ -1532,7 +1532,7 @@ void GlobalSettings::SetHttpApiKey(const char* val)
 
   httpApiKey = val;
 
-  uint16_t addr = HTTP_API_KEY_ADDRESS;
+  uint32_t addr = HTTP_API_KEY_ADDRESS;
   
   MemWrite(addr++,SETT_HEADER1);
   MemWrite(addr++,SETT_HEADER2);
@@ -1560,6 +1560,22 @@ void GlobalSettings::setScheduleActive(bool val)
 {
    scheduleActiveFlag = val;
    MemWrite(SCHEDULE_ACTIVE_FLAG_ADDRESS, val ? 1 : 0); 
+}
+//--------------------------------------------------------------------------------------------------------------------------------------        
+void GlobalSettings::getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year)
+{
+  uint32_t addr = SCHEDULE_LAST_RUN_DATE_ADDRESS;
+  dayOfMonth = read8(addr,0);addr++;
+  month = read8(addr,0);addr++;
+  year = read16(addr,0);
+}
+//--------------------------------------------------------------------------------------------------------------------------------------        
+void GlobalSettings::setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year)
+{
+  uint32_t addr = SCHEDULE_LAST_RUN_DATE_ADDRESS;
+  MemWrite(addr,dayOfMonth);addr++;
+  MemWrite(addr,month);addr++;
+  write16(addr,year);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------        
 

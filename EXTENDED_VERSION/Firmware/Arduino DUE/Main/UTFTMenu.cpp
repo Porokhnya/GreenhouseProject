@@ -16304,7 +16304,7 @@ void TFTFlowScreen::setup(TFTMenu* menuManager)
   }
 
    //загружаем факторы калибровки
-  uint16_t addr = WATERFLOW_EEPROM_ADDR + sizeof(unsigned long)*2;
+  uint32_t addr = WATERFLOW_EEPROM_ADDR + sizeof(unsigned long)*2;
 
   //Serial.println("TFT");
  // Serial.println(addr);

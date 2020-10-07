@@ -2957,7 +2957,7 @@ void UniRegDispatcher::SetRFChannel(uint8_t channel) // устанавливае
 void UniRegDispatcher::ReadState()
 {
   //Тут читаем последнее запомненное состояние по индексам сенсоров
-  uint16_t addr = UNI_SENSOR_INDICIES_EEPROM_ADDR;
+  uint32_t addr = UNI_SENSOR_INDICIES_EEPROM_ADDR;
   uint8_t val = MemRead(addr++);
   if(val != 0xFF)
     currentTemperatureCount = val;
@@ -3067,7 +3067,7 @@ if(soilMoistureModule)
 void UniRegDispatcher::SaveState()
 {
   //Тут сохранение текущего состояния в EEPROM
-  uint16_t addr = UNI_SENSOR_INDICIES_EEPROM_ADDR;  
+  uint32_t addr = UNI_SENSOR_INDICIES_EEPROM_ADDR;  
   MemWrite(addr++,currentTemperatureCount);
   MemWrite(addr++,currentHumidityCount);
   MemWrite(addr++,currentLuminosityCount);

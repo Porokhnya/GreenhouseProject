@@ -540,7 +540,7 @@ void WateringChannel::DoLoadState(byte addressOffset)
     uint8_t savedDOW = 0xFF;
 
     // мы читаем 5 байт на канал, поэтому вычисляем адрес очень просто - по смещению addressOffset, в котором находится индекс канала
-    volatile uint16_t curReadAddr = WATERING_STATUS_EEPROM_ADDR + addressOffset*5;
+    volatile uint32_t curReadAddr = WATERING_STATUS_EEPROM_ADDR + addressOffset*5;
 
     savedDOW = MemRead(curReadAddr++);
 
@@ -608,7 +608,7 @@ void WateringChannel::DoSaveState(byte addressOffset,uint32_t wateringTimer)
     }
 
      //Тут сохранение в EEPROM статуса, что мы на сегодня уже полили сколько-то времени на канале
-    uint16_t wrAddr = WATERING_STATUS_EEPROM_ADDR + addressOffset*5; // адрес записи
+    uint32_t wrAddr = WATERING_STATUS_EEPROM_ADDR + addressOffset*5; // адрес записи
     
     // сохраняем в EEPROM день недели, для которого запомнили значение таймера
     MemWrite(wrAddr++,today);
@@ -1078,7 +1078,7 @@ void WateringModule::Skip(bool skipOrReset) // пропускаем полив �
   #endif
       
   // выставляем в EEPROM максимальное значение полива по каналам за сегодня
-  uint16_t wrAddr = WATERING_STATUS_EEPROM_ADDR;
+  uint32_t wrAddr = WATERING_STATUS_EEPROM_ADDR;
   uint8_t recordsCount = WATER_RELAYS_COUNT + 1;
   
   for(uint8_t i=0;i<recordsCount;i++)
@@ -1098,7 +1098,7 @@ void WateringModule::ResetChannelsState()
 {
   WTR_LOG(F("[WTR] - reset channels state\r\n"));
   //Тут затирание в EEPROM предыдущего сохранённого значения о статусе полива на всех каналах
-  uint16_t wrAddr = WATERING_STATUS_EEPROM_ADDR;
+  uint32_t wrAddr = WATERING_STATUS_EEPROM_ADDR;
   uint8_t bytes_to_write = 5 + WATER_RELAYS_COUNT*5;
   
   for(uint8_t i=0;i<bytes_to_write;i++)

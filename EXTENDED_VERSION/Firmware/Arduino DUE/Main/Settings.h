@@ -203,19 +203,19 @@ class GlobalSettings
 {
   private:
 
-   uint8_t read8(uint16_t address, uint8_t defaultVal);
+   uint8_t read8(uint32_t address, uint8_t defaultVal);
    
-   uint16_t read16(uint16_t address, uint16_t defaultVal);
-   void write16(uint16_t address, uint16_t val);
+   uint16_t read16(uint32_t address, uint16_t defaultVal);
+   void write16(uint32_t address, uint16_t val);
 
-   unsigned long read32(uint16_t address, unsigned long defaultVal);
-   void write32(uint16_t address, unsigned long val);
+   unsigned long read32(uint32_t address, unsigned long defaultVal);
+   void write32(uint32_t address, unsigned long val);
 
-   String readString(uint16_t address, byte maxlength);
-   void writeString(uint16_t address, const String& v, byte maxlength);
+   String readString(uint32_t address, byte maxlength);
+   void writeString(uint32_t address, const String& v, byte maxlength);
 
-   bool checkHeader(uint16_t addr);
-   void writeHeader(uint16_t addr);
+   bool checkHeader(uint32_t addr);
+   void writeHeader(uint32_t addr);
 
    uint8_t wateringOption;
    uint8_t wateringWeekDays;
@@ -408,8 +408,8 @@ class GlobalSettings
     WindowsChannelsBinding GetOrientationBinding();
     void SetOrientationBinding(WindowsChannelsBinding& val);
 
-    WindowsChannelsBinding readWBinding(uint16_t address);
-    void writeWBinding(uint16_t address, WindowsChannelsBinding& val);
+    WindowsChannelsBinding readWBinding(uint32_t address);
+    void writeWBinding(uint32_t address, WindowsChannelsBinding& val);
 
     int16_t GetWindSpeed(int16_t defVal=WM_DEFAULT_WIND_SPEED);
     void SetWindSpeed(int16_t val);
@@ -455,6 +455,8 @@ class GlobalSettings
 
     bool isScheduleActive();
     void setScheduleActive(bool en);
+    void getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year);
+    void setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year);
     
     
 };
