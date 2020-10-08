@@ -7362,10 +7362,10 @@ void TFTShadowSettingsScreen::onButtonReleased(TFTMenu* menuManager,int buttonID
 void TFTShadowSettingsScreen::onTick()
 {
   if(tickerButton == decLuxButton)
-    incLux(-11);
+    incLux(-200);
   else
   if(tickerButton == incLuxButton)
-    incLux(11);
+    incLux(200);
   else
   if(tickerButton == decHisteresisButton)
     incHisteresis(-7);

@@ -455,8 +455,8 @@ class GlobalSettings
 
     bool isScheduleActive();
     void setScheduleActive(bool en);
-    void getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year);
-    void setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year);
+    void getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year, uint8_t& hour, uint8_t& minute);
+    void setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year, uint8_t hour, uint8_t minute);
     
     
 };

@@ -37,6 +37,7 @@ void ScheduleModule::processScheduleFolder(const String& dirName,const String& w
             }
           }
           entry.close();
+          yield();
         } // while        
 
         root.close();
@@ -58,13 +59,15 @@ void ScheduleModule::processActiveSchedule()
    RealtimeClock rtc = MainController->GetClock();
    RTCTime tm = rtc.getTime();   
 
-   GlobalSettings* sett = MainController->GetSettings();
-   // проверяем, не выполняли ли мы на эту дату расписание?
-   uint8_t month, dayOfMonth;
-   uint16_t year;
-   sett->getLastScheduleRunDate(dayOfMonth,month,year);
 
-   if(!(dayOfMonth == tm.dayOfMonth && month == tm.month && year == tm.year)) // на сегодняшнюю дату расписания ещё не выполняли
+   GlobalSettings* sett = MainController->GetSettings();
+
+   // проверяем, не выполняли ли мы на эту дату и время расписание?
+   uint8_t month, dayOfMonth, hour, minute;
+   uint16_t year;
+   sett->getLastScheduleRunDate(dayOfMonth,month,year, hour, minute);
+
+   if(!(dayOfMonth == tm.dayOfMonth && month == tm.month && year == tm.year && hour == tm.hour && minute == tm.minute)) // на сегодняшнюю дату и время расписания ещё не выполняли
    {
    
      String nowStr = getNowStr(tm);
@@ -73,7 +76,7 @@ void ScheduleModule::processActiveSchedule()
      processScheduleFolder(dirName,nowStr);
   
      // выполнили, и запоминаем, за какую дату мы выполнили задание последний раз, чтобы не выполнять его ещё раз
-     sett->setLastScheduleRunDate(tm.dayOfMonth,tm.month,tm.year);
+     sett->setLastScheduleRunDate(tm.dayOfMonth,tm.month,tm.year, tm.hour, tm.minute);
    }
 
     
@@ -106,22 +109,24 @@ void ScheduleModule::Update()
     bFirst = false;
 
     processActiveSchedule();
+
+    timer = millis();
     
     return;
 
   }
 
-  //Тут раз в минуту проверяем на смену даты, и если она сменилась - выполняем текущее задание
+  // Тут раз в минуту опрашиваем активные расписания
   if(millis() - timer >= 60000ul)
   {
-    RealtimeClock rtc = MainController->GetClock();
-    RTCTime tm = rtc.getTime();   
+    //RealtimeClock rtc = MainController->GetClock();
+    //RTCTime tm = rtc.getTime();   
 
-    if(tm.dayOfMonth != lastTime.dayOfMonth || tm.month != lastTime.month || tm.year != lastTime.year)
-    {
-      lastTime = tm;
+    //if(tm.dayOfMonth != lastTime.dayOfMonth || tm.month != lastTime.month || tm.year != lastTime.year)
+    //{
+      //lastTime = tm;
       processActiveSchedule();
-    }
+    //}
    
     timer = millis();
   }
@@ -180,19 +185,51 @@ String ScheduleModule::getNowStr(RTCTime& tm)
    }
    nowStr += tm.dayOfMonth;
 
+   if(tm.hour < 10)
+   {
+    nowStr += '0';
+   }
+
+   nowStr += tm.hour;
+
+   if(tm.minute < 10)
+   {
+    nowStr += '0';
+   }
+
+   nowStr += tm.minute;
+
    return nowStr;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-bool ScheduleModule::isNowSchedule(const String& mmdd)
+bool ScheduleModule::isNowSchedule(const String& mmddhhmm)
 {
+  // проверяем свежедобавленное расписание: если оно для сегодняшней даты, и текущее время больше, чем время расписания - выполняем его
+  
   #ifdef USE_DS3231_REALTIME_CLOCK
 
    RealtimeClock rtc = MainController->GetClock();
    RTCTime tm = rtc.getTime();
+
+   if(mmddhhmm.length() > 7)
+   {
+      uint8_t month = mmddhhmm.substring(0,2).toInt();
+      uint8_t dayOfMonth = mmddhhmm.substring(2,4).toInt();
+      uint8_t hour = mmddhhmm.substring(4,6).toInt();
+      uint8_t minute = mmddhhmm.substring(6,8).toInt();
+
+      if(tm.month == month && tm.dayOfMonth == dayOfMonth && tm.hour >= hour && tm.minute >= minute)
+      {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+   }
    
-   String nowStr = getNowStr(tm);
-   
-   return (mmdd == nowStr);
+   //String nowStr = getNowStr(tm);   
+   //return (mmddhhmm == nowStr);
   
   #else
     return false;
@@ -218,13 +255,106 @@ void ScheduleModule::processSchedule(const String& fileName)
     command += (char) file.read();
   }    
   file.close();
+  yield();
 
   if(command.length())
   {
     ModuleInterop.QueryCommand(ctSET,command,false);
   }
 }
-//--------------------------------------------------------------------------------------------------------------------------------------    
+//--------------------------------------------------------------------------------------------------------------------------------------
+void ScheduleModule::processActivityCommand(const Command& command)
+{
+  // CTSET=SCHEDULE|MODULES|wsection1|wsection2|wsection3|wsection4|heat1|heat2|heat3|shadow1|shadow2|shadow3|cvent1|cvent2|cvent3|vent1|vent2|vent3|spray1|spray2|spray3|therm1|therm2|therm3|light|co2
+   uint8_t argsCnt = command.GetArgsCount();
+   if(argsCnt > 24)
+  {
+    String strCommand;
+    uint8_t iter = 1;
+
+    // windows
+    for(int i=0;i<4;i++)
+    {
+        strCommand = F("LOGIC|TACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // heat
+    for(int i=0;i<3;i++)
+    {
+        strCommand = F("LOGIC|HEAT|ACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // shadow
+    for(int i=0;i<3;i++)
+    {
+        strCommand = F("LOGIC|SHADOW|ACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // cycle vent
+    for(int i=0;i<3;i++)
+    {
+        strCommand = F("LOGIC|CVENT|ACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // vent
+    for(int i=0;i<3;i++)
+    {
+        strCommand = F("LOGIC|VENT|ACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // spray
+    for(int i=0;i<3;i++)
+    {
+        strCommand = F("LOGIC|HSPRAY|ACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // thermostat
+    for(int i=0;i<3;i++)
+    {
+        strCommand = F("LOGIC|THERMOSTAT|ACTIVE|");
+        strCommand += i;
+        strCommand += PARAM_DELIMITER;
+        strCommand += command.GetArg(iter); iter++;
+        ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    } // for
+
+    // light
+     strCommand = F("LOGIC|LIGHT|ACTIVE|");
+     strCommand += command.GetArg(iter); iter++;
+     ModuleInterop.QueryCommand(ctSET,strCommand,false);
+
+     // co2
+     strCommand = F("CO2|ACTIVE|");
+     strCommand += command.GetArg(iter); iter++;
+     ModuleInterop.QueryCommand(ctSET,strCommand,false);
+    
+  } // if
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
 bool ScheduleModule::addSchedule(const Command& command)
 {
   if(!MainController->HasSDCard())
@@ -389,7 +519,16 @@ bool  ScheduleModule::ExecCommand(const Command& command, bool wantAnswer)
             }
         } // ACTIVE
         else
-        if(s == F("DELETE")) // удалить расписание в папке за указанную дату, CTSET=SCHEDULE|DELETE|folder|mmdd
+        if(s == F("MODULES")) // управление активностью модулей, CTSET=SCHEDULE|MODULES|wsection1|wsection2|wsection3|wsection4|heat1|heat2|heat3|shadow1|shadow2|shadow3|cvent1|cvent2|cvent3|vent1|vent2|vent3|spray1|spray2|spray3|therm1|therm2|therm3|light|co2
+        {
+              processActivityCommand(command);
+            
+              PublishSingleton.Flags.Status = true;
+              PublishSingleton = command.GetArg(0);
+              PublishSingleton << PARAM_DELIMITER << REG_SUCC;            
+        } // MODULES
+        else
+        if(s == F("DELETE")) // удалить расписание в папке за указанную дату, CTSET=SCHEDULE|DELETE|folder|mmddhhmm filename
         {
             if(argsCnt > 2)
             {
@@ -402,7 +541,7 @@ bool  ScheduleModule::ExecCommand(const Command& command, bool wantAnswer)
             }          
         } // DELETE
         else
-        if(s == F("ADD")) // добавить расписание в папку на текущую дату, CTSET=SCHEDULE|ADD|folder|mmdd|schedule data here
+        if(s == F("ADD")) // добавить расписание в папку на текущую дату, CTSET=SCHEDULE|ADD|folder|mmddhhmm file name|schedule data here
         {
           if(argsCnt > 3)
           {
@@ -458,7 +597,7 @@ bool  ScheduleModule::ExecCommand(const Command& command, bool wantAnswer)
             }            
           } // DATE
           else
-          if(s == F("READ")) // прочитать данные задания по папке и дате, CTGET=SCHEDULE|READ|folder|mmdd
+          if(s == F("READ")) // прочитать данные задания по папке и дате, CTGET=SCHEDULE|READ|folder|mmddhhmm file name
           {
             if(argsCnt > 2)
             {

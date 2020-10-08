@@ -1562,20 +1562,24 @@ void GlobalSettings::setScheduleActive(bool val)
    MemWrite(SCHEDULE_ACTIVE_FLAG_ADDRESS, val ? 1 : 0); 
 }
 //--------------------------------------------------------------------------------------------------------------------------------------        
-void GlobalSettings::getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year)
+void GlobalSettings::getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year, uint8_t& hour, uint8_t& minute)
 {
   uint32_t addr = SCHEDULE_LAST_RUN_DATE_ADDRESS;
   dayOfMonth = read8(addr,0);addr++;
   month = read8(addr,0);addr++;
-  year = read16(addr,0);
+  year = read16(addr,0); addr += 2;
+  hour = read8(addr,0);addr++;
+  minute = read8(addr,0);
 }
 //--------------------------------------------------------------------------------------------------------------------------------------        
-void GlobalSettings::setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year)
+void GlobalSettings::setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year,uint8_t hour, uint8_t minute)
 {
   uint32_t addr = SCHEDULE_LAST_RUN_DATE_ADDRESS;
   MemWrite(addr,dayOfMonth);addr++;
   MemWrite(addr,month);addr++;
-  write16(addr,year);
+  write16(addr,year); addr += 2;
+  MemWrite(addr,hour);addr++;
+  MemWrite(addr,minute);addr++;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------        
 

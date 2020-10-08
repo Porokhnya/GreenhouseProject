@@ -15,13 +15,15 @@ class ScheduleModule : public AbstractModule // модуль расписани�
     void deleteScheduleByDate(const Command& command);
     bool addSchedule(const Command& command);
 
-    bool isNowSchedule(const String& mmdd);
+    bool isNowSchedule(const String& mmddhhmm);
     void processSchedule(const String& fileName);
 
     String getNowStr(RTCTime& tm);
     void processScheduleFolder(const String& dirName,const String& wantedScheduleFileName);
 
-    RTCTime lastTime;
+    void processActivityCommand(const Command& command);
+
+    //RTCTime lastTime;
     uint32_t timer;
   
   public:
