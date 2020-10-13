@@ -18906,12 +18906,12 @@ void TFTIdleScreen::update(TFTMenu* menuManager)
     drawCurrentScreen(menuManager);
   }
 
-  // USE_WATER_TANK_MODULE
+  #ifdef USE_WATER_TANK_MODULE
   if(pressed_button == fillTankButton)
   {
     WaterTank->FillTank(!WaterTank->IsValveOn());
   }
-  // USE_WATER_TANK_MODULE
+  #endif // USE_WATER_TANK_MODULE
 
   // обновляем текущий экран
   updateCurrentScreen(menuManager);
@@ -18994,12 +18994,16 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
         if(fillTankButton == 0xFF)
         {          
           TFTInfoBoxContentRect rc = waterTankCommandsBox->getContentRect(menuManager);
+
+          #ifdef USE_WATER_TANK_MODULE
           fillTankButton = screenButtons->addButton( rc.x + 10 , rc.y + 10, rc.w - 20,  rc.h - 20, "НАПОЛНИТЬ БАК");
           //screenButtons->setButtonBackColor(fillTankButton, VGA_MAROON);
           //screenButtons->setButtonFontColor(fillTankButton, VGA_WHITE);
 
           //Serial.println("draw fill tank button 2");
           screenButtons->drawButton(fillTankButton);
+
+          #endif // USE_WATER_TANK_MODULE
 
         }
       }
