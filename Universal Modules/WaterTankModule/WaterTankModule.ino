@@ -132,18 +132,8 @@ CommandBuffer commandBuffer(&Serial);
 void fillDataPacket(WaterTankDataPacket* packet)
 {
   packet->valveState = waterTankValveIsOn;
-  packet->countOfLevelSensors = countOfLevelSensors;
 
-  for(size_t i=0;i<10;i++) // максимум 10 датчиков уровня
-  {
-    packet->levelSensors[i] = 0xFF; // нет данных с датчика
-  }  
-
-  //тут заполняем данные с датчиков уровня
-  for(size_t i=0;i<countOfLevelSensors;i++)
-  {
-    packet->levelSensors[i] = levelSensorsState[i];
-  }
+  //TODO: ТУТ заполнение остальных полей пакета !!!
 
   // пакет с данными заполнен и готов к отправке по радиоканалу
 }

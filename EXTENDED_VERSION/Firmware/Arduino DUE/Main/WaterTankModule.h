@@ -1,0 +1,44 @@
+#pragma once
+
+#include "AbstractModule.h"
+#include "TinyVector.h"
+//--------------------------------------------------------------------------------------------------------------------------------------
+typedef enum
+{
+  waterTankNoErrors = 0, // нет ошибок
+  waterTankNoData = 1, // нет внешних данных в течение долгого времени
+  waterTankFullSensorError = 2, // не сработал датчик верхнего уровня в процессе наполнения, по превышению максимального времени наполнения
+  waterTankNoFill = 3, // критический уровень воды в баке, бак почему-то не наполняется
+  
+} WaterTankErrorType;
+//--------------------------------------------------------------------------------------------------------------------------------------
+class WaterTankModule : public AbstractModule // модуль управления уровнем воды в баке
+{
+  private:
+    bool valveOnFlag;
+    uint8_t fillStatus;
+    bool errorFlag;
+    uint8_t errorType;
+
+    uint32_t lastDataPacketSeenAt;
+    
+  public:
+    WaterTankModule() : AbstractModule("WTANK") {}
+
+    bool ExecCommand(const Command& command, bool wantAnswer);
+    void Setup();
+    void Update();
+
+
+    void FillTank(bool on); // команда по наполнению бака, параметр on - включить или выключить
+    void UpdateState(bool isValveOn,uint8_t fillStatus,bool errorFlag,uint8_t errorType);
+
+    uint8_t GetFillStatus() { return fillStatus; }
+    bool HasErrors() { return errorFlag; }
+    uint8_t GetErrorType() { return errorType; }
+    bool IsValveOn() { return valveOnFlag; }
+    String GetErrorText();
+
+};
+//--------------------------------------------------------------------------------------------------------------------------------------
+extern WaterTankModule* WaterTank;

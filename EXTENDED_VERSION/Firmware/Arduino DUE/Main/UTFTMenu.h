@@ -569,6 +569,15 @@ private:
   void drawPHStatus(TFTMenu* menuManager, uint8_t whichSection, TFTInfoBox* box, bool on1, bool on2);
 
 
+  // USE_WATER_TANK_MODULE
+  TFTInfoBox* waterTankStatusBox, *waterTankCommandsBox;
+  void drawWaterTankStatus(TFTMenu* menuManager);
+  uint8_t wTankErrorType, wTankHasErrors, wTankFillStatus;
+  bool wTankIsValveOn;
+  uint8_t fillTankButton;
+  // USE_WATER_TANK_MODULE
+
+
   int prevScreenButton, nextScreenButton;
 
     

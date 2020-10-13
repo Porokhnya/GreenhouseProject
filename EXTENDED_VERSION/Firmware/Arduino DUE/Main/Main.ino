@@ -184,6 +184,10 @@
 #include "ScheduleModule.h"
 #endif
 
+#ifdef USE_WATER_TANK_MODULE
+#include "WaterTankModule.h"
+#endif
+
 
 #include "LogicManageModule.h"
 #include "EEPROMSettingsModule.h"
@@ -337,6 +341,10 @@ OneWireEmulationModule oneWireEmulation;
 
 #ifdef USE_SCHEDULE_MODULE
 ScheduleModule scheduleModule;
+#endif
+
+#ifdef USE_WATER_TANK_MODULE
+WaterTankModule waterTankModule;
 #endif
 
 
@@ -701,6 +709,11 @@ void setup()
   #endif
 
   START_LOG(25);
+
+    #ifdef USE_WATER_TANK_MODULE
+      controller.RegisterModule(&waterTankModule);
+    #endif
+
 
   #ifdef USE_LOG_MODULE
   controller.RegisterModule(&logModule);

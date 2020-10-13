@@ -13,6 +13,7 @@
 #include "LogicManageModule.h"
 #include "EEPROMSettingsModule.h"
 #include "Utils.h"
+#include "WaterTankModule.h"
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 UniRegDispatcher UniDispatcher;
 UniScratchpadClass UniScratchpad; // наш пишичитай скратчпада
@@ -2590,15 +2591,11 @@ void WaterTankClient::Update(UniRawScratchpad* scratchpad, bool isModuleOnline, 
       #if defined(WATER_TANK_MODULE_DEBUG)
         Serial.println(F("RECEIVED WATER TANK DATA VIA RADIO:"));
         Serial.print(F("\tValve state: ")); Serial.println(waterTankData->valveState);
-        Serial.print(F("\tCount of sensors: ")); Serial.println(waterTankData->countOfLevelSensors);
-        Serial.println(F("STATE OF WATER TANK SENSORS:"));
-        for(size_t i=0;i<waterTankData->countOfLevelSensors;i++)
-        {
-          Serial.print(F("\tSensor #")); Serial.print(i+1); Serial.print(": "); Serial.println(waterTankData->levelSensors[i]);
-        }
+        Serial.print(F("\tFill status, %: ")); Serial.println(waterTankData->fillStatus);
      #endif
 
-     //TODO: ТУТ ОБНОВЛЕНИЕ ДАННЫХ В КОНТРОЛЛЕРЕ !!!
+     // ТУТ ОБНОВЛЕНИЕ ДАННЫХ В КОНТРОЛЛЕРЕ
+     WaterTank->UpdateState(waterTankData->valveState,waterTankData->fillStatus,waterTankData->errorFlag,waterTankData->errorType);
 
     } // if(ssRadio == receivedThrough)
 
@@ -4248,25 +4245,78 @@ void UniLoRaGate::Update()
       } // if
       
   } // if(controllerStateTimer > LORA_CONTROLLER_STATE_CHECK_FREQUENCY
-
+  
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void UniLoRaGate::sendWaterTankSettingsPacket()
+{
   #ifdef USE_WATER_TANK_MODULE
-    // тут работаем с модулем контроля уровня воды в баке
 
-    //TODO: ПОКА ТУПО - РАЗ В N СЕКУНД ПОСЫЛАЕМ КОМАНДУ НА СМЕНУ СОСТОЯНИЯ КЛАПАНА !!!
-    static uint32_t wtankTimer = millis();
-    static NRFWaterTankExecutionPacket waterTankExecutionPacket;
+   if(!loRaInited)
+   {
+
+        #ifdef WATER_TANK_MODULE_DEBUG
+         Serial.println(F("LoRa: Send WATER TANK settings packet, LORA NOT INITED!!!"));
+         #endif // WATER_TANK_MODULE_DEBUG    
+      return;
+   }
+  
+    NRFWaterTankSettingsPacket waterTankSettingsPacket;
+    memset(&waterTankSettingsPacket,0,sizeof(waterTankSettingsPacket));
+    waterTankSettingsPacket.controller_id = UniDispatcher.GetControllerID();
+    waterTankSettingsPacket.packetType = RS485WaterTankSettings;     
+
+    //TODO: ТУТ ЗАПОЛНЕНИЕ НАСТРОЕК !!!
+
+    waterTankSettingsPacket.crc8 = /*OneWire::*/crc8((const byte*) &waterTankSettingsPacket,sizeof(waterTankSettingsPacket)-1);
+
+        #ifdef WATER_TANK_MODULE_DEBUG
+         Serial.println(F("LoRa: Send WATER TANK settings packet..."));
+         #endif // WATER_TANK_MODULE_DEBUG
+      
+        LoRa.beginPacket();
     
-    if(millis() - wtankTimer >= 5000)
-    {
-       waterTankExecutionPacket.controller_id = UniDispatcher.GetControllerID();
-       waterTankExecutionPacket.packetType = RS485WaterTankCommands;         
+        // пишем наш скратч в эфир
+        LoRa.write((uint8_t*) &waterTankSettingsPacket,RADIO_PAYLOAD_SIZE);
+    
+        // включаем прослушку
+        LoRa.endPacket();
+        LoRa.receive();
+    
+        #ifdef WATER_TANK_MODULE_DEBUG
+        Serial.println(F("LoRa: WATER TANK settings packet sent."));
+        #endif // WATER_TANK_MODULE_DEBUG       
+                    
+  
+  #endif // USE_WATER_TANK_MODULE
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void UniLoRaGate::sendFillTankCommand(bool on)
+{
+  #ifdef USE_WATER_TANK_MODULE
+
+   if(!loRaInited)
+   {
+        #ifdef WATER_TANK_MODULE_DEBUG
+         Serial.println(F("LoRa: Send WATER TANK COMMAND packet, LORA NOT INITED!!!"));
+         #endif // WATER_TANK_MODULE_DEBUG    
+      return;
+   }
+  
+  
+    NRFWaterTankExecutionPacket waterTankExecutionPacket;
+    memset(&waterTankExecutionPacket,0,sizeof(waterTankExecutionPacket));
+
+    waterTankExecutionPacket.controller_id = UniDispatcher.GetControllerID();
+    waterTankExecutionPacket.packetType = RS485WaterTankCommands;         
          
-       waterTankExecutionPacket.valveCommand = !waterTankExecutionPacket.valveCommand;
+    waterTankExecutionPacket.valveCommand = on ? 1 : 0;
 
-       waterTankExecutionPacket.crc8 = /*OneWire::*/crc8((const byte*) &waterTankExecutionPacket,sizeof(waterTankExecutionPacket)-1);
+    waterTankExecutionPacket.crc8 = /*OneWire::*/crc8((const byte*) &waterTankExecutionPacket,sizeof(waterTankExecutionPacket)-1);
 
-         #ifdef WATER_TANK_MODULE_DEBUG
-         Serial.println(F("LoRa: Send WATER TANK command packet..."));
+        #ifdef WATER_TANK_MODULE_DEBUG
+         Serial.print(F("LoRa: Send WATER TANK command packet with valve command: "));
+         Serial.println(on);
          #endif // WATER_TANK_MODULE_DEBUG
       
         LoRa.beginPacket();
@@ -4281,13 +4331,8 @@ void UniLoRaGate::Update()
         #ifdef WATER_TANK_MODULE_DEBUG
         Serial.println(F("LoRa: WATER TANK command packet sent."));
         #endif // WATER_TANK_MODULE_DEBUG       
-      
-      wtankTimer = millis();
-      
-    }
-    
+                
   #endif // USE_WATER_TANK_MODULE
-  
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void UniLoRaGate::initLoRa()

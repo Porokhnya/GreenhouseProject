@@ -7,6 +7,9 @@
 #include "EEPROMSettingsModule.h"
 #include "UniversalSensors.h"
 #include "ZeroStreamListener.h"
+// USE_WATER_TANK_MODULE
+#include "WaterTankModule.h"
+// USE_WATER_TANK_MODULE
 
 #ifdef USE_TFT_MODULE
 
@@ -16719,7 +16722,11 @@ TFTIdleScreen::TFTIdleScreen() : AbstractTFTScreen()
   #ifdef USE_LORA_GATE
     lastLoraRSSI = -120;
   #endif
-    
+
+
+  // USE_WATER_TANK_MODULE
+  fillTankButton = 0xFF;
+  // USE_WATER_TANK_MODULE
 
   drawCalled = false;
   uptimeMinutes = 0;
@@ -16755,6 +16762,11 @@ TFTIdleScreen::~TFTIdleScreen()
 
   delete phFlowMixBox;
   delete phPlusMinusBox;
+
+  // USE_WATER_TANK_MODULE
+  delete waterTankStatusBox;
+  delete waterTankCommandsBox;
+  // USE_WATER_TANK_MODULE
 
   for(int i=0;i<6;i++)
   {
@@ -16845,6 +16857,52 @@ void TFTIdleScreen::drawPHStatus(TFTMenu* menuManager)
     drawValueInBox(phPlusMinusBox,UNAVAIL_FEATURE,BigRusFont);
   #endif // USE_PH_MODULE
 }
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// USE_WATER_TANK_MODULE
+void TFTIdleScreen::drawWaterTankStatus(TFTMenu* menuManager)
+{
+
+  waterTankStatusBox->draw(menuManager);
+  waterTankCommandsBox->draw(menuManager);
+  
+  #ifdef USE_WATER_TANK_MODULE
+
+  wTankFillStatus =  WaterTank->GetFillStatus();
+  wTankErrorType = WaterTank->GetErrorType();
+  wTankIsValveOn = WaterTank->IsValveOn();
+
+    // тут рисуем статус в первом боксе
+    String fStatus;
+    fStatus = wTankFillStatus;
+    fStatus += "%";
+
+    String errText = WaterTank->GetErrorText();
+    wTankHasErrors = WaterTank->HasErrors();
+    
+    drawStatusesInBox(menuManager, waterTankStatusBox,!wTankHasErrors, !wTankHasErrors, fStatus.c_str(), fStatus.c_str(), errText.c_str(), errText.c_str(), "Заполнение:", "Статус:");
+
+    // TODO: ТУТ ОТРИСОВКА КНОПКИ ДЛЯ НАПОЛНЕНИЯ БАКА !!!
+    if(fillTankButton != 0xFF)
+    {
+      if(wTankIsValveOn)
+      {
+        screenButtons->relabelButton(fillTankButton,"НАПОЛНЯЕТСЯ...");        
+      }
+      else
+      {
+        screenButtons->relabelButton(fillTankButton,"НАПОЛНИТЬ БАК");        
+      }
+
+      //Serial.println("draw fill tank button 3");
+      screenButtons->drawButton(fillTankButton);
+    }
+  
+  #else
+    drawValueInBox(waterTankStatusBox,UNAVAIL_FEATURE,BigRusFont);
+    drawValueInBox(waterTankCommandsBox,UNAVAIL_FEATURE,BigRusFont);
+  #endif // USE_WATER_TANK_MODULE
+}
+// USE_WATER_TANK_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTIdleScreen::drawFlowData(TFTMenu* menuManager)
 {
@@ -17729,6 +17787,27 @@ void TFTIdleScreen::updateStatuses(TFTMenu* menuManager)
           drawPHStatus(menuManager,2, phPlusMinusBox, phPlusOn, phMinusOn);
       }
    #endif // USE_PH_MODULE
+
+
+   #ifdef USE_WATER_TANK_MODULE
+   
+    //TODO: ТУТ ОБНОВЛЯЕМ СТАТУС МОДУЛЯ ЗАПОЛНЕНИЯ ТАНКА С ВОДОЙ !!!
+    uint8_t _wTankErrorType = WaterTank->GetErrorType();
+    uint8_t _wTankHasErrors = WaterTank->HasErrors();
+    uint8_t _wTankFillStatus = WaterTank->GetFillStatus();
+    bool _wTankIsValveOn = WaterTank->IsValveOn();
+
+    if(wTankErrorType != _wTankErrorType || wTankHasErrors != _wTankHasErrors || wTankFillStatus != _wTankFillStatus || wTankIsValveOn != _wTankIsValveOn)
+    {
+      
+         if(currentScreen == TFT_IDLE_PH_SCREEN_NUMBER)
+         {          
+          drawWaterTankStatus(menuManager);
+         }
+      
+    }
+    
+   #endif // USE_WATER_TANK_MODULE
     
   
 }
@@ -17791,11 +17870,21 @@ void TFTIdleScreen::setup(TFTMenu* menuManager)
   heatBox1 = new TFTInfoBox(HEAT_BUTTON_CAPTION1,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
   heatBox1Air = new TFTInfoBox(HEAT_AIR,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
   windDirectionBox = new TFTInfoBox(WINDSPEED_DIRECTION_CAPTION,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
+
+  //USE_WATER_TANK_MODULE
+  waterTankStatusBox = new TFTInfoBox("БАК С ВОДОЙ",(screenWidth - initialLeft*2 -  SENSOR_BOX_H_SPACING)/2,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
+  // USE_WATER_TANK_MODULE
+  
   curInfoBoxLeft += SENSOR_BOX_WIDTH + SENSOR_BOX_H_SPACING;
 
   heatBox2 = new TFTInfoBox(HEAT_BUTTON_CAPTION2,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
   heatBox2Air = new TFTInfoBox(HEAT_AIR,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
   rainStatusBox = new TFTInfoBox(RAIN_BOX_CAPTION,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
+
+  //USE_WATER_TANK_MODULE
+  waterTankCommandsBox = new TFTInfoBox("УПРАВЛЕНИЕ БАКОМ",(screenWidth - initialLeft*2 - SENSOR_BOX_H_SPACING)/2,SENSOR_BOX_HEIGHT,waterTankStatusBox->getX() + waterTankStatusBox->getWidth() + SENSOR_BOX_H_SPACING,statusBoxTop);
+  // USE_WATER_TANK_MODULE
+  
   curInfoBoxLeft += SENSOR_BOX_WIDTH + SENSOR_BOX_H_SPACING;
 
   heatBox3 = new TFTInfoBox(HEAT_BUTTON_CAPTION3,SENSOR_BOX_WIDTH,SENSOR_BOX_HEIGHT,curInfoBoxLeft,statusBoxTop);
@@ -17882,6 +17971,7 @@ void TFTIdleScreen::setup(TFTMenu* menuManager)
 
     nextScreenButton = screenButtons->addButton( curButtonLeft ,  buttonsTop, LIST_BUTTON_WIDTH,  TFT_IDLE_SCREEN_BUTTON_HEIGHT, rightArrowCaption ,BUTTON_SYMBOL);
     curButtonLeft += LIST_BUTTON_WIDTH + TFT_IDLE_SCREEN_BUTTON_SPACING;
+
 
 
   #ifdef USE_HEAT_MODULE
@@ -18816,6 +18906,13 @@ void TFTIdleScreen::update(TFTMenu* menuManager)
     drawCurrentScreen(menuManager);
   }
 
+  // USE_WATER_TANK_MODULE
+  if(pressed_button == fillTankButton)
+  {
+    WaterTank->FillTank(!WaterTank->IsValveOn());
+  }
+  // USE_WATER_TANK_MODULE
+
   // обновляем текущий экран
   updateCurrentScreen(menuManager);
   
@@ -18865,6 +18962,17 @@ void TFTIdleScreen::updateSensors2(TFTMenu* menuManager)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
 {
+  // USE_WATER_TANK_MODULE
+  if(currentScreen != TFT_IDLE_PH_SCREEN_NUMBER)
+  {
+    if(fillTankButton != 0xFF)
+    {
+      screenButtons->deleteButton(fillTankButton);
+      fillTankButton = 0xFF;
+    }
+  }
+  // USE_WATER_TANK_MODULE
+  
   switch(currentScreen)
   {
 
@@ -18879,6 +18987,24 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
         updateSensors2(menuManager);
       }    
       break;
+
+      // USE_WATER_TANK_MODULE
+      case TFT_IDLE_PH_SCREEN_NUMBER:
+      {
+        if(fillTankButton == 0xFF)
+        {          
+          TFTInfoBoxContentRect rc = waterTankCommandsBox->getContentRect(menuManager);
+          fillTankButton = screenButtons->addButton( rc.x + 10 , rc.y + 10, rc.w - 20,  rc.h - 20, "НАПОЛНИТЬ БАК");
+          //screenButtons->setButtonBackColor(fillTankButton, VGA_MAROON);
+          //screenButtons->setButtonFontColor(fillTankButton, VGA_WHITE);
+
+          //Serial.println("draw fill tank button 2");
+          screenButtons->drawButton(fillTankButton);
+
+        }
+      }
+      break;
+      // USE_WATER_TANK_MODULE
 
   }
 
@@ -18925,6 +19051,7 @@ void TFTIdleScreen::drawCurrentScreen(TFTMenu* menuManager)
     case TFT_IDLE_PH_SCREEN_NUMBER:
     {      
       drawPHStatus(menuManager);
+      drawWaterTankStatus(menuManager);
     }
     break;
 
@@ -19008,7 +19135,7 @@ void TFTIdleScreen::draw(TFTMenu* menuManager)
   {
     return;
   }
-  
+
   screenButtons->drawButtons(drawButtonsYield); // рисуем наши кнопки
 
   // рисуем линию под информационными иконками
