@@ -1,6 +1,10 @@
 #include "UniversalSensors.h"
 #include "Globals.h"
+#if TARGET_BOARD == STM32_BOARD
+#include "OneWireSTM.h"
+#else
 #include <OneWire.h>
+#endif
 #include "Memory.h"
 #include "InteropStream.h"
 #ifdef USE_TEMP_SENSORS
@@ -221,6 +225,23 @@ void UniRS485Gate::Setup()
   {
     hs = &Serial3;
   }
+  #if TARGET_BOARD == STM32_BOARD
+  else
+  if(bnd.SerialNumber == 4) // Serial4
+  {
+    hs = &Serial4;
+  }
+  else
+  if(bnd.SerialNumber == 5) // Serial5
+  {
+    hs = &Serial5;
+  }
+  else
+  if(bnd.SerialNumber == 6) // Serial6
+  {
+    hs = &Serial6;
+  }
+  #endif
   
   workStream = hs;
 
@@ -242,48 +263,6 @@ void UniRS485Gate::Setup()
   enableSend();
  
   
-/*  
-  WORK_STATUS.PinMode(RS_485_DE_PIN,OUTPUT);
-  
-  enableSend();
-  
-  RS_485_SERIAL.begin(SERIAL_BAUD_RATE);
-  
-  #if TARGET_BOARD == STM32_BOARD
-  if((int*)&(RS_485_SERIAL) == (int*)&Serial) {
-       WORK_STATUS.PinMode(0,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(1,OUTPUT,false);
-  } else if((int*)&(RS_485_SERIAL) == (int*)&Serial1) {
-       WORK_STATUS.PinMode(19,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(18,OUTPUT,false);
-  } else if((int*)&(RS_485_SERIAL) == (int*)&Serial2) {
-       WORK_STATUS.PinMode(17,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(16,OUTPUT,false);
-  } else if((int*)&(RS_485_SERIAL) == (int*)&Serial3) {
-       WORK_STATUS.PinMode(15,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(14,OUTPUT,false);
-  }
-  #else
-  if(&(RS_485_SERIAL) == &Serial) {
-       WORK_STATUS.PinMode(0,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(1,OUTPUT,false);
-  } else if(&(RS_485_SERIAL) == &Serial1) {
-       WORK_STATUS.PinMode(19,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(18,OUTPUT,false);
-  } else if(&(RS_485_SERIAL) == &Serial2) {
-       WORK_STATUS.PinMode(17,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(16,OUTPUT,false);
-  } else if(&(RS_485_SERIAL) == &Serial3) {
-       WORK_STATUS.PinMode(15,INPUT_PULLUP,true);
-       WORK_STATUS.PinMode(14,OUTPUT,false);
-  }
-  #endif
-
-  // на всякий случай освобождаем буфер от возможного мусора
-  while(RS_485_SERIAL.available())
-    RS_485_SERIAL.read();
-
-*/    
   
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2188,6 +2167,14 @@ AbstractUniClient* UniClientsFactory::GetClient(UniRawScratchpad* scratchpad)
     #else
       break;
     #endif
+
+    case uniWaterTankClient:
+    #ifdef USE_WATER_TANK_MODULE
+      return &waterTankClient;
+    #else
+      break;
+    #endif
+    
   }
 
   return &dummyClient;
@@ -2577,6 +2564,48 @@ void SunControllerClient::Update(UniRawScratchpad* scratchpad, bool isModuleOnli
 
 
 }
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_WATER_TANK_MODULE
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+// WaterTankClient
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+WaterTankClient::WaterTankClient() : AbstractUniClient()
+{
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void WaterTankClient::Register(UniRawScratchpad* scratchpad)
+{
+  // регистрируем модуль тут, добавляя нужные индексы датчиков в контроллер
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void WaterTankClient::Update(UniRawScratchpad* scratchpad, bool isModuleOnline, UniScratchpadSource receivedThrough)
+{
+  
+    // тут обновляем данные, полученный с модуля контроля бака по радиоканалу
+    if(ssRadio == receivedThrough)
+    {
+      // получили данные по радио
+      WaterTankDataPacket* waterTankData = (WaterTankDataPacket*) scratchpad->data;
+      
+      #if defined(WATER_TANK_MODULE_DEBUG)
+        Serial.println(F("RECEIVED WATER TANK DATA VIA RADIO:"));
+        Serial.print(F("\tValve state: ")); Serial.println(waterTankData->valveState);
+        Serial.print(F("\tCount of sensors: ")); Serial.println(waterTankData->countOfLevelSensors);
+        Serial.println(F("STATE OF WATER TANK SENSORS:"));
+        for(size_t i=0;i<waterTankData->countOfLevelSensors;i++)
+        {
+          Serial.print(F("\tSensor #")); Serial.print(i+1); Serial.print(": "); Serial.println(waterTankData->levelSensors[i]);
+        }
+     #endif
+
+     //TODO: ТУТ ОБНОВЛЕНИЕ ДАННЫХ В КОНТРОЛЛЕРЕ !!!
+
+    } // if(ssRadio == receivedThrough)
+
+
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_WATER_TANK_MODULE
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 // WindRainClient
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -3931,7 +3960,9 @@ void UniLoRaGate::Setup()
 void UniLoRaGate::Update()
 {
   if(!loRaInited)
+  {
     return;
+  }
 
   static uint32_t _timer = 0;
   uint32_t now = millis();
@@ -4088,7 +4119,7 @@ void UniLoRaGate::Update()
      #endif
 
       // проверяем, наш ли пакет
-      if((loRaScratch.head.controller_id == BROADCAST_PACKET_ID || loRaScratch.head.controller_id == UniDispatcher.GetControllerID()) && (loRaScratch.head.packet_type >= uniSensorsClient && loRaScratch.head.packet_type <= uniSunControllerClient))
+      if((loRaScratch.head.controller_id == BROADCAST_PACKET_ID || loRaScratch.head.controller_id == UniDispatcher.GetControllerID()) && (loRaScratch.head.packet_type >= uniSensorsClient && loRaScratch.head.packet_type <= uniWaterTankClient))
       {
       #ifdef LORA_DEBUG
       DEBUG_LOGLN(F("LoRa: Packet for us :)"));
@@ -4216,7 +4247,46 @@ void UniLoRaGate::Update()
             
       } // if
       
-  } // if(controllerStateTimer > LORA_CONTROLLER_STATE_CHECK_FREQUENCY  
+  } // if(controllerStateTimer > LORA_CONTROLLER_STATE_CHECK_FREQUENCY
+
+  #ifdef USE_WATER_TANK_MODULE
+    // тут работаем с модулем контроля уровня воды в баке
+
+    //TODO: ПОКА ТУПО - РАЗ В N СЕКУНД ПОСЫЛАЕМ КОМАНДУ НА СМЕНУ СОСТОЯНИЯ КЛАПАНА !!!
+    static uint32_t wtankTimer = millis();
+    static NRFWaterTankExecutionPacket waterTankExecutionPacket;
+    
+    if(millis() - wtankTimer >= 5000)
+    {
+       waterTankExecutionPacket.controller_id = UniDispatcher.GetControllerID();
+       waterTankExecutionPacket.packetType = RS485WaterTankCommands;         
+         
+       waterTankExecutionPacket.valveCommand = !waterTankExecutionPacket.valveCommand;
+
+       waterTankExecutionPacket.crc8 = /*OneWire::*/crc8((const byte*) &waterTankExecutionPacket,sizeof(waterTankExecutionPacket)-1);
+
+         #ifdef WATER_TANK_MODULE_DEBUG
+         Serial.println(F("LoRa: Send WATER TANK command packet..."));
+         #endif // WATER_TANK_MODULE_DEBUG
+      
+        LoRa.beginPacket();
+    
+        // пишем наш скратч в эфир
+        LoRa.write((uint8_t*) &waterTankExecutionPacket,RADIO_PAYLOAD_SIZE);
+    
+        // включаем прослушку
+        LoRa.endPacket();
+        LoRa.receive();
+    
+        #ifdef WATER_TANK_MODULE_DEBUG
+        Serial.println(F("LoRa: WATER TANK command packet sent."));
+        #endif // WATER_TANK_MODULE_DEBUG       
+      
+      wtankTimer = millis();
+      
+    }
+    
+  #endif // USE_WATER_TANK_MODULE
   
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
