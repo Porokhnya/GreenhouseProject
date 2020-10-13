@@ -16862,10 +16862,17 @@ void TFTIdleScreen::drawPHStatus(TFTMenu* menuManager)
 void TFTIdleScreen::drawWaterTankStatus(TFTMenu* menuManager)
 {
 
+  //Serial.println("drawWaterTankStatus");
+  
   waterTankStatusBox->draw(menuManager);
   waterTankCommandsBox->draw(menuManager);
+
   
   #ifdef USE_WATER_TANK_MODULE
+
+  #ifndef USE_LORA_GATE
+     drawValueInBox(waterTankCommandsBox,UNAVAIL_FEATURE,BigRusFont); 
+  #endif 
 
   wTankFillStatus =  WaterTank->GetFillStatus();
   wTankErrorType = WaterTank->GetErrorType();
@@ -16880,6 +16887,8 @@ void TFTIdleScreen::drawWaterTankStatus(TFTMenu* menuManager)
     wTankHasErrors = WaterTank->HasErrors();
     
     drawStatusesInBox(menuManager, waterTankStatusBox,!wTankHasErrors, !wTankHasErrors, fStatus.c_str(), fStatus.c_str(), errText.c_str(), errText.c_str(), "Заполнение:", "Статус:");
+
+    
 
     // TODO: ТУТ ОТРИСОВКА КНОПКИ ДЛЯ НАПОЛНЕНИЯ БАКА !!!
     if(fillTankButton != 0xFF)
@@ -16896,7 +16905,10 @@ void TFTIdleScreen::drawWaterTankStatus(TFTMenu* menuManager)
       //Serial.println("draw fill tank button 3");
       screenButtons->drawButton(fillTankButton);
     }
-  
+    else // кнопки нет, рисуем заглушку
+    {
+      drawValueInBox(waterTankCommandsBox,UNAVAIL_FEATURE,BigRusFont); 
+    }
   #else
     drawValueInBox(waterTankStatusBox,UNAVAIL_FEATURE,BigRusFont);
     drawValueInBox(waterTankCommandsBox,UNAVAIL_FEATURE,BigRusFont);
@@ -18988,27 +19000,34 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
       }    
       break;
 
-      // USE_WATER_TANK_MODULE
+      #ifdef USE_WATER_TANK_MODULE
       case TFT_IDLE_PH_SCREEN_NUMBER:
       {
-        if(fillTankButton == 0xFF)
+        if(fillTankButton == 0xFF) // ещё нет кнопки
         {          
-          TFTInfoBoxContentRect rc = waterTankCommandsBox->getContentRect(menuManager);
 
-          #ifdef USE_WATER_TANK_MODULE
-          fillTankButton = screenButtons->addButton( rc.x + 10 , rc.y + 10, rc.w - 20,  rc.h - 20, "НАПОЛНИТЬ БАК");
-          //screenButtons->setButtonBackColor(fillTankButton, VGA_MAROON);
-          //screenButtons->setButtonFontColor(fillTankButton, VGA_WHITE);
+          #ifdef USE_LORA_GATE
 
-          //Serial.println("draw fill tank button 2");
-          screenButtons->drawButton(fillTankButton);
+          // тут проверяем, активна ли LoRa
+          if(loraGate.isLoraInited())
+          {
+          
+              TFTInfoBoxContentRect rc = waterTankCommandsBox->getContentRect(menuManager);
+              fillTankButton = screenButtons->addButton( rc.x + 10 , rc.y + 10, rc.w - 20,  rc.h - 20, "НАПОЛНИТЬ БАК");
+              //screenButtons->setButtonBackColor(fillTankButton, VGA_MAROON);
+              //screenButtons->setButtonFontColor(fillTankButton, VGA_WHITE);
+    
+              //Serial.println("draw fill tank button 2");
+              screenButtons->drawButton(fillTankButton);
+              
+          } // if(loraGate.isLoraInited())
 
-          #endif // USE_WATER_TANK_MODULE
+         #endif // USE_LORA_GATE
 
         }
       }
       break;
-      // USE_WATER_TANK_MODULE
+     #endif // USE_WATER_TANK_MODULE
 
   }
 
