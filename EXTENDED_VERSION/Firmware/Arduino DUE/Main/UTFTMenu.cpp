@@ -19024,7 +19024,7 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
 
          #endif // USE_LORA_GATE
 
-        }
+        } // if(fillTankButton == 0xFF)
       }
       break;
      #endif // USE_WATER_TANK_MODULE

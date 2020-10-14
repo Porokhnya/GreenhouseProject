@@ -90,7 +90,8 @@ typedef struct
 {
   byte controller_id; // ID контроллера, который выплюнул в эфир пакет
   byte packetType; // тип пакета
-  byte reserved[27]; // резерв, добитие до 30 байт
+  byte level; // уровень срабатывания датчиков
+  byte reserved[26]; // резерв, добитие до 30 байт
   byte crc8; // контрольная сумма
   
 } NRFWaterTankSettingsPacket; // пакет с настройками для модуля контроля бака воды

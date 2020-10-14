@@ -4267,6 +4267,7 @@ void UniLoRaGate::sendWaterTankSettingsPacket()
     waterTankSettingsPacket.packetType = RS485WaterTankSettings;     
 
     //TODO: ТУТ ЗАПОЛНЕНИЕ НАСТРОЕК !!!
+    waterTankSettingsPacket.level = LOW; // ТУТ ИЗ НАСТРОЕК НАДО БРАТЬ УРОВЕНЬ СРАБАТЫВАНИЯ ДАТЧИКА !!!
 
     waterTankSettingsPacket.crc8 = /*OneWire::*/crc8((const byte*) &waterTankSettingsPacket,sizeof(waterTankSettingsPacket)-1);
 

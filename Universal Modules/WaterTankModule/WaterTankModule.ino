@@ -41,17 +41,28 @@
 #define SENSORS_UPDATE_INTERVAL 10000 // интервал обновления датчиков, миллисекунд
 #define USE_WATCHDOG // использовать или нет внутренний ватчдог
 #define WDT_UPDATE_INTERVAL 5000      // интервал сброса сторожевого таймера
-#define CONTROLLER_ID_ADDRESS 55      // по какому адресу в EEPROM храним ID контроллера (1 байт)
-
 #define USE_RANDOM_SEED_PIN // закомментировать, если не надо использовать пин для инициализации генератора псевдослучайных чисел
 #define RANDOM_SEED_PIN A0 // какой пин (АНАЛОГОВЫЙ !!!) использовать для инициализации генератора псевдослучайных чисел (пин должен быть висящим в воздухе)
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// настройки хранения в EEPROM
+//----------------------------------------------------------------------------------------------------------------
+#define CONTROLLER_ID_ADDRESS 55      // по какому адресу в EEPROM храним ID контроллера (1 байт)
+#define LEVEL_SENSOR_ADDRESS  60 // по какому адресу будет хранится уровень срабатывания датчика (1 байт)
 
 //----------------------------------------------------------------------------------------------------------------
 // настройки датчиков уровня
 //----------------------------------------------------------------------------------------------------------------
 #define LEVEL_SENSORS_PINS  4, 5, 6, A1, A2, A3 // пины для датчиков уровней, через запятую, МАКСИМУМ 10 !!!
-#define LEVEL_SENSOR_TRIGGER_LEVEL  HIGH  // уровень срабатывания датчика
+#define LEVEL_SENSOR_TRIGGER_LEVEL  LOW  // уровень срабатывания датчика по умолчанию
 
+//----------------------------------------------------------------------------------------------------------------
+// настройки управления клапаном
+//----------------------------------------------------------------------------------------------------------------
+#define VALVE_PIN         A4 // пин управления клапаном
+#define VALVE_ON_LEVEL    HIGH // уровень включения клапана
 
 //----------------------------------------------------------------------------------------------------------------
 // настройки LoRa
@@ -126,6 +137,7 @@ bool waterTankValveIsOn = false; // флаг включения клапана �
 uint8_t levelSensors[] = {LEVEL_SENSORS_PINS}; // наши пины для датчиков уровня
 uint8_t levelSensorsState[] = {LEVEL_SENSORS_PINS}; // состояние пинов датчиков уровня
 uint8_t countOfLevelSensors = 0;
+uint8_t levelSensorTriggerLevel = LEVEL_SENSOR_TRIGGER_LEVEL; // уровень срабатывания датчика по умолчанию
 //----------------------------------------------------------------------------------------------------------------
 CommandBuffer commandBuffer(&Serial);
 //----------------------------------------------------------------------------------------------------------------
@@ -159,18 +171,21 @@ void initLoRa()
   
 }
 //----------------------------------------------------------------------------------------------------------------
+void turnValve(bool on)
+{
+    waterTankValveIsOn = on;
+    digitalWrite(VALVE_PIN, on ? VALVE_ON_LEVEL : !(VALVE_ON_LEVEL));
+}
+//----------------------------------------------------------------------------------------------------------------
 void UpdateSensors()
 {
   //TODO: обновление данных с датчиков здесь!!!
-
-  // каждый раз при обновлении состояния - инвертируем статус клапана в бочке
-  waterTankValveIsOn = !waterTankValveIsOn;
 
   // теперь проходим по всем пинам датчиков уровня - и читаем их состояние
   for(size_t i=0;i<countOfLevelSensors;i++)
   {
     uint8_t state = digitalRead(levelSensors[i]);
-    levelSensorsState[i] = (state == LEVEL_SENSOR_TRIGGER_LEVEL) ? 1 : 0;
+    levelSensorsState[i] = (state == levelSensorTriggerLevel) ? 1 : 0;
   }
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -236,11 +251,29 @@ void sendDataViaLoRa()
 
 }
 //----------------------------------------------------------------------------------------------------------------
-void processPacket(NRFWaterTankExecutionPacket& packet)
+void processSettingsPacket(NRFWaterTankSettingsPacket* packet)
+{
+  #ifdef _DEBUG
+    Serial.println(F("SETTINGS RECEIVED VIA RADIO!"));
+  #endif 
+
+
+  uint8_t oldLevel = levelSensorTriggerLevel;
+  levelSensorTriggerLevel = packet->level;
+
+  if(levelSensorTriggerLevel != oldLevel)
+  {
+    EEPROM.write(LEVEL_SENSOR_ADDRESS,levelSensorTriggerLevel);
+  }
+
+  //TODO: ТУТ УСТАНОВКА НОВЫХ НАСТРОЕК!
+}
+//----------------------------------------------------------------------------------------------------------------
+void processCommandPacket(NRFWaterTankExecutionPacket* packet)
 {
     #ifdef _DEBUG
       Serial.print(F("RECEIVED WATER TANK COMMAND! VALVE SHOULD BE: ["));
-      if(packet.valveCommand)
+      if(packet->valveCommand)
       {
         Serial.print(F("ON"));
       }
@@ -251,6 +284,8 @@ void processPacket(NRFWaterTankExecutionPacket& packet)
       Serial.println(F("]."));
       
     #endif
+
+    turnValve(packet->valveCommand);
 }
 //----------------------------------------------------------------------------------------------------------------
 void processIncomingLoRaPackets()
@@ -277,9 +312,15 @@ void processIncomingLoRaPackets()
          {
             case RS485WaterTankCommands: // пакет с командами для модуля контроля бака воды
             {
-              processPacket(nrfPacket);
+              processCommandPacket(&nrfPacket);
             }
-            break; // RS485ControllerStatePacket
+            break; // RS485WaterTankCommands
+
+            case RS485WaterTankSettings:
+            {              
+              processSettingsPacket((NRFWaterTankSettingsPacket*) &nrfPacket);
+            }
+            break; // RS485WaterTankSettings
          } // switch
        } //  // good checksum
     }
@@ -296,7 +337,15 @@ void readROM()
 {
   controllerID = EEPROM.read(CONTROLLER_ID_ADDRESS);
   if(controllerID == 0xFF)
+  {
     controllerID = DEFAULT_CONTROLLER_ID;
+  }
+
+  levelSensorTriggerLevel = EEPROM.read(LEVEL_SENSOR_ADDRESS);
+  if(levelSensorTriggerLevel == 0xFF)
+  {
+    levelSensorTriggerLevel = LEVEL_SENSOR_TRIGGER_LEVEL;
+  }
 }
 //----------------------------------------------------------------------------------------------------------------
 void setupLevelSensors()
@@ -314,6 +363,8 @@ void setup()
   #ifdef USE_RANDOM_SEED_PIN
     randomSeed(analogRead(RANDOM_SEED_PIN));
   #endif
+
+  pinMode(VALVE_PIN,OUTPUT);
   
   radioSendInterval = RADIO_SEND_INTERVAL + random(100);
   
@@ -324,7 +375,7 @@ void setup()
   
  
 
-  readROM();
+  readROM(); // читаем настройки
   
   #ifdef _DEBUG
     Serial.begin(57600);
@@ -335,6 +386,8 @@ void setup()
  
   initLoRa();
 
+  UpdateSensors(); // сразу получаем данные при старте
+  turnValve(false); // выключаем клапан при старте
   
 }
 //----------------------------------------------------------------------------------------------------------------
