@@ -55,7 +55,15 @@
 //----------------------------------------------------------------------------------------------------------------
 // настройки датчиков уровня
 //----------------------------------------------------------------------------------------------------------------
-#define LEVEL_SENSORS_PINS  4, 5, 6, A1, A2, A3 // пины для датчиков уровней, через запятую, МАКСИМУМ 10 !!!
+// пины для датчиков уровней, через запятую, МИНИМУМ - 5, МАКСИМУМ - 10. Датчики идут по порядку: первый - самый нижний, т.е. снизу вверх.
+// система считается работоспособной, пока как минимум 3 датчика остаются работоспособными.
+// неисправностью верхнего датчика считается превышение по времени максимального заполнения (настройка MAX_WORK_TIME ниже).
+// неисправностью нижнего датчика считается ситуация, когда два датчика выше него - показывают воду, а он - нет.
+// при неисправности верхнего датчика его функции передаются нижележащему датчику.
+// при неисправности нижнего датчика - его функции передаются вышележащему датчику.
+// таким образом, минимально допустимое кол-во рабочих датчиков - 3.
+// заполнение бака рассчитывается только по рабочим датчикам и сигналам с них.
+#define LEVEL_SENSORS_PINS  4, 5, 6, A1, A2, A3 
 #define LEVEL_SENSOR_TRIGGER_LEVEL  LOW  // уровень срабатывания датчика по умолчанию
 
 //----------------------------------------------------------------------------------------------------------------
@@ -63,6 +71,7 @@
 //----------------------------------------------------------------------------------------------------------------
 #define VALVE_PIN         A4 // пин управления клапаном
 #define VALVE_ON_LEVEL    HIGH // уровень включения клапана
+#define MAX_WORK_TIME     60  // время для максимального наполнения, секунд (по умолчанию, будет меняться через конфигуратор)
 
 //----------------------------------------------------------------------------------------------------------------
 // настройки LoRa
@@ -133,31 +142,28 @@ uint32_t updateTimer = 0;
 uint32_t updateTimerWdt = 0;
 #endif // USE_WATCHDOG
 
-bool waterTankValveIsOn = false; // флаг включения клапана заполнения бочки
+bool waterTankValveIsOn = true; // флаг включения клапана заполнения бочки
 uint8_t levelSensors[] = {LEVEL_SENSORS_PINS}; // наши пины для датчиков уровня
 uint8_t levelSensorsState[] = {LEVEL_SENSORS_PINS}; // состояние пинов датчиков уровня
-uint8_t countOfLevelSensors = 0;
 uint8_t levelSensorTriggerLevel = LEVEL_SENSOR_TRIGGER_LEVEL; // уровень срабатывания датчика по умолчанию
+uint8_t criticalLevelSensorIndex = 0; // индекс датчика критического уровня
+uint8_t fullLevelSensorIndex = sizeof(levelSensors)/sizeof(levelSensors[0]) - 1; // индекс датчика полноты бака
+uint32_t maxWorkTime = 1000ul*MAX_WORK_TIME; // максимальное время наполнения
+uint8_t errorType = waterTankNoErrors;
+uint8_t errorFlag = 0;
+MachineState machineState = msNormal;
+uint32_t fullFillTimer = 0; 
 //----------------------------------------------------------------------------------------------------------------
 CommandBuffer commandBuffer(&Serial);
-//----------------------------------------------------------------------------------------------------------------
-void fillDataPacket(WaterTankDataPacket* packet)
-{
-  packet->valveState = waterTankValveIsOn;
-
-  //TODO: ТУТ заполнение остальных полей пакета !!!
-
-  // пакет с данными заполнен и готов к отправке по радиоканалу
-}
 //----------------------------------------------------------------------------------------------------------------
 #include "LoRa.h"
 bool loRaInited = false;
 //----------------------------------------------------------------------------------------------------------------
 void initLoRa()
-{
+{  
   #ifdef _DEBUG
-  Serial.begin(57600);
-  #endif
+    Serial.println(F(" Init LoRa..."));
+  #endif  
   
   // инициализируем LoRa
   LoRa.setPins(LORA_SS_PIN,LORA_RESET_PIN,-1);
@@ -167,26 +173,87 @@ void initLoRa()
   {
     LoRa.setTxPower(LORA_TX_POWER);
     LoRa.sleep(); // засыпаем
+
+  #ifdef _DEBUG
+    Serial.println(F("LoRa inited."));
+  #endif  
+    
   } // loRaInited
+  #ifdef _DEBUG
+  else
+  {
+    Serial.println(F("LoRa init FAIL!"));
+  }
+  #endif  
+  
   
 }
 //----------------------------------------------------------------------------------------------------------------
-void turnValve(bool on)
+void turnValve(bool on) // включение или выключение клапана
 {
-    waterTankValveIsOn = on;
-    digitalWrite(VALVE_PIN, on ? VALVE_ON_LEVEL : !(VALVE_ON_LEVEL));
+    if(waterTankValveIsOn != on)
+    {
+      #ifdef _DEBUG
+        Serial.print(F("Turn valve to: "));
+        Serial.println(on ? F("ON") : F("OFF"));
+      #endif  
+      
+      waterTankValveIsOn = on;
+      digitalWrite(VALVE_PIN, on ? VALVE_ON_LEVEL : !(VALVE_ON_LEVEL));
+    }
 }
 //----------------------------------------------------------------------------------------------------------------
-void UpdateSensors()
+uint8_t getCountOfWorkingSensors() // возвращает кол-во рабочих датчиков
 {
-  //TODO: обновление данных с датчиков здесь!!!
+  return ((fullLevelSensorIndex - criticalLevelSensorIndex) + 1);
+}
+//----------------------------------------------------------------------------------------------------------------
+bool canWork() // проверяем, можем ли мы работать в штатном режиме? это возможно, только если кол-во рабочих датчиков - минимум 3
+{
+  return (getCountOfWorkingSensors() > 2);
+}
+//----------------------------------------------------------------------------------------------------------------
+void checkCriticalSensorIsGood()
+{
+  // проверяем, в порядке ли датчик критического уровня.
+  // рабочих датчиков должно быть минимум 3.
+  // при этом неработоспособность датчика критического уровня
+  // принимается как состояние, когда на датчике нет воды,
+  // а на двух вышележащих - есть вода.
+
+  uint8_t cnt = getCountOfWorkingSensors();
+  if(cnt > 2)
+  {
+      bool criticalSensorHasWater = levelSensorsState[criticalLevelSensorIndex] > 0;
+      bool topHasWater = (levelSensorsState[criticalLevelSensorIndex+1] > 0) && (levelSensorsState[criticalLevelSensorIndex+2] > 0);
+
+      if(!criticalSensorHasWater && topHasWater)
+      {
+      #ifdef _DEBUG
+        Serial.println(F("Critical sensor ERROR detected!"));
+      #endif  
+        
+        // ситуация, когда верхние два датчика показывают воду, а датчик критического уровня - воду не показывает.
+        // передаём управление вышестоящему датчику, взводим флаг ошибки и запоминаем тип ошибки
+        criticalLevelSensorIndex++;
+        errorFlag = 1;
+        errorType = waterTankBottomSensorFailure;
+      }
+  } // if
+}
+//----------------------------------------------------------------------------------------------------------------
+void updateSensors()
+{
+  //обновление данных с датчиков. обновлять можно только тогда, когда работоспособность системы - не нарушена,
+  // т.е. кол-во рабочих датчиков - минимум 3. Эта функция вызывается только в случае, если кол-во рабочих датчиков - больше 2.
 
   // теперь проходим по всем пинам датчиков уровня - и читаем их состояние
-  for(size_t i=0;i<countOfLevelSensors;i++)
+  for(size_t i=criticalLevelSensorIndex;i<=fullLevelSensorIndex;i++)
   {
     uint8_t state = digitalRead(levelSensors[i]);
     levelSensorsState[i] = (state == levelSensorTriggerLevel) ? 1 : 0;
   }
+
 }
 //----------------------------------------------------------------------------------------------------------------
 void sendDataViaLoRa()
@@ -285,15 +352,42 @@ void processCommandPacket(NRFWaterTankExecutionPacket* packet)
       
     #endif
 
-    turnValve(packet->valveCommand);
+    if(canWork())
+    {
+      // можем работать, исправных датчиков - минимум 3
+      
+      bool requestedWalveState = packet->valveCommand > 0;
+      
+      if(waterTankValveIsOn != requestedWalveState)
+      {
+        // попросили изменить состояние клапана.
+        // здесь мы должны учитывать, что при включении/выключении клапана - мы должны переместиться
+        // на нужную ветку конечного автомата
+        if(requestedWalveState)
+        {
+            // попросили включиться
+            turnValve(true);
+            fullFillTimer = millis();
+            machineState = msWaitForTankFullfilled;
+        }
+        else
+        {
+          // попросили выключиться
+          turnValve(false);
+          machineState = msNormal;
+        }
+      }
+    } // canWork
 }
 //----------------------------------------------------------------------------------------------------------------
 void processIncomingLoRaPackets()
 {
     // обрабатываем входящие данные по LoRa  
   if(!loRaInited)
+  {
     return;
-    
+  }
+      
   static NRFWaterTankExecutionPacket nrfPacket; // наш пакет, в который мы принимаем данные с контроллера
   int packetSize = LoRa.parsePacket();
   if(packetSize >= sizeof(NRFWaterTankExecutionPacket))
@@ -350,16 +444,25 @@ void readROM()
 //----------------------------------------------------------------------------------------------------------------
 void setupLevelSensors()
 {
-  countOfLevelSensors = sizeof(levelSensors)/sizeof(levelSensors[0]);
-  for(size_t i=0;i<countOfLevelSensors;i++)
+  #ifdef _DEBUG
+    Serial.println(F("Setup level sensors..."));
+  #endif  
+  
+  size_t cnt = sizeof(levelSensors)/sizeof(levelSensors[0]);
+  for(size_t i=0;i<cnt;i++)
   {
     pinMode(levelSensors[i],INPUT);
-    levelSensorsState[i] = 0xFF; // нет данных с датчика
+    levelSensorsState[i] = 0; // нет воды на датчике
   }
 }
 //----------------------------------------------------------------------------------------------------------------
 void setup()
 {
+  #ifdef _DEBUG
+    Serial.begin(57600);
+    Serial.println(F("DEBUG MODE!"));
+  #endif
+  
   #ifdef USE_RANDOM_SEED_PIN
     randomSeed(analogRead(RANDOM_SEED_PIN));
   #endif
@@ -369,24 +472,16 @@ void setup()
   radioSendInterval = RADIO_SEND_INTERVAL + random(100);
   
   #ifdef USE_WATCHDOG
-  delay(5000);                        // Задержка, чтобы было время перепрошить устройство в случае bootloop
-  wdt_enable (WDTO_8S);               // Для тестов не рекомендуется устанавливать значение менее 8 сек.
+    delay(5000);                        // Задержка, чтобы было время перепрошить устройство в случае bootloop
+    wdt_enable (WDTO_8S);               // Для тестов не рекомендуется устанавливать значение менее 8 сек.
   #endif // USE_WATCHDOG
   
  
 
   readROM(); // читаем настройки
-  
-  #ifdef _DEBUG
-    Serial.begin(57600);
-    Serial.println(F("DEBUG MODE!"));
-  #endif
-
-  setupLevelSensors();
- 
-  initLoRa();
-
-  UpdateSensors(); // сразу получаем данные при старте
+  setupLevelSensors(); // настраиваем датчики
+  initLoRa(); // поднимаем радиоканал
+  updateSensors(); // сразу получаем данные при старте
   turnValve(false); // выключаем клапан при старте
   
 }
@@ -437,14 +532,77 @@ void ProcessIncomingCommand(String& cmd)
   }
 }
 //----------------------------------------------------------------------------------------------------------------
+uint8_t getFillStatus() // возвращает процент заполнения (0-100%)
+{
+  float cnt = getCountOfWorkingSensors(); // количество рабочих датчиков
+  // считаем, что все датчики исправны и расположены равномерно по баку.
+  // рассчитываем, сколько датчиков показывают воду, прерываемся на первом, кто воду не показывает
+
+  uint16_t hasWater = 0;
+
+  for(uint8_t i=criticalLevelSensorIndex;i<=fullLevelSensorIndex;i++)
+  {
+    if(levelSensorsState[i])
+    {
+      hasWater++;
+    }
+    else
+    {
+      break;
+    }
+  } // for
+
+  // пропорция
+  // cnt = 100%
+  // hasWater = x%
+  // x = (hasWater*100)/cnt;
+  float f1 = hasWater;
+  f1*=100;
+
+  float result = f1/cnt;
+
+  return roundf(result);
+}
+//----------------------------------------------------------------------------------------------------------------
+void fillDataPacket(WaterTankDataPacket* packet)
+{
+  packet->valveState = waterTankValveIsOn;
+  packet->errorFlag = errorFlag;
+  packet->errorType = errorType;
+  packet->fillStatus = getFillStatus();
+
+  #ifdef _DEBUG
+    Serial.print(F("Fill status is: "));
+    Serial.println(packet->fillStatus);
+  #endif  
+  
+  // пакет с данными заполнен и готов к отправке по радиоканалу
+}
+//----------------------------------------------------------------------------------------------------------------
 void loop()
 { 
-   
-  if(millis() - updateTimer >= SENSORS_UPDATE_INTERVAL)
+
+  if(canWork())
   {
-    UpdateSensors();
-    updateTimer = millis();
-  }
+    // можем работать, проверяем, не пора ли обновить датчики?
+    if(millis() - updateTimer >= SENSORS_UPDATE_INTERVAL)
+    {
+      updateSensors(); // обновляем данные с датчиков
+      checkCriticalSensorIsGood(); // проверяем, в порядке ли датчик критического уровня?
+      updateTimer = millis();
+    }
+
+    // показания с датчиков обновлены, можно вычислять процент заполнения, делать выводы - надо ли включать
+    // помпу, и т.п.
+
+  } // canWork
+  else
+  {
+    // работать не можем, минимальное кол-во рабочих датчиков - меньше трёх, выключаем подающий клапан
+    turnValve(false);
+    
+  } // else
+
 
   #ifdef USE_WATCHDOG
   if(millis() - updateTimerWdt > WDT_UPDATE_INTERVAL)
@@ -470,6 +628,77 @@ void loop()
     radioSendInterval = RADIO_SEND_INTERVAL + random(100);
   }
 
+  // тут можно проверять состояния конечного автомата
+  if(canWork())
+  {
+    // можем работать, смотрим, в какой ветке конечного автомата мы находимся
+    switch(machineState)
+    {
+      case msNormal:
+      {
+        // нормальное состояние, проверяем датчик критического уровня
+        if(!levelSensorsState[criticalLevelSensorIndex])
+        {
+          #ifdef _DEBUG
+            Serial.println(F("Critical level detected, turn valve ON!"));
+          #endif  
+          
+          // датчик критического уровня показывает, что нет воды - надо открывать клапан
+          turnValve(true);
+
+          // включили таймер, перешли на другую ветку
+          fullFillTimer = millis(); 
+          machineState = msWaitForTankFullfilled;
+        }
+        
+      }
+      break; // msNormal
+
+      case msWaitForTankFullfilled:
+      {
+        // ждём наполнения бака в течение максимального времени
+        if(levelSensorsState[fullLevelSensorIndex])
+        {
+          #ifdef _DEBUG
+            Serial.println(F("Tank is full, turn valve OFF!"));
+          #endif  
+          
+          // датчик верхнего уровня показывает воду, выключаем клапан, переключаемся в нормальный режим
+          turnValve(false);
+          machineState = msNormal;
+        }
+        else
+        {
+          // датчик всё ещё не показывает воду, смотрим - не истекло ли время ожидания наполнения
+          if(millis() - fullFillTimer >= maxWorkTime)
+          {
+            #ifdef _DEBUG
+              Serial.println(F("Full sensor ERROR detected!"));
+            #endif  
+            
+            // истекло время максимальной работы, это ошибка верхнего датчика !!!
+            fullLevelSensorIndex--; // передаём его функции нижележащему датчику
+
+            // взводим флаг ошибки
+            errorFlag = 1;
+            errorType = waterTankFullSensorError;
+          }
+        }
+      }
+      break; // msWaitForTankFullfilled
+      
+    } // switch
+    
+  } // canWork
+  else
+  {
+    // работать не можем, минимальное кол-во рабочих датчиков - меньше трёх, выключаем подающий клапан
+    turnValve(false);
+
+    // тут переведение конечного автомата в исходную ветку
+    machineState = msNormal;
+    
+  } // else
 }
 //----------------------------------------------------------------------------------------------------------------
 

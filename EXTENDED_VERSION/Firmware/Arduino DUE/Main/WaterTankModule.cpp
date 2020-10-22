@@ -14,17 +14,17 @@ String WaterTankModule::GetErrorText()
 
   switch(errorType)
   {
-    case waterTankNoErrors:
-      return F("штатная работа");
+    case waterTankNoErrors: // нет ошибок
+      return F("штатно");
 
-    case waterTankNoData:
-      return F("нет данных");
+    case waterTankNoData: // нет внешних данных в течение долгого времени
+      return F("нет модуля");
 
-    case waterTankFullSensorError:
-      return F("ошибка датчиков");
+    case waterTankFullSensorError: // не сработал датчик верхнего уровня в процессе наполнения, по превышению максимального времени наполнения
+      return F("Е наполнения");
 
-    case waterTankNoFill:
-      return F("нет наполнения");
+    case waterTankBottomSensorFailure: // ошибка нижнего датчика критического уровня
+      return F("E крит. датчика");
 
     default:
       return F("ошибка");
