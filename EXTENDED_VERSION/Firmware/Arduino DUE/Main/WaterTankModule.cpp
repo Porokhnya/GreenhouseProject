@@ -45,8 +45,12 @@ void WaterTankModule::UpdateState(bool _valveOnFlag,uint8_t _fillStatus, bool _e
   fillStatus = _fillStatus; // статус наполнения (0-100%)
 
     //TODO: ТУТ ПРОВЕРКА - ЕСЛИ В НАСТРОЙКАХ УКАЗАНА LORA, ТО ОТПРАВЛЯЕМ ЧЕРЕЗ НЕЁ!!!
+
+    #ifdef USE_LORA_GATE
      // напоследок - отправляем актуальные настройки модулю
    loraGate.sendWaterTankSettingsPacket();
+
+   #endif // USE_LORA_GATE
 
 
 
