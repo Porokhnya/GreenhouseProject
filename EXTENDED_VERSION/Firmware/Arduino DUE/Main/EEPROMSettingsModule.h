@@ -495,6 +495,16 @@ typedef struct
 } WindowsIntervals;
 #pragma pack(pop)
 //--------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  uint8_t LinkType; // тип привязки, пока используется только LoRa (значение 1)
+  uint8_t Level; // уровень срабатывания датчиков в баке
+  uint32_t MaxWorkTime; // максимальное время работы, секунд
+  
+} WaterTankBinding;
+#pragma pack(pop)
+//--------------------------------------------------------------------------------------------------------------------------------------
 class EEPROMSettingsModule : public AbstractModule // модуль хранения настроек привязок в EEPROM
 {
   private:
@@ -575,6 +585,7 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
   WPowerBinding wPowerBinding;
   DoorBinding doorBinding[2];
   WindowsIntervals windowsIntervals;
+  WaterTankBinding waterTankBinding;
   
   public:
     EEPROMSettingsModule();
@@ -683,6 +694,9 @@ class EEPROMSettingsModule : public AbstractModule // модуль хранен�
 
     // возвращает настройки интервалов открытия окон
     WindowsIntervals& GetWindowsIntervals() { return windowsIntervals; }
+
+    // возвращает настройки модуля наполнения бака
+    WaterTankBinding& GetWaterTankBinding() { return waterTankBinding; }
 
 };
 //--------------------------------------------------------------------------------------------------------------------------------------

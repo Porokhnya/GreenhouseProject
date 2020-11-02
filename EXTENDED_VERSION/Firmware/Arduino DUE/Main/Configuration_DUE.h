@@ -313,6 +313,7 @@
 
 #define EEPROM_RULES_START_ADDR 5120 // с пятого килобайта в EEPROM идут правила
 
+#define WATER_TANK_BINDING_ADDRESS  10000 // тут хранятся привезки модуля бака в настройкам, 50 байт (про запас)
 #define CO2_BINDING_ADDRESS 10300 // тут хранятся привязки CO2 к железу, 100 байт (про запас)
 #define PH_BINDING_ADDRESS 10400 // тут хранятся привязки pH к железу, 100 байт (про запас)
 #define THERMOSTAT_BINDING_ADDRESS 10500 // тут хранятся привязки термостата к железу, 100 байт (про запас)

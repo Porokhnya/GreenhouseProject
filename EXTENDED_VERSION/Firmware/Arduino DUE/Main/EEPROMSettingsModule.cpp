@@ -792,6 +792,20 @@ void EEPROMSettingsModule::Setup()
       }
     
   } // for  
+
+
+   #ifdef USE_WATER_TANK_MODULE
+   // читаем настройки модуля бака
+   memset(&waterTankBinding,0,sizeof(waterTankBinding));
+   if(!read(WATER_TANK_BINDING_ADDRESS, waterTankBinding))
+   {
+      memset(&waterTankBinding,0,sizeof(waterTankBinding));
+      
+      waterTankBinding.LinkType = 1; // LoRa
+      waterTankBinding.Level = LOW;
+      waterTankBinding.MaxWorkTime = 600;
+   }
+   #endif // USE_WATER_TANK_MODULE  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void EEPROMSettingsModule::Update()
@@ -859,7 +873,33 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
              PublishSingleton << PARAM_DELIMITER << REG_SUCC;
           }
        }
-       #endif // USE_DOOR_MODULE       
+       #endif // USE_DOOR_MODULE
+       #ifdef USE_WATER_TANK_MODULE
+       else
+       if(param == F("WTANK")) // установить настройки модуля контроля бака с водой: CTSET=EES|WTANK|link type|level|max work time
+       {
+          if(argsCnt < 4)
+          {
+            if(wantAnswer)
+            {
+              PublishSingleton = PARAMS_MISSED;
+            }
+          }
+          else
+          {
+             // аргументов хватает
+             waterTankBinding.LinkType = atoi(command.GetArg(1));
+             waterTankBinding.Level = atoi(command.GetArg(2));
+             waterTankBinding.MaxWorkTime = atol(command.GetArg(3));
+
+             write(WATER_TANK_BINDING_ADDRESS, waterTankBinding);
+
+             PublishSingleton.Flags.Status = true;
+             PublishSingleton = param;
+             PublishSingleton << PARAM_DELIMITER << REG_SUCC;
+          }
+       } // F("WTANK")       
+       #endif // USE_WATER_TANK_MODULE      
        #ifdef USE_CO2_MODULE
        else
        if(param == F("CO2")) // установить настройки CO2: CTSET=EES|CO2|link type|mcp address|relay pin|alert pin|level|vent pin|sensor pin|max ppm|min adc|max adc|alert percents|measure mode
@@ -2100,6 +2140,19 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           
         }
         #endif // USE_DOOR_MODULE
+        #ifdef USE_WATER_TANK_MODULE
+        else
+        if(param == F("WTANK")) // запросили настройки модуля управления баком: CTGET=EES|WTANK
+        {
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = param;
+          PublishSingleton << PARAM_DELIMITER << waterTankBinding.LinkType
+          << PARAM_DELIMITER << waterTankBinding.Level
+          << PARAM_DELIMITER << waterTankBinding.MaxWorkTime
+          ;
+          
+        } // param == F("WTANK")        
+        #endif // USE_WATER_TANK_MODULE
         #ifdef USE_CO2_MODULE
         else
         if(param == F("CO2")) // запросили настройки CO2: CTGET=EES|CO2
