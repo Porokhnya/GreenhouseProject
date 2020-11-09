@@ -38,7 +38,6 @@
 //----------------------------------------------------------------------------------------------------------------
 #define DEFAULT_CONTROLLER_ID 0 // ID контроллера по умолчанию
 #define RADIO_SEND_INTERVAL 5000 // интервал между отсылкой данных по радиоканалу, миллисекунд
-#define SENSORS_UPDATE_INTERVAL 10000 // интервал обновления датчиков, миллисекунд
 #define USE_WATCHDOG // использовать или нет внутренний ватчдог
 #define WDT_UPDATE_INTERVAL 5000      // интервал сброса сторожевого таймера
 #define USE_RANDOM_SEED_PIN // закомментировать, если не надо использовать пин для инициализации генератора псевдослучайных чисел
@@ -138,7 +137,6 @@
 int controllerID = DEFAULT_CONTROLLER_ID;
 uint32_t radioSendInterval = RADIO_SEND_INTERVAL;
 uint32_t lastRadioSentAt = 0;
-uint32_t updateTimer = 0;
 #ifdef USE_WATCHDOG
 uint32_t updateTimerWdt = 0;
 #endif // USE_WATCHDOG
@@ -599,23 +597,13 @@ void loop()
 
   if(canWork())
   {
-    // можем работать, проверяем, не пора ли обновить датчики?
-    if(millis() - updateTimer >= SENSORS_UPDATE_INTERVAL)
-    {
       updateSensors(); // обновляем данные с датчиков
-      checkCriticalSensorIsGood(); // проверяем, в порядке ли датчик критического уровня?
-      updateTimer = millis();
-    }
-
-    // показания с датчиков обновлены, можно вычислять процент заполнения, делать выводы - надо ли включать
-    // помпу, и т.п.
-
+      checkCriticalSensorIsGood(); // проверяем, в порядке ли датчик критического уровня?      
   } // canWork
   else
   {
     // работать не можем, минимальное кол-во рабочих датчиков - меньше трёх, выключаем подающий клапан
-    turnValve(false);
-    
+    turnValve(false);    
   } // else
 
 
@@ -672,6 +660,7 @@ void loop()
       case msWaitForTankFullfilled:
       {
         // ждём наполнения бака в течение максимального времени
+        
         if(levelSensorsState[fullLevelSensorIndex])
         {
           #ifdef _DEBUG
