@@ -19168,10 +19168,12 @@ void TFTIdleScreen::draw(TFTMenu* menuManager)
   dc->drawLine(10,40,screenWidth-10,40);
 
   // рисуем номер версии
+  uint8_t* oldFont = dc->getFont();
   dc->setFont(SmallRusFont);
   dc->setColor(INFO_BOX_CAPTION_COLOR);
   dc->setBackColor(TFT_BACK_COLOR);
-  menuManager->getRusPrinter()->print(PROGRAM_VERSION,10,14);    
+  menuManager->getRusPrinter()->print(PROGRAM_VERSION,10,14);
+  dc->setFont(oldFont);    
 
 
   drawCurrentScreen(menuManager);
