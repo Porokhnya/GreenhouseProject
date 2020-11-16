@@ -53,7 +53,7 @@ void WaterTankModule::UpdateState(bool _valveOnFlag,uint8_t _fillStatus, bool _e
    #endif // USE_LORA_GATE
 
 
-
+  isOnline = true;
   lastDataPacketSeenAt = millis();
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -66,11 +66,12 @@ void WaterTankModule::Setup()
   errorFlag = true;
   errorType = waterTankNoData;
   lastDataPacketSeenAt = 0;
+  isOnline = false;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 bool WaterTankModule::IsModuleOnline()
 {
-  return (millis() - lastDataPacketSeenAt <= 120000ul);
+  return isOnline;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void WaterTankModule::Update()
@@ -79,6 +80,7 @@ void WaterTankModule::Update()
   if(millis() - lastDataPacketSeenAt >= 120000ul)
   {
     // в течение двух минут не было данных с модуля, сбрасываем флаг наличия данных
+    isOnline = false;
 
     //TODO: ТУТ ОТСЫЛ SMS, ЕСЛИ НЕОБХОДИМО !!!
 

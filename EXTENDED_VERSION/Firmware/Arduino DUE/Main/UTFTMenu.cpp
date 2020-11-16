@@ -19041,6 +19041,21 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
          #endif // USE_LORA_GATE
 
         } // if(fillTankButton == 0xFF)
+        else
+        {
+          // кнопка заполнения бака - уже есть
+
+            if(!WaterTank->IsModuleOnline())
+            {
+              screenButtons->disableButton(fillTankButton,screenButtons->buttonEnabled(fillTankButton));
+            }
+            else
+            {
+              screenButtons->enableButton(fillTankButton,!screenButtons->buttonEnabled(fillTankButton));
+            }
+                     
+          
+        } // else
       }
       break;
      #endif // USE_WATER_TANK_MODULE

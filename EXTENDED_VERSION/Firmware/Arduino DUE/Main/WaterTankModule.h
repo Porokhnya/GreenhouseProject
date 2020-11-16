@@ -21,6 +21,7 @@ class WaterTankModule : public AbstractModule // модуль управлени
     uint8_t errorType;
 
     uint32_t lastDataPacketSeenAt;
+    bool isOnline;
     
   public:
     WaterTankModule() : AbstractModule("WTANK") {}
