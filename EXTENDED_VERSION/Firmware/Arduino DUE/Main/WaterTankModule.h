@@ -39,6 +39,8 @@ class WaterTankModule : public AbstractModule // модуль управлени
     bool IsValveOn() { return valveOnFlag; }
     String GetErrorText();
 
+    bool IsModuleOnline();
+
 };
 //--------------------------------------------------------------------------------------------------------------------------------------
 extern WaterTankModule* WaterTank;

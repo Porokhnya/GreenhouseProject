@@ -9,7 +9,7 @@
 //--------------------------------------------------------------------------------------------------------------------------------
 // настройки альтернативного модуля управления фрамугами
 //--------------------------------------------------------------------------------------------------------------------------------
-#define WM_BACK_CAPTION "< НАЗАД"
+#define WM_BACK_CAPTION "$ НАЗАД"
 #define WM_SAVE_CAPTION "СОХРАНИТЬ"
 #define WM_WINDOWS_CAPTION "0 ФРАМУГИ"
 #define WM_SCENE_BUTTON_CAPTION "9 СЦЕНАРИИ" 
@@ -80,8 +80,8 @@
 #define WM_SECTION_LINK4_CAPTION "Секция 4"
 #define WM_SECTION_LABEL_PREFIX "Окно #"
 
-#define CYCLE_VENT_BUTTON_CAPTION "<ВОЗДУХООБМЕН"
-#define CYCLE_VENT_SCREEN_CAPTION "ВОЗДУХООБМЕН"
+#define CYCLE_VENT_BUTTON_CAPTION "<РЕЦИРКУЛЯЦИЯ"  //БЫЛО: "ВОЗДУХООБМЕН" - КМВ
+#define CYCLE_VENT_SCREEN_CAPTION "РЕЦИРКУЛЯЦИЯ"
 
 #define CHANNEL_N_1_CAPTION "КАНАЛ #1"
 #define CHANNEL_N_2_CAPTION "КАНАЛ #2"
@@ -114,7 +114,14 @@
 #define CONTROL_PH_CAPTION "?КОНТРОЛЬ pH"
 #define CONTROL_PH_SCREEN_CAPTION "КОНТРОЛЬ pH"
 
-#define CONTROL_CO2_CAPTION "КОНТРОЛЬ CO2"
+#define CONTROL_CO2_CAPTION "BКОНТРОЛЬ CO2"
+#define CONTROL_CO2_SCREEN_CAPTION "КОНТРОЛЬ CO2"
+
+#define DOORS_BUTTON_CAPTION "C ДВЕРИ"
+#define DOORS_SCREEN_CAPTION "ДВЕРИ"
+
+#define SPRAY_BUTTON_CAPTION "D СПРИНКЛЕРЫ"
+#define SPRAY_SCREEN_CAPTION "СПРИНКЛЕРЫ"
 
 #define WM_BLINK_ON_TEXT_COLOR VGA_WHITE
 #define WM_BLINK_OFF_TEXT_COLOR 0x3A8D
@@ -161,14 +168,14 @@
 #define HEAT_WORKTIME_CAPTION "Работа привода, с"
 #define HEAT_AIR "ВОЗДУХ"
 
-#define HEAT_INFO_BOX_CONTOUR "Контур:"
-#define HEAT_INFO_BOX_MODULE "Модуль:"
+#define HEAT_INFO_BOX_CONTOUR "КОНТУР:"
+#define HEAT_INFO_BOX_MODULE "МОДУЛЬ:"
 
 #define HEAT_INFO_BOX_CONTOUR_ON "ВКЛ"
 #define HEAT_INFO_BOX_CONTOUR_OFF "ВЫКЛ"
 
-#define HEAT_INFO_BOX_MODULE_ON "вкл"
-#define HEAT_INFO_BOX_MODULE_OFF "выкл"
+#define HEAT_INFO_BOX_MODULE_ON "ВКЛ"
+#define HEAT_INFO_BOX_MODULE_OFF "ВЫКЛ"
 
 #define HEAT_DRIVE_CHANNEL_ON "ВКЛЮЧЕН"
 #define HEAT_DRIVE_CHANNEL_OFF "ВЫКЛЮЧЕН"
@@ -380,8 +387,8 @@
 #define INFO_BOX_CAPTION_COLOR 0x30, 0x7B, 0xB5 // цвет заголовка информационного бокса
 #define SENSOR_BOX_FONT_COLOR VGA_WHITE // цвет показаний датчика
 #define SENSOR_BOX_UNIT_COLOR VGA_WHITE // цвет единиц изменений датчика
-#define MODE_ON_COLOR VGA_GREEN   // цвет "вкл", "авто"
-#define MODE_OFF_COLOR VGA_MAROON // цвет "выкл", "ручной"
+#define MODE_ON_COLOR VGA_LIME   // цвет "вкл", "авто"
+#define MODE_OFF_COLOR VGA_RED // цвет "выкл", "ручной"
 #define CHANNELS_BUTTONS_TEXT_COLOR VGA_WHITE // цвет текста кнопок каналов
 #define CHANNELS_BUTTONS_BG_COLOR 0xEF7D    // цвет фона кнопок каналов
 #define CHANNEL_BUTTONS_TEXT_COLOR 0x3A8D   // цвет текста кнопки одного канала
@@ -390,22 +397,24 @@
 #define TIME_PART_BG_COLOR 0xEF7D // цвет фона кнопки компонента времени
 #define TIME_PART_SELECTED_BG_COLOR VGA_GREEN // цвет фона выбранной кнопки компонента времени
 #define STATUS_ON_COLOR VGA_LIME // цвет статусов на экране ожидания
+
+#define TFT_MANUAL_MODE_CAPTION_COLOR VGA_YELLOW     //цвет шрифта, которым будет написан ручной режим работы в инфобоксах -КМВ
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // настройки подписей и пр.
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #define TFT_WINDOW_STATUS_CAPTION "ФРАМУГИ"
 #define TFT_WATER_STATUS_CAPTION "ПОЛИВ"
 #define TFT_LIGHT_STATUS_CAPTION "ДОСВЕТКА"
-#define TFT_STATUS_CAPTION "Статус:"
-#define TFT_MODE_CAPTION "Режим:"
-#define TFT_WINDOWS_OPEN_CAPTION "открыты"
-#define TFT_WINDOWS_CLOSED_CAPTION "закрыты"
-#define TFT_WATER_ON_CAPTION "вкл"
-#define TFT_WATER_OFF_CAPTION "выкл"
-#define TFT_LIGHT_ON_CAPTION "вкл"
-#define TFT_LIGHT_OFF_CAPTION "выкл"
-#define TFT_AUTO_MODE_CAPTION "авто"
-#define TFT_MANUAL_MODE_CAPTION "ручной"
+#define TFT_STATUS_CAPTION "СТАТУС:"
+#define TFT_MODE_CAPTION "РЕЖИМ:"
+#define TFT_WINDOWS_OPEN_CAPTION "ОТКРЫТЫ"
+#define TFT_WINDOWS_CLOSED_CAPTION "ЗАКРЫТЫ"
+#define TFT_WATER_ON_CAPTION "ВКЛ"
+#define TFT_WATER_OFF_CAPTION "ВЫКЛ"
+#define TFT_LIGHT_ON_CAPTION "ВКЛ"
+#define TFT_LIGHT_OFF_CAPTION "ВЫКЛ"
+#define TFT_AUTO_MODE_CAPTION "АВТО"
+#define TFT_MANUAL_MODE_CAPTION "РУЧНОЙ"
 #define AUTO_MODE_LABEL "РЕЖИМ: АВТО"
 #define MANUAL_MODE_LABEL "РЕЖИМ: РУЧНОЙ"
 #define OPEN_ALL_LABEL "ОТКРЫТЬ ВСЕ"
@@ -423,8 +432,8 @@
 #define TFT_SENSOR_HUMIDITY_CAPTION F("Влажность #")
 #define TFT_SENSOR_LUMINOSITY_CAPTION F("Освещенность #")
 #define TFT_SENSOR_SOIL_CAPTION F("Почва #")
-#define TFT_LIST_SCROLL_UP_CAPTION "ВВЕРХ"
-#define TFT_LIST_SCROLL_DOWN_CAPTION "ВНИЗ"
+#define TFT_LIST_SCROLL_UP_CAPTION "{ ВВЕРХ"
+#define TFT_LIST_SCROLL_DOWN_CAPTION "} ВНИЗ"
 #define TFT_TIME_SYNC_BUTTON_CAPTION "СИНХРОНИЗАЦИЯ ВРЕМЕНИ"
 #define TFT_SYNC_ENABLED_CAPTION "ВКЛЮЧЕНА"
 #define TFT_SYNC_DISABLED_CAPTION "ВЫКЛЮЧЕНА"

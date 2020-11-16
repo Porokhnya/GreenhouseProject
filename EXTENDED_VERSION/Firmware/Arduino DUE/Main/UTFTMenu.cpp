@@ -15059,6 +15059,7 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     leftPos = initialLeftPos;
 
     co2Button = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, CONTROL_CO2_CAPTION);
+    screenButtons->setButtonHasIcon(co2Button);
     leftPos += controlsButtonsWidth + spacing;
     #ifndef USE_CO2_MODULE
     screenButtons->disableButton(co2Button);
@@ -15072,10 +15073,10 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     screenButtons->disableButton(phButton);
     #endif
 
-    doorButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, "ДВЕРИ");
+    doorButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, DOORS_BUTTON_CAPTION);
+    screenButtons->setButtonHasIcon(doorButton);
     leftPos += controlsButtonsWidth + spacing;
-    //screenButtons->setButtonHasIcon(doorButton);
-    #ifndef USE_DOOR_MODULE
+     #ifndef USE_DOOR_MODULE
     screenButtons->disableButton(doorButton);
     #endif    
 
@@ -15089,7 +15090,8 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     leftPos += controlsButtonsWidth + spacing;
 
     // кнопка распрыскивания
-    sprayButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, "СПРИНКЛЕРЫ");
+    sprayButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, SPRAY_BUTTON_CAPTION);
+    screenButtons->setButtonHasIcon(sprayButton);
     leftPos += controlsButtonsWidth + spacing;
     #ifndef USE_HUMIDITY_SPRAY_MODULE
     screenButtons->disableButton(sprayButton);
@@ -16902,6 +16904,15 @@ void TFTIdleScreen::drawWaterTankStatus(TFTMenu* menuManager)
         screenButtons->relabelButton(fillTankButton,"НАПОЛНИТЬ БАК");        
       }
 
+      if(!WaterTank->IsModuleOnline())
+      {
+        screenButtons->disableButton(fillTankButton);
+      }
+      else
+      {
+        screenButtons->enableButton(fillTankButton);
+      }
+
       //Serial.println("draw fill tank button 3");
       screenButtons->drawButton(fillTankButton);
     }
@@ -17669,7 +17680,7 @@ void TFTIdleScreen::drawStatusesInBox(TFTMenu* menuManager,TFTInfoBox* box, bool
   }
   else
   {
-    dc->setColor(SENSOR_BOX_FONT_COLOR);
+    dc->setColor(TFT_MANUAL_MODE_CAPTION_COLOR); // ручной режим будет отрисован другим цветом = КМВ
     toDraw = manualModeString;
   }
 
@@ -19016,6 +19027,11 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
               fillTankButton = screenButtons->addButton( rc.x + 10 , rc.y + 10, rc.w - 20,  rc.h - 20, "НАПОЛНИТЬ БАК");
               //screenButtons->setButtonBackColor(fillTankButton, VGA_MAROON);
               //screenButtons->setButtonFontColor(fillTankButton, VGA_WHITE);
+
+              if(!WaterTank->IsModuleOnline())
+              {
+                screenButtons->disableButton(fillTankButton);
+              }
     
               //Serial.println("draw fill tank button 2");
               screenButtons->drawButton(fillTankButton);
