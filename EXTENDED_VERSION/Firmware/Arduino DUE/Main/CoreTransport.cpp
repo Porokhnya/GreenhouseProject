@@ -3335,7 +3335,11 @@ void CoreMQTT::update()
             if(hasPublishTopics)
             {
 
-              retain = true;
+              #ifdef MQTT_RETAIN_TOPICS
+                      retain = true;
+              #else
+                      retain = false;
+              #endif
               // есть пакеты для публикации
               MQTTPublishQueue pq = publishList[0];
 
