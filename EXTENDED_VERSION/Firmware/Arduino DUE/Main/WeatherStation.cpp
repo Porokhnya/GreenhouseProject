@@ -104,6 +104,12 @@ WeatherStationClass::WeatherStationClass()
 void WeatherStationClass::setup(int16_t _pin)
 {
 
+   Humidity = NO_TEMPERATURE_DATA;
+   HumidityDecimal = 0;
+
+   Temperature = NO_TEMPERATURE_DATA;
+   TemperatureDecimal = 0;
+
   if(_pin > -1 && _pin != UNBINDED_PIN && EEPROMSettingsModule::SafePin(_pin)
   && _pin < NUM_DIGITAL_PINS // запрещаем использование пина больше 66 (для DUE)
   )
@@ -152,11 +158,12 @@ void WeatherStationClass::update()
     { //первый байт должен быть 0xF5 (ID станции, может варьироваться от модели и верный CRC
       //ID станции возможно необходимо настраивать под конкретную?
 
-      /*
+      
       //Температура
       float temp = 0;
       int16_t temp_tmp = 0;
       int16_t temp_tmp1 = 0;
+      bool tempValid = true;
       for (uint8_t i = 36; i < 48; i++)    //биты температуры
       {
         temp_tmp <<= 1;                  //смещаем влево
@@ -172,7 +179,20 @@ void WeatherStationClass::update()
       }
       else 
       {
-        temp = 255;
+        tempValid = false;
+      }
+
+      if(tempValid) // валидная температура
+      {
+          int32_t iTemp = temp*100;
+          Temperature = iTemp/100;
+          TemperatureDecimal = abs(iTemp%100);
+          
+      }
+      else // невалидная температура
+      {
+        Temperature = NO_TEMPERATURE_DATA;
+        TemperatureDecimal = 0; 
       }
 
       //Влажность
@@ -191,9 +211,20 @@ void WeatherStationClass::update()
       }
       else 
       {
-        hum = 255;
+        hum = 0xFF;
       }
-*/
+
+      if(hum != 0xFF) // валидная влажность
+      {
+        Humidity = hum;
+        HumidityDecimal = 0;
+      }
+      else // невалидная влажность
+      {
+        Humidity = NO_TEMPERATURE_DATA;
+        HumidityDecimal = 0;
+      }
+
 
       //скорость ветра
       uint16_t ch_wind = 0;

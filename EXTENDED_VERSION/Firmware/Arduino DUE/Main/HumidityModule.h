@@ -7,18 +7,6 @@
 #include "DHTSupport.h"
 #include "TinyVector.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
-/*
-#pragma pack(push,1)
-typedef struct
-{
-  uint8_t pin;
-  uint8_t pin2;
-  HumiditySensorType type;
-  
-} HumiditySensorRecord;
-#pragma pack(pop)
-*/
-//--------------------------------------------------------------------------------------------------------------------------------------
 class HumidityModule : public AbstractModule // модуль управления влажностью
 {
   private:

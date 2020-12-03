@@ -2,6 +2,7 @@
 #include "ModuleController.h"
 #include "SHT1x.h"
 #include "EEPROMSettingsModule.h"
+#include "WeatherStation.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
 ///////////////////////////// КОД СБРОСА ДИНАМИЧЕСКИХ ДАТЧИКОВ ////////////////////////////////////////
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -25,7 +26,7 @@ void HumidityModule::Setup()
     uint8_t t = hbnd.Type[i];
     uint8_t pin1 = hbnd.Pin1[i];
     
-    if(t > SHT10 || t < DHT11) // неизвестный науке датчик
+    if(t > MISOL || t < DHT11) // неизвестный науке датчик
     {
       continue;
     }
@@ -42,29 +43,7 @@ void HumidityModule::Setup()
         WORK_STATUS.PinMode(pin1,OUTPUT);
       }
   } // for
-  
-/*
-  #if SUPPORTED_HUMIDITY_SENSORS > 0
-
- // si7021.begin(); // настраиваем датчик Si7021
-  dummyAnswer.IsOK = false;
-  
-  for(uint8_t i=0;i<SUPPORTED_HUMIDITY_SENSORS;i++)
-   {
-    State.AddState(StateHumidity,i); // поддерживаем и влажность,
-    State.AddState(StateTemperature,i); // и температуру
-
-     // проверяем на стробы для Si7021
-     if(HUMIDITY_SENSORS_ARRAY[i].type == SI7021 && HUMIDITY_SENSORS_ARRAY[i].pin > 0)
-     {
-      //Serial.println("FOUND SI7021 STROBE PIN!!!");
-       // есть привязанный пин для разрыва строба - настраиваем его
-       WORK_STATUS.PinMode(HUMIDITY_SENSORS_ARRAY[i].pin,OUTPUT);
-     }
    
-   }
-   #endif  
-*/   
  }
 //--------------------------------------------------------------------------------------------------------------------------------------
 HumidityAnswer HumidityModule::QuerySensor(uint8_t sensorNumber, uint8_t pin, uint8_t pin2, HumiditySensorType type)
@@ -205,6 +184,20 @@ HumidityAnswer HumidityModule::QuerySensor(uint8_t sensorNumber, uint8_t pin, ui
       }
     }
     break;
+
+    case MISOL: // датчики с метеостанции типа MISOL
+    {
+        dummyAnswer.Temperature = WeatherStation.Temperature;
+        dummyAnswer.TemperatureDecimal = WeatherStation.TemperatureDecimal;
+
+        dummyAnswer.Humidity = WeatherStation.Humidity;
+        dummyAnswer.HumidityDecimal = WeatherStation.HumidityDecimal;
+
+        dummyAnswer.IsOK = (dummyAnswer.Temperature != NO_TEMPERATURE_DATA) || (dummyAnswer.Humidity != NO_TEMPERATURE_DATA);
+
+      return dummyAnswer;
+    }
+    break;
   }
   return dummyAnswer;
 }
@@ -237,7 +230,7 @@ void HumidityModule::Update()
       uint8_t pin2 = hbnd.Pin2[i];
       uint8_t type = hbnd.Type[i];
 
-      if(type > SHT10 || type < DHT11) // неизвестный науке датчик
+      if(type > MISOL || type < DHT11) // неизвестный науке датчик
       {
         continue;
       }
@@ -268,34 +261,6 @@ void HumidityModule::Update()
       sensorCntr++;
 
   } // for
-  /*
-  for(uint8_t i=0;i<SUPPORTED_HUMIDITY_SENSORS;i++)
-   {
-      Humidity h;
-      Temperature t;
-      HumidityAnswer answer = QuerySensor(i, HUMIDITY_SENSORS_ARRAY[i].pin, HUMIDITY_SENSORS_ARRAY[i].pin2, HUMIDITY_SENSORS_ARRAY[i].type);
-
-      if(answer.IsOK)
-      {
-        h.Value = answer.Humidity;
-        h.Fract = answer.HumidityDecimal;
-        
-        t.Value = answer.Temperature;
-        t.Fract = answer.TemperatureDecimal;
-
-        // convert to Fahrenheit if needed
-        #ifdef MEASURE_TEMPERATURES_IN_FAHRENHEIT
-         t = Temperature::ConvertToFahrenheit(t);
-        #endif
-        
-      } // if
-
-      // сохраняем данные в состоянии модуля - индексы мы назначаем сами, последовательно, поэтому дыр в нумерации датчиков нет
-      State.UpdateState(StateTemperature,i,(void*)&t);
-      State.UpdateState(StateHumidity,i,(void*)&h);
-   }  // for
-   */
-
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 bool  HumidityModule::ExecCommand(const Command& command,bool wantAnswer)
