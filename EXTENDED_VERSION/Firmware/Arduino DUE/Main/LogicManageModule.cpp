@@ -3,6 +3,7 @@
 #include "InteropStream.h"
 #include "TempSensors.h"
 #include "EEPROMSettingsModule.h"
+#include "WeatherStation.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_THERMOSTAT_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1186,11 +1187,11 @@ RainSensor::~RainSensor()
 //--------------------------------------------------------------------------------------------------------------------------------------
 void RainSensor::setHasRain(bool b)
 { 
-  // установка флага дождя извне. Доступна только тогда, когда режим работы - выносной модуль!!!
+  // установка флага дождя извне. Доступна только тогда, когда режим работы - выносной модуль или метеостанция типа Misol!!!
 
   RainSensorBinding bnd = HardwareBinding->GetRainSensorBinding();
   
-  if(bnd.WorkMode != wrsExternalModule) // режим работы - не выносной модуль
+  if(!(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)) // режим работы - не выносной модуль или метеостанция типа Misol
   {
     return;
   }
@@ -1244,7 +1245,7 @@ void RainSensor::update()
 
   RainSensorBinding bnd = HardwareBinding->GetRainSensorBinding();
 
-  if(bnd.WorkMode == wrsExternalModule) // датчик подключен через выносной модуль
+  if(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol) // датчик подключен через выносной модуль или метеостанцию типа Misol
   {
     if((millis() - lastDataAt) > 2ul*WIND_RAIN_UPDATE_INTERVAL)
     {
@@ -1253,7 +1254,7 @@ void RainSensor::update()
       rainFlag = false;
     }
     
-  } // if(bnd.WorkMode == wrsExternalModule)
+  } // if(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)
   else 
   if(bnd.WorkMode == wrsDirect) // датчик подключен напрямую к контроллеру
   {
@@ -6533,7 +6534,18 @@ void WindSensor::setup()
       compassSamples[i] = cpUnknown;
     }
     
-  } // if(bnd.WorkMode == 0)
+  } // if(bnd.WorkMode == wrsDirect)
+  else
+  if(bnd.WorkMode == wrsMisol) // работаем через метеостанцию типа Misol
+  {
+    if(bnd.Pin != UNBINDED_PIN)
+    {
+        if(EEPROMSettingsModule::SafePin(bnd.Pin))
+        {
+          WeatherStation.setup(bnd.Pin);
+        }
+    }    
+  } // if(bnd.WorkMode == wrsMisol)
   
 
 	lastDataAt = millis();
@@ -6549,7 +6561,7 @@ void WindSensor::setWindSpeed(uint32_t ws)
   // установка скорости ветра извне, может применяться только тогда, когда режим работы - внешний модуль!!!
   
   WindSensorBinding bnd = HardwareBinding->GetWindSensorBinding();
-  if(bnd.WorkMode != wrsExternalModule) // не через внешний модуль работаем
+  if(!(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)) // не через внешний модуль работаем и не верез метеостанцию типа Misol
   {
     return;
   }
@@ -6563,7 +6575,7 @@ void WindSensor::setWindDirection(CompassPoints cp)
   // установка направления ветра извне, может применяться только тогда, когда режим работы - внешний модуль!!!
   
   WindSensorBinding bnd = HardwareBinding->GetWindSensorBinding();
-  if(bnd.WorkMode != wrsExternalModule) // не через внешний модуль работаем
+  if(!(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)) // не через внешний модуль работаем и не верез метеостанцию типа Misol
   {
     return;
   }
@@ -6671,8 +6683,13 @@ void WindSensor::update()
 
  } // if(bnd.WorkMode == wrsDirect)
  else
- if(bnd.WorkMode == wrsExternalModule) // датчик прикреплён на выносной модуль
+ if(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol) // датчик прикреплён на выносной модуль или работаем через метеостанцию типа Misol
  {
+    if(bnd.WorkMode == wrsMisol) // если работаем через метеостанцию - обновляем её
+    {
+      WeatherStation.update();
+    }
+  
     if((millis() - lastDataAt) > 2ul*WIND_RAIN_UPDATE_INTERVAL)
     {
       // очень долго не было данных, сбрасываем
@@ -6680,7 +6697,7 @@ void WindSensor::update()
       windDirection = cpUnknown;
       lastDataAt = millis();
     }
- } // if(bnd.WorkMode == wrsExternalModule)
+ } // if(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)
      
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
