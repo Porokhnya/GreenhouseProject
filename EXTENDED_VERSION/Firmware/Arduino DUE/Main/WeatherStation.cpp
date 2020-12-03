@@ -1,6 +1,7 @@
 #include "WeatherStation.h"
 #include "LogicManageModule.h"
 #include "EEPROMSettingsModule.h"
+#include "AbstractModule.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
 WeatherStationClass WeatherStation;
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -103,11 +104,13 @@ WeatherStationClass::WeatherStationClass()
 void WeatherStationClass::setup(int16_t _pin)
 {
 
-  if(_pin > -1 && _pin != UNBINDED_PIN && EEPROMSettingsModule::SafePin(_pin))
+  if(_pin > -1 && _pin != UNBINDED_PIN && EEPROMSettingsModule::SafePin(_pin)
+  && _pin < NUM_DIGITAL_PINS // запрещаем использование пина больше 66 (для DUE)
+  )
   {
       pin = _pin;
-      pinMode(pin, INPUT_PULLUP);
-      attachInterrupt(pin, read_input, CHANGE);  // DUE    
+      WORK_STATUS.PinMode(pin, INPUT_PULLUP,true);
+      attachInterrupt(digitalPinToInterrupt(pin), read_input, CHANGE);  // DUE    
   }
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -118,10 +121,8 @@ void WeatherStationClass::update()
     return;
   }
 
-
   if (flag == 1) //если были данные
   {
-
 
     uint16_t stationID = 0;  // Получить ID станции
     for (uint8_t i = 0; i < 8; i++)
