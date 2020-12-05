@@ -10,6 +10,7 @@
 #include "EEPROMSettingsModule.h"
 #include "TinyVector.h"
 #include "CoreTransport.h"
+#include "ADCSampler.h"
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 #if defined(USE_UNIVERSAL_MODULES) && defined(USE_UNI_REGISTRATION_LINE)
 
@@ -28,15 +29,64 @@
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void(* resetFunc) (void) = 0;
 ZeroStreamListener* ZeroStream = NULL;
+ADCSampler sampler;
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void loopADC() 
+{
+
+  if(sampler.available()) 
+  {
+ 
+    int bufferLength = 0;
+    uint16_t* cBuf = sampler.getFilledBuffer(&bufferLength);
+
+    int16_t systemTemp = cBuf[0];
+    float temp = (float)systemTemp / 4096 * TSYSTEM_VREF;    // Напряжение в вольтах на датчике.
+    temp = (temp - TSYSTEM_V_25) / TSYSTEM_SLOPE + 25;   // Температура в градусах.
+    systemTemp = (int16_t)temp;                // Температура в градусах без дробей
+
+    if(ZeroStream)
+    {
+      // получаем хранилище температуры системы
+      OneState* os = ZeroStream->State.GetState(StateTemperature,0);
+      
+      if(os)
+      {
+        Temperature t;
+        t.Value = systemTemp;
+        t.Fract = 0;
+
+          // convert to Fahrenheit if needed
+          #ifdef MEASURE_TEMPERATURES_IN_FAHRENHEIT
+           t = Temperature::ConvertToFahrenheit(t);
+          #endif           
+
+          // обновляем температуру системы
+          ZeroStream->State.UpdateState(StateTemperature,0,(void*)&t);
+      } // if(os)
+      
+    } // if(ZeroStream)
+    
+    sampler.readBufferDone();
+    
+  } // if(sampler.available()) 
+  
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void ADC_Handler() 
+{
+  sampler.handleInterrupt();
+}
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void ZeroStreamListener::Setup()
 {
   ZeroStream = this;
   // настройка модуля тут
-  #ifdef USE_DS3231_REALTIME_CLOCK
-    // добавляем температуру часов
+  //#ifdef USE_DS3231_REALTIME_CLOCK
+    // добавляем температуру системы
     State.AddState(StateTemperature,0);
-  #endif
+    sampler.begin(20);// samplingRate == 20
+  //#endif
 
   #if defined(USE_UNIVERSAL_MODULES) && defined(USE_UNI_REGISTRATION_LINE)
 
@@ -78,6 +128,7 @@ void ZeroStreamListener::Setup()
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 void ZeroStreamListener::Update()
 {
+  loopADC();
 	
   static uint32_t _timer = 0;
   uint32_t now = millis();
@@ -97,6 +148,7 @@ void ZeroStreamListener::Update()
   
 #endif // #if defined(USE_UNIVERSAL_MODULES) && defined(USE_UNI_REGISTRATION_LINE)
 
+/*
  #ifdef USE_DS3231_REALTIME_CLOCK
 
   // читать чаще, чем раз в 20 секунд - быссмысленно, 
@@ -120,7 +172,7 @@ void ZeroStreamListener::Update()
     
   }
   #endif 
-
+*/
 
   #ifdef USE_RS485_GATE
     RS485.Update();

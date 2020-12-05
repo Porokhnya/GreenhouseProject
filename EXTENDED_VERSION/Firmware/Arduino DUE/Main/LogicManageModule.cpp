@@ -1193,6 +1193,7 @@ void RainSensor::setHasRain(bool b)
   
   if(!(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)) // режим работы - не выносной модуль или метеостанция типа Misol
   {
+    lastDataAt = millis(); 
     return;
   }
   
@@ -6563,6 +6564,7 @@ void WindSensor::setWindSpeed(uint32_t ws)
   WindSensorBinding bnd = HardwareBinding->GetWindSensorBinding();
   if(!(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)) // не через внешний модуль работаем и не верез метеостанцию типа Misol
   {
+    lastDataAt = millis(); 
     return;
   }
   
@@ -6577,6 +6579,7 @@ void WindSensor::setWindDirection(CompassPoints cp)
   WindSensorBinding bnd = HardwareBinding->GetWindSensorBinding();
   if(!(bnd.WorkMode == wrsExternalModule || bnd.WorkMode == wrsMisol)) // не через внешний модуль работаем и не верез метеостанцию типа Misol
   {
+    lastDataAt = millis(); 
     return;
   }
   
