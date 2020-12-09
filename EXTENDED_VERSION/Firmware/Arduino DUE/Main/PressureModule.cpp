@@ -1,5 +1,6 @@
 #include "PressureModule.h"
 #include "ModuleController.h"
+#include "ZeroStreamListener.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_PRESSURE_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -139,16 +140,54 @@ void PressureModule::Update()
 					
 				  }
 			  } // hasSensor			  
-		  }
+		  } // if(measureIterator > 1)
 		  else
 		  {
 			  // закончилась конвертация температуры	  
-				sensor.getTemperature(pressureTemperature);
-			  	measureTimerInterval = sensor.startPressure(3);
+				if(sensor.getTemperature(pressureTemperature))
+        {
+          // получили температуру системы, смотрим - надо ли её пихнуть в нужное место?
+          #if SYSTEM_TEMP_SOURCE == 1 // температура системы определяется как температура с датчика BMP180
+
+          if(ZeroStream)
+          {
+              int32_t tempI = pressureTemperature*100;
+              int8_t tVal = tempI/100;
+              uint8_t tFract = abs(tempI)%100;
+              Temperature t;
+              t.Value = tVal;
+              t.Fract = tFract;
+
+              // convert to Fahrenheit if needed
+              #ifdef MEASURE_TEMPERATURES_IN_FAHRENHEIT
+               t = Temperature::ConvertToFahrenheit(t);
+              #endif  
+
+              ZeroStream->State.UpdateState(StateTemperature,0,(void*)&t);
+              
+          } // if(ZeroStream)
+          
+          #endif // SYSTEM_TEMP_SOURCE == 1
+          
+        } // if(sensor.getTemperature(pressureTemperature))
+        else
+        {
+          // температуру получить не удалось
+           #if SYSTEM_TEMP_SOURCE == 1 // температура системы определяется как температура с датчика BMP180
+           if(ZeroStream)
+           {
+              Temperature t;
+              ZeroStream->State.UpdateState(StateTemperature,0,(void*)&t);
+           } // if(ZeroStream)
+           #endif  // SYSTEM_TEMP_SOURCE == 1
+        } // else
+       
+			  measureTimerInterval = sensor.startPressure(3);
 				measureTimerTime = millis();
-		  }		  		
+        
+		  } // else		  		
 		  
-	  }
+	  } // if(millis() - measureTimerTime > measureTimerInterval)
 	  
 	  return;
   }

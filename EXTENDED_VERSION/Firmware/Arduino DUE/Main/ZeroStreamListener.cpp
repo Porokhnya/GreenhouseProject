@@ -32,11 +32,9 @@ ZeroStreamListener* ZeroStream = NULL;
 void ZeroStreamListener::Setup()
 {
   ZeroStream = this;
-  // настройка модуля тут
-  #ifdef USE_DS3231_REALTIME_CLOCK
-    // добавляем температуру системы
-    State.AddState(StateTemperature,0);
-  #endif
+  
+  // добавляем температуру системы
+  State.AddState(StateTemperature,0);
 
   #if defined(USE_UNIVERSAL_MODULES) && defined(USE_UNI_REGISTRATION_LINE)
 
@@ -100,27 +98,31 @@ void ZeroStreamListener::Update()
 
  #ifdef USE_DS3231_REALTIME_CLOCK
 
-  // читать чаще, чем раз в 20 секунд - быссмысленно, 
-  // внутренняя конверсия температуры у DS3231 происходит
-  // каждые 64 секунды.
-  static uint16_t dsTimer = 20000;
-  dsTimer += dt;
-  if(dsTimer > 20000)
-  {
-    dsTimer = 0;
-  // получаем температуру модуля реального времени
-    RealtimeClock rtc = MainController->GetClock();
-    Temperature t = rtc.getTemperature();
+  #if SYSTEM_TEMP_SOURCE == 0 // температура с часов реального времени
 
-    // convert to Fahrenheit if needed
-    #ifdef MEASURE_TEMPERATURES_IN_FAHRENHEIT
-     t = Temperature::ConvertToFahrenheit(t);
-    #endif      
-          
-    State.UpdateState(StateTemperature,0,(void*)&t);
+      // читать чаще, чем раз в 20 секунд - быссмысленно, 
+      // внутренняя конверсия температуры у DS3231 происходит
+      // каждые 64 секунды.
+      static uint16_t dsTimer = 20000;
+      dsTimer += dt;
+      if(dsTimer > 20000)
+      {
+        dsTimer = 0;
+      // получаем температуру модуля реального времени
+        RealtimeClock rtc = MainController->GetClock();
+        Temperature t = rtc.getTemperature();
     
-  }
-  #endif 
+        // convert to Fahrenheit if needed
+        #ifdef MEASURE_TEMPERATURES_IN_FAHRENHEIT
+         t = Temperature::ConvertToFahrenheit(t);
+        #endif      
+              
+        State.UpdateState(StateTemperature,0,(void*)&t);
+        
+      }
+    #endif // #if SYSTEM_TEMP_SOURCE == 0
+    
+  #endif // #ifdef USE_DS3231_REALTIME_CLOCK
 
 
   #ifdef USE_RS485_GATE
