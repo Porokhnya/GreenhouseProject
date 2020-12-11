@@ -877,7 +877,7 @@ void setup()
  {
     if(bnd.LinkType == linkDirect)
     {
-        if(bnd.ReadyDiodePin != UNBINDED_PIN)
+        if(bnd.ReadyDiodePin != UNBINDED_PIN && bnd.ReadyDiodePin > 1)
         {
           #ifndef DISABLE_DIODES_CONFIGURE
           if(EEPROMSettingsModule::SafePin(bnd.ReadyDiodePin))

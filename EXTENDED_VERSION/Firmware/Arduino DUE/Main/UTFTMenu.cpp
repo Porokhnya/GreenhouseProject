@@ -19740,6 +19740,8 @@ void TFTMenu::switchBacklight(uint8_t level)
 
          #ifndef DISABLE_TFT_CONFIGURE
           if(EEPROMSettingsModule::SafePin(bnd.BacklightPin))
+         #else
+          if(bnd.BacklightPin > 1) // не даём блокировать Serial
          #endif 
           {
               

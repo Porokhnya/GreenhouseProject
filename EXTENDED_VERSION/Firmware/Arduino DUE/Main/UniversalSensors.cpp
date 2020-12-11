@@ -107,6 +107,8 @@ void UniRS485Gate::enableSend()
     {
         #ifndef DISABLE_RS485_CONFIGURE
         if(EEPROMSettingsModule::SafePin(bnd.DEPin))
+        #else
+        if(bnd.DEPin > 1) // не даём блокировать Serial
         #endif
         {
             digitalWrite(bnd.DEPin,HIGH); 
@@ -151,6 +153,8 @@ void UniRS485Gate::enableReceive()
     {
         #ifndef DISABLE_RS485_CONFIGURE
         if(EEPROMSettingsModule::SafePin(bnd.DEPin))
+        #else
+        if(bnd.DEPin > 1) // не даём блокировать Serial
         #endif
         {
             digitalWrite(bnd.DEPin,LOW);
@@ -185,6 +189,8 @@ void UniRS485Gate::Setup()
     {
         #ifndef DISABLE_RS485_CONFIGURE
         if(EEPROMSettingsModule::SafePin(bnd.DEPin))
+        #else
+        if(bnd.DEPin > 1) // не даём блокировать Serial
         #endif
         {
            WORK_STATUS.PinMode(bnd.DEPin,OUTPUT);
@@ -3429,6 +3435,8 @@ void UniNRFGate::Setup()
         {
           #ifndef DISABLE_NRF_CONFIGURE
           if(EEPROMSettingsModule::SafePin(bnd.PowerPin))
+          #else
+          if(bnd.PowerPin > 1) // prevent Serial locking
           #endif
           {
             WORK_STATUS.PinMode(bnd.PowerPin,OUTPUT);
@@ -3910,6 +3918,8 @@ void UniLoRaGate::Setup()
         {
           #ifndef DISABLE_LORA_CONFIGURE
           if(EEPROMSettingsModule::SafePin(bnd.PowerPin))
+          #else
+          if(bnd.PowerPin > 1) // prevent Serial locking
           #endif
           {
             WORK_STATUS.PinMode(bnd.PowerPin,OUTPUT);

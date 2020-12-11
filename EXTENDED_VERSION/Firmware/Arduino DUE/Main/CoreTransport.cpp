@@ -2141,6 +2141,8 @@ void CoreESPTransport::power(bool on)
       {
           #ifndef DISABLE_WIFI_CONFIGURE
           if(EEPROMSettingsModule::SafePin(bnd.RebootPin))
+          #else
+          if(bnd.RebootPin > 1) // prevent Serial locking
           #endif
           {
              WORK_STATUS.PinMode(bnd.RebootPin,OUTPUT);
@@ -4848,6 +4850,8 @@ void CoreSIM800Transport::power(bool on)
       {
           #ifndef DISABLE_GSM_CONFIGURE
           if(EEPROMSettingsModule::SafePin(gbnd.RebootPin))
+          #else
+          if(gbnd.RebootPin > 1) // prevent Serial locking
           #endif
           {
             WORK_STATUS.PinMode(gbnd.RebootPin,OUTPUT);
@@ -6379,6 +6383,8 @@ void CoreSIM800Transport::update()
                   {
                       #ifndef DISABLE_GSM_CONFIGURE
                       if(EEPROMSettingsModule::SafePin(gbnd.PowerkeyPin))
+                      #else
+                      if(gbnd.PowerkeyPin > 1) // prevent Serial locking
                       #endif
                       {
                         WORK_STATUS.PinWrite(gbnd.PowerkeyPin,!gbnd.PowerkeyOnLevel);
@@ -6432,6 +6438,8 @@ void CoreSIM800Transport::update()
                   {
                       #ifndef DISABLE_GSM_CONFIGURE
                       if(EEPROMSettingsModule::SafePin(gbnd.PowerkeyPin))
+                      #else
+                      if(gbnd.PowerkeyPin > 1) // prevent Serial locking
                       #endif
                       {
                         WORK_STATUS.PinWrite(gbnd.PowerkeyPin,gbnd.PowerkeyOnLevel);
@@ -6533,6 +6541,8 @@ void CoreSIM800Transport::powerkeyInit()
     {
         #ifndef DISABLE_GSM_CONFIGURE
         if(EEPROMSettingsModule::SafePin(gbnd.PowerkeyPin))
+        #else
+        if(gbnd.PowerkeyPin > 1) // prevent Serial locking
         #endif
         {
           WORK_STATUS.PinMode(gbnd.PowerkeyPin,OUTPUT);

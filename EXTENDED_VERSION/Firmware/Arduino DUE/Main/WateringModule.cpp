@@ -964,7 +964,7 @@ void WateringModule::Setup()
   {
     if(bnd.LinkType == linkDirect)
     {
-        if(bnd.WateringManualModeDiodePin != UNBINDED_PIN 
+        if(bnd.WateringManualModeDiodePin != UNBINDED_PIN && bnd.WateringManualModeDiodePin > 1
         #ifndef DISABLE_DIODES_CONFIGURE
         && EEPROMSettingsModule::SafePin(bnd.WateringManualModeDiodePin)
         #endif

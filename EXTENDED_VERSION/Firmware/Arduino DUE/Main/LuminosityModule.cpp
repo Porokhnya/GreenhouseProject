@@ -148,7 +148,7 @@ void LuminosityModule::Setup()
   {
     if(dbnd.LinkType == linkDirect)
     {
-        if(dbnd.LightManualModeDiodePin != UNBINDED_PIN && dbnd.LightManualModeDiodePin > 0
+        if(dbnd.LightManualModeDiodePin != UNBINDED_PIN && dbnd.LightManualModeDiodePin > 1
         #ifndef DISABLE_DIODES_CONFIGURE
         && EEPROMSettingsModule::SafePin(dbnd.LightManualModeDiodePin)
         #endif

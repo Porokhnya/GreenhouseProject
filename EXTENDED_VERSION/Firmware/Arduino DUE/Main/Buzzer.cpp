@@ -24,7 +24,7 @@ void BuzzerClass::begin()
 
   if(bnd.LinkType == linkDirect)
   {
-    if(bnd.Pin != UNBINDED_PIN)
+    if(bnd.Pin != UNBINDED_PIN && bnd.Pin > 1)
     {
       #ifndef DISABLE_BUZZER_CONFIGURE
       if(EEPROMSettingsModule::SafePin(bnd.Pin))
@@ -89,7 +89,7 @@ void BuzzerClass::buzzLevel(bool on)
 
   if(bnd.LinkType == linkDirect)
   {
-    if(bnd.Pin != UNBINDED_PIN)
+    if(bnd.Pin != UNBINDED_PIN && bnd.Pin > 1)
     {
       #ifndef DISABLE_BUZZER_CONFIGURE
       if(EEPROMSettingsModule::SafePin(bnd.Pin))

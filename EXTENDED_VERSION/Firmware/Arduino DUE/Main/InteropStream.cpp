@@ -98,7 +98,7 @@ void BlinkModeInterop::begin(uint8_t p)
     
     if(bnd.LinkType == linkDirect)
     {
-        if(pin != UNBINDED_PIN)
+        if(pin != UNBINDED_PIN && pin > 1)
         {
           #ifndef DISABLE_DIODES_CONFIGURE
           if(EEPROMSettingsModule::SafePin(pin))

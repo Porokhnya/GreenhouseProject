@@ -1083,7 +1083,7 @@ void TempSensors::Setup()
   {
     if(dbnd.LinkType == linkDirect)
     {
-        if(dbnd.WindowsManualModeDiodePin != UNBINDED_PIN 
+        if(dbnd.WindowsManualModeDiodePin != UNBINDED_PIN && dbnd.WindowsManualModeDiodePin > 1
         #ifndef DISABLE_DIODES_CONFIGURE
         && EEPROMSettingsModule::SafePin(dbnd.WindowsManualModeDiodePin)
         #endif
