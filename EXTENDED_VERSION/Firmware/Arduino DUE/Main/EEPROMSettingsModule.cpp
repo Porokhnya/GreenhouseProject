@@ -170,6 +170,11 @@ const uint8_t UNSAFE_PINS[] = { // список небезопасных пин�
 bool EEPROMSettingsModule::SafePin(uint8_t pin)
 {
 
+  if(pin == UNBINDED_PIN)
+  {
+    return false;
+  }
+
   for(size_t i=0;i<sizeof(UNSAFE_PINS)/sizeof(UNSAFE_PINS[0]);i++)
   {
       if(pin == UNSAFE_PINS[i])
