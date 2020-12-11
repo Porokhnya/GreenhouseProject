@@ -148,7 +148,7 @@ void LuminosityModule::Setup()
   {
     if(dbnd.LinkType == linkDirect)
     {
-        if(dbnd.LightManualModeDiodePin != UNBINDED_PIN 
+        if(dbnd.LightManualModeDiodePin != UNBINDED_PIN && dbnd.LightManualModeDiodePin > 0
         #ifndef DISABLE_DIODES_CONFIGURE
         && EEPROMSettingsModule::SafePin(dbnd.LightManualModeDiodePin)
         #endif
@@ -387,63 +387,6 @@ void LuminosityModule::Update()
         } // if(bnd.Sensors[i] != NO_LIGHT_SENSOR)
     } // for
     
-
-/*
-  #if LIGHT_SENSORS_COUNT > 0
-
-    for(int i=0;i<LIGHT_SENSORS_COUNT;i++)
-    {
-        long lum = NO_LUMINOSITY_DATA;
-        
-        switch(LIGHT_SENSORS_MAPPING[i])
-        {
-           case BH1750_SENSOR:
-           {
-              BH1750Support* bh = (BH1750Support*) lightSensors[i];
-              lum = bh->GetCurrentLuminosity();
-              
-           }
-           break;
-    
-           case MAX44009_SENSOR:
-           {
-              Max44009* bh = (Max44009*) lightSensors[i];
-              float curLum = bh->readLuminosity();
-              
-             if(curLum < 0)
-              lum = NO_LUMINOSITY_DATA;
-            else
-            {
-              unsigned long ulLum = (unsigned long) curLum;
-              if(ulLum > 65535)
-                ulLum = 65535;
-
-              lum = ulLum;
-            }
-        
-           }
-           break;
-                  
-      
-          
-        } // switch 
-
-        #ifdef LIGHT_AVERAGING_ENABLED
-          lum = GetAverageValue(lum,i);
-        #endif
-        
-        #ifdef LIGHT_HARBORING_ENABLED
-          lum = ApplyHarboring(lum);
-        #endif
-        
-        State.UpdateState(StateLuminosity,i,(void*)&lum);
-
-    } // for
-  
-    
-  #endif 
-  */  
-
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 long LuminosityModule::GetAverageValue(long lum,uint8_t sensorIndex)

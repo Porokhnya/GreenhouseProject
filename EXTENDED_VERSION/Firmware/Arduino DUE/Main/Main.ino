@@ -126,10 +126,6 @@
 #include "SoilMoistureModule.h"
 #endif
 
-#ifdef USE_W5100_MODULE
-#include "EthernetModule.h"
-#endif
-
 #ifdef USE_RESERVATION_MODULE
 #include "ReservationModule.h"
 #endif
@@ -304,11 +300,6 @@ PhModule phModule;
 #ifdef USE_CO2_MODULE
 // модуль контроля CO2
 CO2Module co2Module;
-#endif
-
-#ifdef USE_W5100_MODULE
-// модуль поддержки W5100
-EthernetModule ethernetModule;
 #endif
 
 #ifdef USE_RESERVATION_MODULE
@@ -674,9 +665,6 @@ void setup()
 
   START_LOG(22);
 
-  #ifdef USE_W5100_MODULE
-  controller.RegisterModule(&ethernetModule);
-  #endif
 
   START_LOG(23);
 
@@ -1113,11 +1101,6 @@ void yield()
 
    esp_sim800_call();
 
-/*
-   #ifdef USE_LCD_MODULE
-    rotaryEncoder.update(); // обновляем энкодер меню
-   #endif
-*/
    CoreDelayedEvent.update();
 
 

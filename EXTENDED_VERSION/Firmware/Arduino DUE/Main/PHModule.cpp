@@ -169,7 +169,7 @@ void PhModule::Setup()
   ReadSettings();
 
   // теперь смотрим - если у нас пин pH не 255 - значит, надо добавить состояние
-  if(phSensorPin > 0 && phSensorPin != UNBINDED_PIN)
+  if(phSensorPin > 0 && phSensorPin != UNBINDED_PIN && EEPROMSettingsModule::SafePin(phSensorPin))
   {
     State.AddState(StatePH,0); // добавляем датчик pH, прикреплённый к меге
     WORK_STATUS.PinMode(phSensorPin,INPUT);
@@ -718,7 +718,10 @@ void PhModule::Update()
           samplesDone++; // увеличиваем кол-во семплов
 
           // читаем из порта и запоминаем прочитанное
-          dataArray += analogRead(phSensorPin);
+          if(phSensorPin > 0 && phSensorPin != UNBINDED_PIN && EEPROMSettingsModule::SafePin(phSensorPin))
+          {
+            dataArray += analogRead(phSensorPin);
+          }
           
         } // PH_SAMPLES_INTERVAL
         
@@ -742,7 +745,11 @@ void PhModule::Update()
         dataArray = 0;
 
         // читаем первый раз, игнорируем значение, чтобы выровнять датчик
-        analogRead(phSensorPin);
+        if(phSensorPin > 0 && phSensorPin != UNBINDED_PIN && EEPROMSettingsModule::SafePin(phSensorPin))
+        {
+          analogRead(phSensorPin);
+        }
+        
       }
     } // else
     
