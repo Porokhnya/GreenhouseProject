@@ -1242,7 +1242,7 @@ void UniRS485Gate::Update()
                   if(packet.direction == RS485FromSlave && packet.type == RS485WaterTankDataAnswer)
                   {
                     #ifdef RS485_DEBUG
-                      DEBUG_LOGLN(F("Packet type ok, start analyze water tank data data..."));
+                      DEBUG_LOGLN(F("Packet type ok, start analyze WATER TANK data..."));
                     #endif
     
                     WaterTankDataPacket* waterTankData = (WaterTankDataPacket*) &(packet.data);                 
