@@ -461,6 +461,9 @@ enum
   RS485SunControllerData = 9, // пакет с данными контроллера солнечной установки
   RS485WaterTankCommands = 10, // пакет с командами для модуля контроля бака воды
   RS485WaterTankSettings = 11, // пакет с настройками для модуля контроля уровня бака
+  RS485WaterTankRequestData = 12, // пакет с запросом данных по баку с водой
+  RS485WaterTankDataAnswer = 13,  // пакет с ответом на запрос данных по баку с водой
+  
 };
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_RS485_GATE
@@ -624,6 +627,9 @@ class UniRS485Gate // класс для работы универсальных 
     void Setup();
     void Update();
 
+    void sendFillTankCommand(bool on);
+    void sendWaterTankSettingsPacket();    
+
   private:
   
 #ifdef USE_UNI_EXECUTION_MODULE
@@ -756,6 +762,25 @@ typedef struct
   uint8_t reserved[19]; // добитие до 23 байт
 
 } WaterTankDataPacket;
+#pragma pack(pop)
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  uint8_t valveCommand; // флаг - включить клапан бака воды или выключить
+  uint8_t reserved[22]; // добитие до 23 байт
+
+} RS485WaterTankCommandPacket;
+#pragma pack(pop)
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  uint8_t level; // флаг - включить клапан бака воды или выключить
+  uint32_t maxWorkTime;
+  uint8_t reserved[18]; // добитие до 23 байт
+
+} RS485WaterTankSettingsPacket;
 #pragma pack(pop)
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_WATER_TANK_MODULE

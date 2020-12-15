@@ -2,7 +2,9 @@
 /*
 ПАМЯТКА ПО КОМАНДАМ КОНТРОЛЛЕРА:
 
-  1. КАЖДАЯ КОМАНДА ЗАКАНЧИВАЕТСЯ ПЕРЕВОДОМ СТРОКИ!
+  0. КАЖДАЯ КОМАНДА ЗАКАНЧИВАЕТСЯ ПЕРЕВОДОМ СТРОКИ!
+
+  1. КОМАНДЫ ЧЕРЕЗ UART РАБОТАЮТ, ТОЛЬКО ЕСЛИ USE_RS485_GATE ЗАКОММЕНТИРОВАНО;
 
   2. ДЛЯ ПРОСМОТРА ID КОНТРОЛЛЕРА, К КОТОРОМУ БУДЕТ ПРИВЯЗАН МОДУЛЬ, НАДО ПОСЛАТЬ КОМАНДУ
 
@@ -34,7 +36,7 @@
 //----------------------------------------------------------------------------------------------------------------
 // ПОЛЬЗОВАТЕЛЬСКИЕ НАСТРОЙКИ
 //----------------------------------------------------------------------------------------------------------------
-#define _DEBUG // раскомментировать для отладочного режима (плюётся в Serial)
+//#define _DEBUG // раскомментировать для отладочного режима (плюётся в Serial)
 //----------------------------------------------------------------------------------------------------------------
 #define DEFAULT_CONTROLLER_ID 0 // ID контроллера по умолчанию
 #define RADIO_SEND_INTERVAL 5000 // интервал между отсылкой данных по радиоканалу, миллисекунд
@@ -76,6 +78,8 @@
 //----------------------------------------------------------------------------------------------------------------
 // настройки LoRa
 //----------------------------------------------------------------------------------------------------------------
+#define USE_LORA // закомментировать, если не надо работать через LoRa.
+
 /*
  LoRa для своей работы занимает следующие пины: 9,10,11,12,13. 
  Следите за тем, чтобы номера пинов не пересекались в слотах, или с RS-485, или ещё где.
@@ -84,6 +88,14 @@
 #define LORA_RESET_PIN 7 // пин Reset для LoRa
 #define LORA_FREQUENCY 868E6 // частота работы (433E6, 868E6, 915E6)
 #define LORA_TX_POWER 17 // мощность передатчика (1 - 17)
+
+//----------------------------------------------------------------------------------------------------------------
+// настройки RS-485
+//----------------------------------------------------------------------------------------------------------------
+//#define USE_RS485_GATE // закомментировать, если не нужна работа через RS-485
+//----------------------------------------------------------------------------------------------------------------
+#define RS485_DE_PIN 4 // номер пина, на котором будем управлять направлением приём/передача по RS-485
+
 
 //----------------------------------------------------------------------------------------------------------------
 // Дальше лазить - неосмотрительно :)
@@ -153,7 +165,11 @@ uint8_t errorFlag = 0;
 MachineState machineState = msNormal;
 uint32_t fullFillTimer = 0; 
 //----------------------------------------------------------------------------------------------------------------
+#if defined(USE_LORA) && !defined(USE_RS485_GATE)
 CommandBuffer commandBuffer(&Serial);
+#endif
+//----------------------------------------------------------------------------------------------------------------
+#ifdef USE_LORA
 //----------------------------------------------------------------------------------------------------------------
 #include "LoRa.h"
 bool loRaInited = false;
@@ -187,6 +203,8 @@ void initLoRa()
   
   
 }
+//----------------------------------------------------------------------------------------------------------------
+#endif // USE_LORA
 //----------------------------------------------------------------------------------------------------------------
 void turnValve(bool on) // включение или выключение клапана
 {
@@ -255,6 +273,8 @@ void updateSensors()
 
 }
 //----------------------------------------------------------------------------------------------------------------
+#ifdef USE_LORA
+//----------------------------------------------------------------------------------------------------------------
 void sendDataViaLoRa()
 {
   if(!loRaInited) {
@@ -317,22 +337,23 @@ void sendDataViaLoRa()
 
 }
 //----------------------------------------------------------------------------------------------------------------
-void processSettingsPacket(NRFWaterTankSettingsPacket* packet)
+#endif // USE_LORA
+//----------------------------------------------------------------------------------------------------------------
+void processSettingsPacket(uint8_t _level, uint32_t _maxWorkTime)
 {
   #ifdef _DEBUG
-    Serial.println(F("SETTINGS RECEIVED VIA RADIO!"));
+    Serial.println(F("SETTINGS RECEIVED!"));
   #endif 
 
-
   uint8_t oldLevel = levelSensorTriggerLevel;
-  levelSensorTriggerLevel = packet->level;
+  levelSensorTriggerLevel = _level;
 
   if(levelSensorTriggerLevel != oldLevel)
   {
     EEPROM.write(LEVEL_SENSOR_ADDRESS,levelSensorTriggerLevel);
   }
 
-  uint32_t newWorkTime = 1000ul*packet->maxWorkTime;
+  uint32_t newWorkTime = 1000ul*_maxWorkTime;
   
   if(newWorkTime != maxWorkTime)
   {
@@ -340,14 +361,24 @@ void processSettingsPacket(NRFWaterTankSettingsPacket* packet)
     EEPROM.put(MAX_WORKTIME_ADDRESS,maxWorkTime);
   }
 
-  //TODO: ТУТ УСТАНОВКА НОВЫХ НАСТРОЕК!
+  //TODO: ТУТ УСТАНОВКА НОВЫХ НАСТРОЕК!  
 }
 //----------------------------------------------------------------------------------------------------------------
-void processCommandPacket(NRFWaterTankExecutionPacket* packet)
+void processSettingsPacket(RS485WaterTankSettingsPacket* packet)
 {
-    #ifdef _DEBUG
+  processSettingsPacket(packet->level,packet->maxWorkTime); 
+}
+//----------------------------------------------------------------------------------------------------------------
+void processSettingsPacket(NRFWaterTankSettingsPacket* packet)
+{
+  processSettingsPacket(packet->level,packet->maxWorkTime);  
+}
+//----------------------------------------------------------------------------------------------------------------
+void processCommandPacket(uint8_t valveCommand)
+{
+  #ifdef _DEBUG
       Serial.print(F("RECEIVED WATER TANK COMMAND! VALVE SHOULD BE: ["));
-      if(packet->valveCommand)
+      if(valveCommand)
       {
         Serial.print(F("ON"));
       }
@@ -363,7 +394,7 @@ void processCommandPacket(NRFWaterTankExecutionPacket* packet)
     {
       // можем работать, исправных датчиков - минимум 3
       
-      bool requestedWalveState = packet->valveCommand > 0;
+      bool requestedWalveState = valveCommand > 0;
       
       if(waterTankValveIsOn != requestedWalveState)
       {
@@ -384,8 +415,20 @@ void processCommandPacket(NRFWaterTankExecutionPacket* packet)
           machineState = msNormal;
         }
       }
-    } // canWork
+    } // canWork  
 }
+//----------------------------------------------------------------------------------------------------------------
+void processCommandPacket(RS485WaterTankCommandPacket* packet)
+{
+  processCommandPacket(packet->valveCommand);
+}
+//----------------------------------------------------------------------------------------------------------------
+void processCommandPacket(NRFWaterTankExecutionPacket* packet)
+{
+    processCommandPacket(packet->valveCommand);    
+}
+//----------------------------------------------------------------------------------------------------------------
+#ifdef USE_LORA
 //----------------------------------------------------------------------------------------------------------------
 void processIncomingLoRaPackets()
 {
@@ -428,6 +471,8 @@ void processIncomingLoRaPackets()
   }    
 }
 //----------------------------------------------------------------------------------------------------------------
+#endif // USE_LORA
+//----------------------------------------------------------------------------------------------------------------
 void SetControllerID(uint8_t id)
 {
     controllerID = id;
@@ -466,82 +511,6 @@ void setupLevelSensors()
   {
     pinMode(levelSensors[i],INPUT);
     levelSensorsState[i] = 0; // нет воды на датчике
-  }
-}
-//----------------------------------------------------------------------------------------------------------------
-void setup()
-{
-  #ifdef _DEBUG
-    Serial.begin(57600);
-    Serial.println(F("DEBUG MODE!"));
-  #endif
-  
-  #ifdef USE_RANDOM_SEED_PIN
-    randomSeed(analogRead(RANDOM_SEED_PIN));
-  #endif
-
-  pinMode(VALVE_PIN,OUTPUT);
-  
-  radioSendInterval = RADIO_SEND_INTERVAL + random(100);
-  
-  #ifdef USE_WATCHDOG
-    delay(5000);                        // Задержка, чтобы было время перепрошить устройство в случае bootloop
-    wdt_enable (WDTO_8S);               // Для тестов не рекомендуется устанавливать значение менее 8 сек.
-  #endif // USE_WATCHDOG
-  
- 
-
-  readROM(); // читаем настройки
-  setupLevelSensors(); // настраиваем датчики
-  initLoRa(); // поднимаем радиоканал
-  updateSensors(); // сразу получаем данные при старте
-  turnValve(false); // выключаем клапан при старте
-  
-}
-//----------------------------------------------------------------------------------------------------------------
-void ProcessIDCommand(Command& cmd)
-{
-
-  size_t argsCount = cmd.GetArgsCount();
-  if(cmd.GetType() == ctGET)
-  {
-    // GET
-
-      Serial.print("OK=");
-      Serial.println(controllerID);
-      return;
-    
-  }
-  else
-  {
-    // SET
-      if(argsCount > 0)
-      {
-        uint8_t id = atoi(cmd.GetArg(0));
-        SetControllerID(id);
-        Serial.print("OK=");
-        Serial.println("ADDED");
-        return;
-    }
-  }
-
-  Serial.print("ER=");
-  Serial.println("UNKNOWN_COMMAND");
-}
-//----------------------------------------------------------------------------------------------------------------
-void ProcessIncomingCommand(String& cmd)
-{
-
-  CommandParser cParser;
-  Command parsed;
-  if(cParser.ParseCommand(cmd,parsed))
-  {
-
-      String module = parsed.GetTargetModuleID();
-      if(module == F("ID"))
-      {
-        ProcessIDCommand(parsed);
-      }
   }
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -592,6 +561,308 @@ void fillDataPacket(WaterTankDataPacket* packet)
   // пакет с данными заполнен и готов к отправке по радиоканалу
 }
 //----------------------------------------------------------------------------------------------------------------
+#ifdef USE_RS485_GATE // сказали работать ещё и через RS-485
+//----------------------------------------------------------------------------------------------------------------
+/*
+ Структура пакета, передаваемого по RS-495:
+ 
+   0xAB - первый байт заголовка
+   0xBA - второй байт заголовка
+
+   данные, в зависимости от типа пакета
+   
+   0xDE - первый байт окончания
+   0xAD - второй байт окончания
+   CRC - контрольная сумма пакета
+
+ 
+ */
+//----------------------------------------------------------------------------------------------------------------
+RS485Packet rs485Packet; // пакет, в который мы принимаем данные
+volatile byte* rsPacketPtr = (byte*) &rs485Packet;
+volatile byte  rs485WritePtr = 0; // указатель записи в пакет
+//----------------------------------------------------------------------------------------------------------------
+bool GotRS485Packet()
+{
+  // проверяем, есть ли у нас валидный RS-485 пакет
+  return rs485WritePtr > ( sizeof(RS485Packet)-1 );
+}
+//----------------------------------------------------------------------------------------------------------------
+void ProcessRS485Packet()
+{
+
+  // обрабатываем входящий пакет. Тут могут возникнуть проблемы с синхронизацией
+  // начала пакета, поэтому мы сначала ищем заголовок и убеждаемся, что он валидный. 
+  // если мы нашли заголовок и он не в начале пакета - значит, с синхронизацией проблемы,
+  // и мы должны сдвинуть заголовок в начало пакета, чтобы потом дочитать остаток.
+  if(!(rs485Packet.header1 == 0xAB && rs485Packet.header2 == 0xBA))
+  {
+     // заголовок неправильный, ищем возможное начало пакета
+     byte readPtr = 0;
+     bool startPacketFound = false;
+     while(readPtr < sizeof(RS485Packet))
+     {
+       if(rsPacketPtr[readPtr] == 0xAB)
+       {
+        startPacketFound = true;
+        break;
+       }
+        readPtr++;
+     } // while
+
+     if(!startPacketFound) // не нашли начало пакета
+     {
+        rs485WritePtr = 0; // сбрасываем указатель чтения и выходим
+        return;
+     }
+
+     if(readPtr == 0)
+     {
+      // стартовый байт заголовка найден, но он в нулевой позиции, следовательно - что-то пошло не так
+        rs485WritePtr = 0; // сбрасываем указатель чтения и выходим
+        return;       
+     } // if
+
+     // начало пакета найдено, копируем всё, что после него, перемещая в начало буфера
+     byte writePtr = 0;
+     byte bytesWritten = 0;
+     while(readPtr < sizeof(RS485Packet) )
+     {
+      rsPacketPtr[writePtr++] = rsPacketPtr[readPtr++];
+      bytesWritten++;
+     }
+
+     rs485WritePtr = bytesWritten; // запоминаем, куда писать следующий байт
+     return;
+         
+  } // if
+  else
+  {
+    // заголовок правильный, проверяем окончание
+    if(!(rs485Packet.tail1 == 0xDE && rs485Packet.tail2 == 0xAD))
+    {
+      // окончание неправильное, сбрасываем указатель чтения и выходим
+      rs485WritePtr = 0;
+      return;
+    }
+    // данные мы получили, сразу обнуляем указатель записи, чтобы не забыть
+    rs485WritePtr = 0;
+
+    // проверяем контрольную сумму
+    byte crc = OneWire::crc8((const byte*) rsPacketPtr,sizeof(RS485Packet) - 1);
+    if(crc != rs485Packet.crc8)
+    {
+      // не сошлось, игнорируем
+      return;
+    }
+
+
+    // всё в пакете правильно, анализируем и выполняем
+    // проверяем, наш ли пакет
+    if(rs485Packet.direction != RS485FromMaster) // не от мастера пакет
+      return;
+
+    switch(rs485Packet.type)
+    {
+      case RS485WaterTankRequestData: // запросили данные по баку
+      {
+        WaterTankDataPacket* packet = (WaterTankDataPacket*) &rs485Packet.data;
+        fillDataPacket(packet);        
+      }
+      break; // RS485WaterTankRequestData
+
+      case RS485WaterTankCommands: // пакет с командами для модуля контроля бака воды
+      {
+        RS485WaterTankCommandPacket* packet = (RS485WaterTankCommandPacket*) &rs485Packet.data;
+        processCommandPacket(packet);
+        
+      }
+      return; // RS485WaterTankCommands
+
+      case RS485WaterTankSettings: // пакет с настройками для модуля контроля уровня бака
+      {
+        RS485WaterTankSettingsPacket* packet = (RS485WaterTankSettingsPacket*) &rs485Packet.data;
+        processSettingsPacket(packet);
+      }
+      return; // RS485WaterTankSettings
+
+      default: return;
+    } // switch
+
+
+     // выставляем нужное направление пакета
+     rs485Packet.direction = RS485FromSlave;
+     rs485Packet.type = RS485WaterTankDataAnswer;
+
+     // подсчитываем CRC
+     rs485Packet.crc8 = OneWire::crc8((const byte*) &rs485Packet,sizeof(RS485Packet)-1 );
+
+     // теперь переключаемся на передачу
+     RS485Send();
+
+     // пишем в порт данные
+     Serial.write((const uint8_t *)&rs485Packet,sizeof(RS485Packet));
+
+     // ждём окончания передачи
+     RS485waitTransmitComplete();
+     
+    // переключаемся на приём
+    RS485Receive();
+
+    
+  } // else
+}
+//----------------------------------------------------------------------------------------------------------------
+void ProcessIncomingRS485Packets() // обрабатываем входящие пакеты по RS-485
+{
+  while(Serial.available())
+  {
+    rsPacketPtr[rs485WritePtr++] = (byte) Serial.read();
+   
+    if(GotRS485Packet())
+      ProcessRS485Packet();
+  } // while
+  
+}
+//----------------------------------------------------------------------------------------------------------------
+void RS485Receive()
+{
+  digitalWrite(RS485_DE_PIN,LOW); // переводим контроллер RS-485 на приём
+}
+//----------------------------------------------------------------------------------------------------------------
+void RS485Send()
+{
+  digitalWrite(RS485_DE_PIN,HIGH); // переводим контроллер RS-485 на передачу
+}
+//----------------------------------------------------------------------------------------------------------------
+void InitRS485()
+{
+  #ifdef _DEBUG
+    Serial.println(F("Init RS-485..."));
+  #endif
+
+  memset(&rs485Packet,0,sizeof(RS485Packet));
+  // тут настраиваем RS-485 на приём
+  pinMode(RS485_DE_PIN,OUTPUT);
+  RS485Receive();
+
+  #ifdef _DEBUG
+    Serial.println(F("RS-485 Inited."));
+  #endif
+}
+//----------------------------------------------------------------------------------------------------------------
+void RS485waitTransmitComplete()
+{
+  // ждём завершения передачи по UART
+  while(!(UCSR0A & _BV(TXC0) ));
+}
+//----------------------------------------------------------------------------------------------------------------
+#endif // USE_RS485_GATE
+//----------------------------------------------------------------------------------------------------------------
+void setup()
+{
+  bool serialStarted = false;
+  
+  #ifdef _DEBUG
+    Serial.begin(57600);
+    Serial.println(F("DEBUG MODE!"));
+    serialStarted = true;
+  #endif
+  
+  #ifdef USE_RANDOM_SEED_PIN
+    randomSeed(analogRead(RANDOM_SEED_PIN));
+  #endif
+
+  pinMode(VALVE_PIN,OUTPUT);
+  
+  radioSendInterval = RADIO_SEND_INTERVAL + random(100);
+  
+  #ifdef USE_WATCHDOG
+    delay(5000);                        // Задержка, чтобы было время перепрошить устройство в случае bootloop
+    wdt_enable (WDTO_8S);               // Для тестов не рекомендуется устанавливать значение менее 8 сек.
+  #endif // USE_WATCHDOG
+  
+
+  #if defined(USE_LORA) && !defined(USE_RS485_GATE)
+    if(!serialStarted)
+    {
+      Serial.begin(57600);
+      serialStarted = true;
+    }
+  #endif 
+
+ #ifdef USE_RS485_GATE // если сказано работать через RS-485 - работаем 
+ 
+    #ifndef _DEBUG
+      if(!serialStarted)
+      {
+        Serial.begin(57600);        
+      }
+    #endif
+    
+    InitRS485(); // настраиваем RS-485 на приём
+ #endif  
+
+  readROM(); // читаем настройки
+  setupLevelSensors(); // настраиваем датчики
+  #ifdef USE_LORA
+  initLoRa(); // поднимаем радиоканал
+  #endif // USE_LORA
+  updateSensors(); // сразу получаем данные при старте
+  turnValve(false); // выключаем клапан при старте
+  
+}
+//----------------------------------------------------------------------------------------------------------------
+#if defined(USE_LORA) && !defined(USE_RS485_GATE)
+//----------------------------------------------------------------------------------------------------------------
+void ProcessIDCommand(Command& cmd)
+{
+
+  size_t argsCount = cmd.GetArgsCount();
+  if(cmd.GetType() == ctGET)
+  {
+    // GET
+
+      Serial.print("OK=");
+      Serial.println(controllerID);
+      return;
+    
+  }
+  else
+  {
+    // SET
+      if(argsCount > 0)
+      {
+        uint8_t id = atoi(cmd.GetArg(0));
+        SetControllerID(id);
+        Serial.print("OK=");
+        Serial.println("ADDED");
+        return;
+    }
+  }
+
+  Serial.print("ER=");
+  Serial.println("UNKNOWN_COMMAND");
+}
+//----------------------------------------------------------------------------------------------------------------
+void ProcessIncomingCommand(String& cmd)
+{
+
+  CommandParser cParser;
+  Command parsed;
+  if(cParser.ParseCommand(cmd,parsed))
+  {
+
+      String module = parsed.GetTargetModuleID();
+      if(module == F("ID"))
+      {
+        ProcessIDCommand(parsed);
+      }
+  }
+}
+//----------------------------------------------------------------------------------------------------------------
+#endif // #if defined(USE_LORA) && !defined(USE_RS485_GATE)
+//----------------------------------------------------------------------------------------------------------------
 void loop()
 { 
 
@@ -615,18 +886,30 @@ void loop()
   }
   #endif // USE_WATCHDOG
 
+    #if defined(USE_LORA) && !defined(USE_RS485_GATE)
     if(commandBuffer.HasCommand())
     {
       String cmd = commandBuffer.GetCommand();
       commandBuffer.ClearCommand();
       ProcessIncomingCommand(cmd);
     }
+    #endif
 
+  #ifdef USE_RS485_GATE
+      ProcessIncomingRS485Packets(); // обрабатываем входящие пакеты по RS-485
+  #endif
+    
+
+   #ifdef USE_LORA
    processIncomingLoRaPackets();
+   #endif // USE_LORA
     
   if(millis() - lastRadioSentAt >= radioSendInterval)
   {
+    #ifdef USE_LORA
     sendDataViaLoRa();
+    #endif // USE_LORA
+    
     lastRadioSentAt = millis();
     radioSendInterval = RADIO_SEND_INTERVAL + random(100);
   }
@@ -705,4 +988,12 @@ void loop()
   } // else
 }
 //----------------------------------------------------------------------------------------------------------------
+void yield()
+{
+   #ifdef USE_RS485_GATE
+      ProcessIncomingRS485Packets(); // обрабатываем входящие пакеты по RS-485
+  #endif   
+}
+//----------------------------------------------------------------------------------------------------------------
+
 

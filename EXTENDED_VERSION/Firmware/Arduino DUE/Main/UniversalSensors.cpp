@@ -580,6 +580,89 @@ void UniRS485Gate::writeToStream(const uint8_t* buffer, size_t len)
    workStream->write(buffer,len);
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------
+void UniRS485Gate::sendFillTankCommand(bool on)
+{
+  #ifdef USE_WATER_TANK_MODULE
+
+
+      #ifdef WATER_TANK_MODULE_DEBUG
+       Serial.print(F("RS-485: Send WATER TANK command packet with valve command: "));
+       Serial.println(on);
+      #endif // WATER_TANK_MODULE_DEBUG
+  
+   enableSend();
+    
+    RS485Packet packet;
+    memset(&packet,0,sizeof(RS485Packet));
+    
+    packet.header1 = 0xAB;
+    packet.header2 = 0xBA;
+    packet.tail1 = 0xDE;
+    packet.tail2 = 0xAD;
+
+    packet.direction = RS485FromMaster;
+    packet.type = RS485WaterTankCommands;
+
+    RS485WaterTankCommandPacket* dest = (RS485WaterTankCommandPacket*) &(packet.data);
+    dest->valveCommand = on ? 1 : 0;
+
+    const byte* b = (const byte*) &packet;
+    packet.crc8 = crc8(b,sizeof(RS485Packet)-1);
+
+    // пишем в шину RS-495 слепок состояния контроллера
+    writeToStream((const uint8_t *)&packet,sizeof(RS485Packet));
+
+    // теперь ждём завершения передачи
+    waitTransmitComplete();
+
+/// Этой строчки не надо, поскольку на этот пакет мы не ждём ответа
+ ///    enableReceive();
+                
+  #endif // USE_WATER_TANK_MODULE
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+void UniRS485Gate::sendWaterTankSettingsPacket()
+{
+  #ifdef USE_WATER_TANK_MODULE
+
+        #ifdef WATER_TANK_MODULE_DEBUG
+         Serial.println(F("RS-485: Send WATER TANK settings packet..."));
+         #endif // WATER_TANK_MODULE_DEBUG  
+
+   enableSend();
+    
+    RS485Packet packet;
+    memset(&packet,0,sizeof(RS485Packet));
+    
+    packet.header1 = 0xAB;
+    packet.header2 = 0xBA;
+    packet.tail1 = 0xDE;
+    packet.tail2 = 0xAD;
+
+    packet.direction = RS485FromMaster;
+    packet.type = RS485WaterTankSettings;
+
+    WaterTankBinding bnd = HardwareBinding->GetWaterTankBinding();
+    RS485WaterTankSettingsPacket* dest = (RS485WaterTankSettingsPacket*) &(packet.data);
+    dest->level = bnd.Level; // ТУТ ИЗ НАСТРОЕК НАДО БРАТЬ УРОВЕНЬ СРАБАТЫВАНИЯ ДАТЧИКА !!!
+    dest->maxWorkTime = bnd.MaxWorkTime;
+
+    const byte* b = (const byte*) &packet;
+    packet.crc8 = crc8(b,sizeof(RS485Packet)-1);
+
+    // пишем в шину RS-495 слепок состояния контроллера
+    writeToStream((const uint8_t *)&packet,sizeof(RS485Packet));
+
+    // теперь ждём завершения передачи
+    waitTransmitComplete();
+
+/// Этой строчки не надо, поскольку на этот пакет мы не ждём ответа
+ ///    enableReceive();
+                  
+  
+  #endif // USE_WATER_TANK_MODULE
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
 void UniRS485Gate::sendControllerStatePacket()
 {
     
@@ -1049,6 +1132,151 @@ void UniRS485Gate::Update()
   } // if(bndRain.WorkMode == wrsExternalModule || bndWind.WorkMode == wrsExternalModule)
   ///////////////////////////////////////////////////////////////////////
   // конец опроса по данным ветра и дождя
+  ///////////////////////////////////////////////////////////////////////
+
+
+  ///////////////////////////////////////////////////////////////////////
+  // начало опроса по данным модуля бака с водой
+  ///////////////////////////////////////////////////////////////////////
+  #ifdef USE_WATER_TANK_MODULE
+  
+      static uint16_t waterTankTimer = 0;
+      waterTankTimer += dt;
+      
+      if(waterTankTimer > WATER_TANK_UPDATE_INTERVAL)
+      {
+          // пора опрашивать модуль датчиков скорости ветра и дождя
+        
+          waterTankTimer = 0;
+          
+          enableSend();
+          
+          #ifdef RS485_DEBUG
+            DEBUG_LOGLN(F("Request information from WATER TANK module..."));        
+          #endif
+    
+          memset(&packet,0,sizeof(RS485Packet));
+          packet.header1 = 0xAB;
+          packet.header2 = 0xBA;
+          packet.tail1 = 0xDE;
+          packet.tail2 = 0xAD;
+    
+          packet.direction = RS485FromMaster;
+          packet.type = RS485WaterTankRequestData;
+    
+          const uint8_t* b = (const uint8_t*) &packet;
+          packet.crc8 = crc8(b,sizeof(RS485Packet)-1);
+    
+          writeToStream((const uint8_t *)&packet,sizeof(RS485Packet));
+        
+          // теперь ждём завершения передачи
+          waitTransmitComplete();
+    
+          // начинаем принимать
+          enableReceive();
+    
+          yield();
+    
+                memset(&packet,0,sizeof(RS485Packet));
+                uint8_t* writePtr = (uint8_t*) &packet;
+                uint8_t bytesReaded = 0; // кол-во прочитанных байт
+                
+                // запоминаем время начала чтения
+                uint32_t startReadingTime = micros();
+    
+                // начинаем читать данные
+                while(1)
+                {
+                  if( micros() - startReadingTime > readTimeout)
+                  {
+                    
+                    #ifdef RS485_DEBUG
+                      DEBUG_LOGLN(F("WATER TANK module not answering!"));
+                    #endif
+                    
+                    break;
+                  } // if
+        
+                  if(workStream->available())
+                  {
+                    startReadingTime = micros(); // сбрасываем таймаут
+                    *writePtr++ = (uint8_t) workStream->read();
+                    bytesReaded++;
+                  } // if available
+    
+                  if(bytesReaded == sizeof(RS485Packet)) // прочитали весь пакет
+                  {
+                    #ifdef RS485_DEBUG
+                      DEBUG_LOGLN(F("Packet received from wind and rain module!"));
+                    #endif
+                    
+                    break;
+                  }
+              
+               } // while
+    
+                // затем опять переключаемся на передачу
+                enableSend();
+    
+            // теперь парсим пакет
+            if(bytesReaded == sizeof(RS485Packet))
+            {
+              bool headOk = packet.header1 == 0xAB && packet.header2 == 0xBA;
+              bool tailOk = packet.tail1 == 0xDE && packet.tail2 == 0xAD;
+              
+              if(headOk && tailOk)
+              {
+                #ifdef RS485_DEBUG
+                  DEBUG_LOGLN(F("Header and tail ok."));
+                #endif
+             
+                // вычисляем crc
+                uint8_t crc = crc8((const uint8_t*)&packet,sizeof(RS485Packet)-1);
+                if(crc == packet.crc8)
+                {
+                  #ifdef RS485_DEBUG
+                    DEBUG_LOGLN(F("Checksum ok."));
+                  #endif
+                  
+                  // теперь проверяем, нам ли пакет
+                  if(packet.direction == RS485FromSlave && packet.type == RS485WaterTankDataAnswer)
+                  {
+                    #ifdef RS485_DEBUG
+                      DEBUG_LOGLN(F("Packet type ok, start analyze water tank data data..."));
+                    #endif
+    
+                    WaterTankDataPacket* waterTankData = (WaterTankDataPacket*) &(packet.data);                 
+    
+                    #ifdef RS485_DEBUG
+                      DEBUG_LOG(F("VALVE STATE: "));
+                      DEBUG_LOGLN(String(waterTankData->valveState));
+    
+                      DEBUG_LOG(F("FILL STATUS: "));
+                      DEBUG_LOGLN(String(waterTankData->fillStatus));
+    
+                      DEBUG_LOG(F("ERROR FLAG: "));
+                      DEBUG_LOGLN(String(waterTankData->errorFlag));
+
+                      DEBUG_LOG(F("ERROR TYPE: "));
+                      DEBUG_LOGLN(String(waterTankData->errorType));
+                      
+                      DEBUG_LOGLN(F("WATER TANK data received."));
+                    #endif                  
+
+                   // ТУТ ОБНОВЛЕНИЕ ДАННЫХ В КОНТРОЛЛЕРЕ
+                    WaterTank->UpdateState(waterTankData->valveState,waterTankData->fillStatus,waterTankData->errorFlag,waterTankData->errorType);
+
+                  }
+                } // if crc ok
+                
+              } // if(headOk && tailOk)
+                    
+            } // if(bytesReaded == sizeof(RS485Packet))
+                  
+      } // if interval reached
+  #endif // USE_WATER_TANK_MODULE
+  ///////////////////////////////////////////////////////////////////////
+  // конец опроса по данным модуля бака с водой
   ///////////////////////////////////////////////////////////////////////
 
 

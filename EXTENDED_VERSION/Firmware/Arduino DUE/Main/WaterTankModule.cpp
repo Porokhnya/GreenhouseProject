@@ -44,13 +44,14 @@ void WaterTankModule::UpdateState(bool _valveOnFlag,uint8_t _fillStatus, bool _e
   errorType = _errorType;
   fillStatus = _fillStatus; // статус наполнения (0-100%)
 
-    //TODO: ТУТ ПРОВЕРКА - ЕСЛИ В НАСТРОЙКАХ УКАЗАНА LORA, ТО ОТПРАВЛЯЕМ ЧЕРЕЗ НЕЁ!!!
 
-    #ifdef USE_LORA_GATE
-     // напоследок - отправляем актуальные настройки модулю
-   loraGate.sendWaterTankSettingsPacket();
-
+    #ifdef USE_LORA_GATE // отправляем через LoRa
+   loraGate.sendWaterTankSettingsPacket();   
    #endif // USE_LORA_GATE
+
+   #ifdef USE_RS485_GATE // отправляем через RS-485
+   RS485.sendWaterTankSettingsPacket();   
+   #endif
 
 
   isOnline = true;
@@ -144,14 +145,13 @@ bool  WaterTankModule::ExecCommand(const Command& command, bool wantAnswer)
 //--------------------------------------------------------------------------------------------------------------------------------------
 void WaterTankModule::FillTank(bool on)
 {
+  valveOnFlag = on; // сохраняем статус клапана, пока не придёт команда в ответ.
+
   
-  #ifdef USE_LORA_GATE
-    
-    //TODO: ТУТ ПРОВЕРКА НАСТРОЕК МОДУЛЯ - ЕСЛИ ПРИВЯЗАНЫ К LORA, ТО ОТСЫЛАТЬ !!!
+  #ifdef USE_LORA_GATE // отправляем через LoRa
     
     if(loraGate.isLoraInited())
     {
-      valveOnFlag = on; // сохраняем статус клапана, пока не придёт команда в ответ.
       loraGate.sendFillTankCommand(on);
     }
     #if defined(WATER_TANK_MODULE_DEBUG)
@@ -162,6 +162,11 @@ void WaterTankModule::FillTank(bool on)
     #endif // WATER_TANK_MODULE_DEBUG
     
   #endif // USE_LORA_GATE
+
+  #ifdef USE_RS485_GATE // отправляем по RS-485
+      RS485.sendFillTankCommand(on);    
+  #endif // USE_RS485_GATE
+  
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 
