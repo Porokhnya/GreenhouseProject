@@ -1335,7 +1335,7 @@ void UniRS485Gate::Update()
               {
                 
                 #ifdef RS485_DEBUG
-                  DEBUG_LOGLN(F("Sun contrroller module not answering!"));
+                  DEBUG_LOGLN(F("Sun controller module not answering!"));
                 #endif
                 
                 break;
