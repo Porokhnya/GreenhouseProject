@@ -1207,7 +1207,7 @@ void UniRS485Gate::Update()
                   if(bytesReaded == sizeof(RS485Packet)) // прочитали весь пакет
                   {
                     #ifdef RS485_DEBUG
-                      DEBUG_LOGLN(F("Packet received from wind and rain module!"));
+                      DEBUG_LOGLN(F("Packet received from WATER TANK module!"));
                     #endif
                     
                     break;
