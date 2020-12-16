@@ -646,6 +646,8 @@ void UniRS485Gate::sendWaterTankSettingsPacket()
     RS485WaterTankSettingsPacket* dest = (RS485WaterTankSettingsPacket*) &(packet.data);
     dest->level = bnd.Level; // ТУТ ИЗ НАСТРОЕК НАДО БРАТЬ УРОВЕНЬ СРАБАТЫВАНИЯ ДАТЧИКА !!!
     dest->maxWorkTime = bnd.MaxWorkTime;
+    dest->distanceEmpty = bnd.DistanceEmpty;
+    dest->distanceFull = bnd.DistanceFull;
 
     const byte* b = (const byte*) &packet;
     packet.crc8 = crc8(b,sizeof(RS485Packet)-1);
@@ -4509,6 +4511,8 @@ void UniLoRaGate::sendWaterTankSettingsPacket()
     
     waterTankSettingsPacket.level = bnd.Level; // ТУТ ИЗ НАСТРОЕК НАДО БРАТЬ УРОВЕНЬ СРАБАТЫВАНИЯ ДАТЧИКА !!!
     waterTankSettingsPacket.maxWorkTime = bnd.MaxWorkTime;
+    waterTankSettingsPacket.distanceEmpty = bnd.DistanceEmpty;
+    waterTankSettingsPacket.distanceFull = bnd.DistanceFull;
 
     waterTankSettingsPacket.crc8 = /*OneWire::*/crc8((const byte*) &waterTankSettingsPacket,sizeof(waterTankSettingsPacket)-1);
 

@@ -502,6 +502,8 @@ typedef struct
   uint8_t LinkType; // тип привязки, пока используется только LoRa (значение 1)
   uint8_t Level; // уровень срабатывания датчиков в баке
   uint32_t MaxWorkTime; // максимальное время работы, секунд
+  uint16_t DistanceEmpty; // расстояние до пустого бака, см
+  uint16_t DistanceFull; // расстояние до полного бака, см
   
 } WaterTankBinding;
 #pragma pack(pop)

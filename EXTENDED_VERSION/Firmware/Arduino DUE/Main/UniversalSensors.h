@@ -746,7 +746,9 @@ typedef struct
   byte packetType; // тип пакета
   byte level; // уровень срабатывания датчиков
   uint32_t maxWorkTime; // максимальное время работы, секунд
-  byte reserved[22]; // резерв, добитие до 30 байт
+  uint16_t distanceEmpty; // расстояние до пустого бака, см
+  uint16_t distanceFull; // расстояние до полного бака, см              
+  byte reserved[18]; // резерв, добитие до 30 байт
   byte crc8; // контрольная сумма
     
 } NRFWaterTankSettingsPacket; // пакет с настройками для модуля контроля бака воды
@@ -778,7 +780,9 @@ typedef struct
 {
   uint8_t level; // флаг - включить клапан бака воды или выключить
   uint32_t maxWorkTime;
-  uint8_t reserved[18]; // добитие до 23 байт
+  uint32_t distanceEmpty;
+  uint32_t distanceFull;
+  uint8_t reserved[14]; // добитие до 23 байт
 
 } RS485WaterTankSettingsPacket;
 #pragma pack(pop)

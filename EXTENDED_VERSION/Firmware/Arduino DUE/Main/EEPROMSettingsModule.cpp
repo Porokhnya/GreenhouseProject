@@ -809,6 +809,8 @@ void EEPROMSettingsModule::Setup()
       waterTankBinding.LinkType = 1; // LoRa
       waterTankBinding.Level = LOW;
       waterTankBinding.MaxWorkTime = 600;
+      waterTankBinding.DistanceEmpty = 100;
+      waterTankBinding.DistanceFull = 10;
    }
    #endif // USE_WATER_TANK_MODULE  
 }
@@ -881,9 +883,9 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
        #endif // USE_DOOR_MODULE
        #ifdef USE_WATER_TANK_MODULE
        else
-       if(param == F("WTANK")) // установить настройки модуля контроля бака с водой: CTSET=EES|WTANK|link type|level|max work time
+       if(param == F("WTANK")) // установить настройки модуля контроля бака с водой: CTSET=EES|WTANK|link type|level|max work time|empty_cm|full_cm
        {
-          if(argsCnt < 4)
+          if(argsCnt < 6)
           {
             if(wantAnswer)
             {
@@ -896,6 +898,8 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
              waterTankBinding.LinkType = atoi(command.GetArg(1));
              waterTankBinding.Level = atoi(command.GetArg(2));
              waterTankBinding.MaxWorkTime = atol(command.GetArg(3));
+             waterTankBinding.DistanceEmpty = atol(command.GetArg(4));
+             waterTankBinding.DistanceFull = atol(command.GetArg(5));
 
              write(WATER_TANK_BINDING_ADDRESS, waterTankBinding);
 
@@ -2154,6 +2158,8 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           PublishSingleton << PARAM_DELIMITER << waterTankBinding.LinkType
           << PARAM_DELIMITER << waterTankBinding.Level
           << PARAM_DELIMITER << waterTankBinding.MaxWorkTime
+          << PARAM_DELIMITER << waterTankBinding.DistanceEmpty
+          << PARAM_DELIMITER << waterTankBinding.DistanceFull
           ;
           
         } // param == F("WTANK")        
