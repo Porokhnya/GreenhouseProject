@@ -15,19 +15,19 @@ String WaterTankModule::GetErrorText()
   switch(errorType)
   {
     case waterTankNoErrors: // нет ошибок
-      return F("штатно");
+      return F("МОДУЛЬ ИСПРАВЕН");
 
     case waterTankNoData: // нет внешних данных в течение долгого времени
-      return F("нет модуля");
+      return F("НЕТ МОДУЛЯ");
 
     case waterTankFullSensorError: // не сработал датчик верхнего уровня в процессе наполнения, по превышению максимального времени наполнения
-      return F("Е наполнения");
+      return F("СБОЙ НАПОЛНЕНИЯ");
 
     case waterTankBottomSensorFailure: // ошибка нижнего датчика критического уровня
-      return F("E крит. датчика");
+      return F("СБОЙ ДАТЧИКА #1");
 
     default:
-      return F("ошибка");
+      return F("ОШИБКА");
   }
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -43,6 +43,11 @@ void WaterTankModule::UpdateState(bool _valveOnFlag,uint8_t _fillStatus, bool _e
   errorFlag = _errorFlag;
   errorType = _errorType;
   fillStatus = _fillStatus; // статус наполнения (0-100%)
+
+  if(!errorFlag)
+  {
+    errorType = waterTankNoErrors;
+  }
 
 
     #ifdef USE_LORA_GATE // отправляем через LoRa

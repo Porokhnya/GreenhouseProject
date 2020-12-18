@@ -16882,8 +16882,32 @@ void TFTIdleScreen::drawWaterTankStatus(TFTMenu* menuManager)
 
     // тут рисуем статус в первом боксе
     String fStatus;
+    int waterDropCount = wTankFillStatus;
     fStatus = wTankFillStatus;
-    fStatus += "%";
+    //fStatus += "%";
+
+    if (wTankFillStatus == 100) 
+    {
+      fStatus += "% ";
+    }
+    else 
+    {
+      fStatus += "%  ";
+    }
+    
+    for (uint8_t i=0; i<=4;i++) 
+    {
+        if(waterDropCount > 0) 
+        {
+          fStatus += "*";
+          waterDropCount -= 20;
+        }
+        else 
+        {
+          fStatus += "-";
+        }  
+    }
+        
 
     String errText = WaterTank->GetErrorText();
     wTankHasErrors = WaterTank->HasErrors();

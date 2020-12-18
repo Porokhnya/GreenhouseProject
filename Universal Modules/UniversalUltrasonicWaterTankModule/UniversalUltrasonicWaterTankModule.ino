@@ -992,7 +992,7 @@ void loop()
                 errorType = waterTankFullSensorError;
                 
                 turnValve(false); // выключаем клапан
-                machineState = msNormal;
+                machineState = msFillTankError;
                 
               }
             }
@@ -1010,11 +1010,17 @@ void loop()
                 errorType = waterTankFullSensorError;
                 
                 turnValve(false);
-                machineState = msNormal;
+                machineState = msFillTankError;
 
         } // else
       }
       break; // msWaitForTankFullfilled
+
+      case msFillTankError: // бак не заполнялся в течение длительного времени
+      {
+        
+      }
+      break; // msFillTankError
       
     } // switch
     

@@ -969,10 +969,18 @@ void loop()
             // взводим флаг ошибки
             errorFlag = 1;
             errorType = waterTankFullSensorError;
+
+            machineState = msFillTankError;
           }
         }
       }
       break; // msWaitForTankFullfilled
+
+      case msFillTankError: // бак не заполнялся в течение нужного времени
+      {
+        
+      }
+      break; // msFillTankError
       
     } // switch
     
