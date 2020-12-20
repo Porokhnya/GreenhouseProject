@@ -2828,6 +2828,9 @@ void WaterTankClient::Update(UniRawScratchpad* scratchpad, bool isModuleOnline, 
         Serial.println(F("RECEIVED WATER TANK DATA VIA RADIO:"));
         Serial.print(F("\tValve state: ")); Serial.println(waterTankData->valveState);
         Serial.print(F("\tFill status, %: ")); Serial.println(waterTankData->fillStatus);
+        Serial.print(F("\tErrors status - ")); Serial.println(waterTankData->errorFlag); //добавил еще вывод флага ошибки в дебаг-сообщение - КМВ
+        Serial.print(F("\tErrors type - ")); Serial.println(waterTankData->errorType); //добавил еще вывод флага ошибки в дебаг-сообщение - КМВ
+        
      #endif
 
      // ТУТ ОБНОВЛЕНИЕ ДАННЫХ В КОНТРОЛЛЕРЕ

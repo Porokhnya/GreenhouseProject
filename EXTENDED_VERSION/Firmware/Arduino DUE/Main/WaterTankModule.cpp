@@ -9,13 +9,13 @@ String WaterTankModule::GetErrorText()
   
   if(!HasErrors())
   {
-    return "";
+    return F("МОДУЛЬ ИСПРАВЕН");
   }
 
   switch(errorType)
   {
-    case waterTankNoErrors: // нет ошибок
-      return F("МОДУЛЬ ИСПРАВЕН");
+   // case waterTankNoErrors: // нет ошибок
+//      return F("МОДУЛЬ ИСПРАВЕН");
 
     case waterTankNoData: // нет внешних данных в течение долгого времени
       return F("НЕТ МОДУЛЯ");

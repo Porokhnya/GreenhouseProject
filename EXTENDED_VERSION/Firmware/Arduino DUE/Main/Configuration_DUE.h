@@ -387,8 +387,8 @@
 #define INFO_BOX_CAPTION_COLOR 0x30, 0x7B, 0xB5 // цвет заголовка информационного бокса
 #define SENSOR_BOX_FONT_COLOR VGA_WHITE // цвет показаний датчика
 #define SENSOR_BOX_UNIT_COLOR VGA_WHITE // цвет единиц изменений датчика
-#define MODE_ON_COLOR VGA_LIME   // цвет "вкл", "авто"
-#define MODE_OFF_COLOR VGA_RED // цвет "выкл", "ручной"
+#define MODE_ON_COLOR VGA_GREEN  // цвет "вкл", "авто"
+#define MODE_OFF_COLOR VGA_MAROON // цвет "выкл", "ручной"
 #define CHANNELS_BUTTONS_TEXT_COLOR VGA_WHITE // цвет текста кнопок каналов
 #define CHANNELS_BUTTONS_BG_COLOR 0xEF7D    // цвет фона кнопок каналов
 #define CHANNEL_BUTTONS_TEXT_COLOR 0x3A8D   // цвет текста кнопки одного канала
