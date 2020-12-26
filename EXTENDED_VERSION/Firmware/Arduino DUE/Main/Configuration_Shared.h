@@ -15,6 +15,7 @@
 #define UNIT_LITRES F(" л") // литры (litres)
 #define UNIT_LUX F(" люкс") // люксы (lux)
 #define UNIT_PPM F(" ppm") // ppm (для CO2)
+#define UNIT_EC F(" ppm") // ppm (для EC)
 
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -405,6 +406,7 @@
 #define PROP_LIGHT F("LIGHT") // свойство "освещенность"
 #define PROP_HUMIDITY F("HUMIDITY") // свойство "влажность"
 #define PROP_CO2 F("CO2") // свойство "CO2"
+#define PROP_EC F("EC") // свойство "EC"
 #define PROP_PIN F("PIN") // свойство "пин" (для слежения за статусом пинов)
 #define PROP_SOIL F("SOIL") // свойство "влажность почвы"
 #define PROP_PH F("PH") // свойство pH

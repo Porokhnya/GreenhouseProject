@@ -196,7 +196,7 @@ struct CO2Pair
 
   private:
     CO2Pair();
-    CO2Pair& operator=(const LuminosityPair&);
+    CO2Pair& operator=(const CO2Pair&);
 };
 //--------------------------------------------------------------------------------------------------------------------------------
 struct WaterFlowPair
