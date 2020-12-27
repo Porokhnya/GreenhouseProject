@@ -478,9 +478,39 @@ bool  CO2Module::ExecCommand(const Command& command, bool wantAnswer)
   uint8_t argsCount = command.GetArgsCount();
   if(argsCount < 1)
   {
+    if(command.GetType() == ctGET)
+    {
+    // попросили отдать все показания с датчиков
+    
+      PublishSingleton.Flags.Status = true;
+      if(wantAnswer) 
+      {
+         PublishSingleton = "";
+
+         uint8_t _cnt = State.GetStateCount(StateCO2);
+
+         PublishSingleton << _cnt;
+         
+         for(uint8_t i=0;i<_cnt;i++)
+         {
+            OneState* os = State.GetStateByOrder(StateCO2,i);
+            if(os)
+            {
+              CO2Pair lp = *os;
+
+              PublishSingleton << PARAM_DELIMITER;
+              PublishSingleton << lp.Current;
+                              
+            } // if(os)
+         } // for
+     
+      }
+
+    } // if(command.GetType() == ctGET)
+   
     MainController->Publish(this,command);
     return PublishSingleton.Flags.Status;
-  }
+  } // if(argsCount < 1)
   
   if(command.GetType() == ctGET)
   {
