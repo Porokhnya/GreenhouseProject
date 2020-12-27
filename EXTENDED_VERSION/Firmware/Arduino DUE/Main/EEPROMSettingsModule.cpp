@@ -2197,7 +2197,7 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           << PARAM_DELIMITER << flowBinding.SaveDelta        
           ;
           
-        } // param == F("CO2")
+        } // param == F("FLOW")
         #endif // #ifdef USE_WATERFLOW_MODULE
         #ifdef USE_PH_MODULE
         else
