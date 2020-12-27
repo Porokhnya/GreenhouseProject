@@ -47,8 +47,15 @@ bool  ECModule::ExecCommand(const Command& command, bool wantAnswer)
               ECPair lp = *os;
 
               PublishSingleton << PARAM_DELIMITER;
-              PublishSingleton << lp.Current;
-                              
+              
+              if(os->HasData())
+              {
+                PublishSingleton << lp.Current;
+              }
+              else
+              {
+                PublishSingleton << "-";
+              }                              
             } // if(os)
          } // for
      
