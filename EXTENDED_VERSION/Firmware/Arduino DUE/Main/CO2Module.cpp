@@ -499,15 +499,7 @@ bool  CO2Module::ExecCommand(const Command& command, bool wantAnswer)
               CO2Pair lp = *os;
 
               PublishSingleton << PARAM_DELIMITER;
-
-              if(os->HasData())
-              {
-                PublishSingleton << lp.Current;
-              }
-              else
-              {
-                PublishSingleton << "-";
-              }
+              PublishSingleton << lp.Current;
                               
             } // if(os)
          } // for
@@ -573,14 +565,7 @@ bool  CO2Module::ExecCommand(const Command& command, bool wantAnswer)
                 
                 if(wantAnswer)
                 {
-                  if(stateCO2->HasData())
-                  {
                     PublishSingleton << PARAM_DELIMITER << (co2p.Current);
-                  }
-                  else
-                  {
-                    PublishSingleton << PARAM_DELIMITER << "-";
-                  }
                 }
              } // if
             
