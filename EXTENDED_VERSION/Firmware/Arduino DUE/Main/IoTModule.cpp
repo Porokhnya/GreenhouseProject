@@ -249,7 +249,9 @@ void IoTModule::Update()
 
  
   if(inSendData)
+  {
     return;
+  }
 
   IoTSettings iotSettings = MainController->GetSettings()->GetIoTSettings();
   bool canWork =   iotSettings.Flags.ThingSpeakEnabled;
@@ -317,13 +319,13 @@ bool IoTModule::ExecCommand(const Command& command, bool wantAnswer)
                 for(byte i=0;i<8;i++)
                 {
                     strHelper = command.GetArg(iter++);
-                    iotSettings.Sensors[i].ModuleID = (byte) strHelper.toInt();
+                    iotSettings.Sensors[i].ModuleID = (uint8_t) strHelper.toInt();
 
                     strHelper = command.GetArg(iter++);
-                    iotSettings.Sensors[i].Type = (byte) strHelper.toInt();
+                    iotSettings.Sensors[i].Type = (uint16_t) strHelper.toInt();
 
                     strHelper = command.GetArg(iter++);
-                    iotSettings.Sensors[i].SensorIndex = (byte) strHelper.toInt();
+                    iotSettings.Sensors[i].SensorIndex = (uint8_t) strHelper.toInt();
                 } // for
 
                 // теперь получаем ID канала thingspeak

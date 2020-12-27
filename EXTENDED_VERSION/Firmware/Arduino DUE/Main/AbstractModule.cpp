@@ -498,6 +498,7 @@ void OneState::Update(void* newData) // обновляем внутреннее 
       break;
 
       case StateCO2:
+      case StateEC:
       {
         uint16_t*  ui1 = (uint16_t*) Data;
         uint16_t*  ui2 = (uint16_t*) PreviousData;
@@ -579,6 +580,19 @@ void OneState::Init(ModuleStates state, uint8_t idx)
       }
       break;
 
+      case StateEC:
+      {
+        uint16_t*  ui1 = new uint16_t;
+        uint16_t*  ui2 = new uint16_t;
+
+        *ui1 = NO_EC_DATA; // нет данных о EC
+        *ui2 = NO_EC_DATA;
+        
+        Data = ui1;
+        PreviousData = ui2;
+      }
+      break;
+
       case StateWaterFlowInstant:
       case StateWaterFlowIncremental:
       {
@@ -621,6 +635,7 @@ OneState::operator String() // выводим текущие значения к
       }
 
       case StateCO2:
+      case StateEC:
       {
         uint16_t*  ul1 = (uint16_t*) Data;
         return String(*ul1);
@@ -684,6 +699,7 @@ OneState& OneState::operator=(const OneState& rhs)
         break;
 
         case StateCO2:
+        case StateEC:
         {
           uint16_t*  rhs_ui1 = (uint16_t*) rhs.Data;
           uint16_t*  rhs_ui2 = (uint16_t*) rhs.PreviousData;
@@ -748,6 +764,7 @@ bool OneState::IsChanged()
         break;
 
         case StateCO2:
+        case StateEC:
         {
           uint16_t*  ui1 = (uint16_t*) Data;
           uint16_t*  ui2 = (uint16_t*) PreviousData;
@@ -811,6 +828,9 @@ String OneState::GetUnit()
     case StateCO2:
       return UNIT_PPM;
 
+    case StateEC:
+      return UNIT_EC;
+
     case StateWaterFlowIncremental:
     case StateWaterFlowInstant:
       return  UNIT_LITRES;
@@ -849,6 +869,13 @@ void OneState::Reset()
       {
         uint16_t*  ui1 = (uint16_t*) Data;
         *ui1 = NO_CO2_DATA;
+      } 
+      break;
+
+      case StateEC:
+      {
+        uint16_t*  ui1 = (uint16_t*) Data;
+        *ui1 = NO_EC_DATA;
       } 
       break;
 
@@ -895,6 +922,12 @@ bool OneState::HasData()
     {
       uint16_t*  ui1 = (uint16_t*) Data;
       return *ui1 != NO_CO2_DATA;
+    }
+
+    case StateEC:
+    {
+      uint16_t*  ui1 = (uint16_t*) Data;
+      return *ui1 != NO_EC_DATA;
     }
 
     // для датчиков расхода воды считаем,
@@ -969,6 +1002,7 @@ uint8_t OneState::GetRawData(byte* outBuffer)
 
     // для CO2 пишем два байта в сырые данные
     case StateCO2:
+    case StateEC:
     {
       uint16_t* lum = (uint16_t*) Data;
       memcpy(outBuffer,lum,2);
@@ -1007,6 +1041,9 @@ String OneState::GetStringType(ModuleStates type)
     case StateCO2:
       return PROP_CO2;
 
+    case StateEC:
+      return PROP_EC;
+
     case StateSoilMoisture:
       return PROP_SOIL;
 
@@ -1036,6 +1073,9 @@ ModuleStates OneState::GetType(const char* stringType)
 
   if(!strcmp_P(stringType, (const char*) PROP_CO2))
     return StateCO2;
+
+  if(!strcmp_P(stringType, (const char*) PROP_EC))
+    return StateEC;
 
   if(!strcmp_P(stringType, (const char*) PROP_SOIL))
     return StateSoilMoisture;
@@ -1082,6 +1122,7 @@ OneState::~OneState()
         break;
 
         case StateCO2:
+        case StateEC:
         {
           uint16_t*  ui1 = (uint16_t*) Data;
           uint16_t*  ui2 = (uint16_t*) PreviousData;
@@ -1147,6 +1188,15 @@ OneState::operator CO2Pair()
     return CO2Pair(0,0); // undefined behaviour
   }
   return CO2Pair(*((uint16_t*)PreviousData),*((uint16_t*)Data));   
+}
+//--------------------------------------------------------------------------------------------------------------------------------
+OneState::operator ECPair()
+{
+  if(Type != StateEC)
+  {
+    return ECPair(0,0); // undefined behaviour
+  }
+  return ECPair(*((uint16_t*)PreviousData),*((uint16_t*)Data));   
 }
 //--------------------------------------------------------------------------------------------------------------------------------
 OneState::operator WaterFlowPair()
@@ -1232,6 +1282,28 @@ OneState operator-(const OneState& left, const OneState& right)
 
           // получаем дельту предыдущих изменений
           if(*ui1 != NO_CO2_DATA && *ui2 != NO_CO2_DATA) // только если есть показания с датчиков
+            *thisLong = abs((*ui1 - *ui2));   
+        }  
+        break;
+
+        case StateEC:
+        {
+          uint16_t*  ui1 = (uint16_t*) left.Data;
+          uint16_t*  ui2 = (uint16_t*) right.Data;
+
+          uint16_t* thisLong = (uint16_t*) result.Data;
+
+          // получаем дельту текущих изменений
+          if(*ui1 != NO_EC_DATA && *ui2 != NO_EC_DATA) // только если есть показания с датчиков
+            *thisLong = abs((*ui1 - *ui2));
+
+          ui1 = (uint16_t*) left.PreviousData;
+          ui2 = (uint16_t*) right.PreviousData;
+
+          thisLong = (uint16_t*) result.PreviousData;
+
+          // получаем дельту предыдущих изменений
+          if(*ui1 != NO_EC_DATA && *ui2 != NO_EC_DATA) // только если есть показания с датчиков
             *thisLong = abs((*ui1 - *ui2));   
         }  
         break;

@@ -490,6 +490,21 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
           PublishSingleton << PARAM_DELIMITER << UniDispatcher.GetHardCodedSensorsCount(uniLuminosity);
           PublishSingleton << PARAM_DELIMITER << UniDispatcher.GetHardCodedSensorsCount(uniSoilMoisture);
           PublishSingleton << PARAM_DELIMITER << UniDispatcher.GetHardCodedSensorsCount(uniPH);
+
+          // кол-во датчиков CO2
+          #ifdef USE_CO2_MODULE
+          PublishSingleton << PARAM_DELIMITER << 1;
+          #else
+          PublishSingleton << PARAM_DELIMITER << 0;
+          #endif
+
+          // кол-во датчиков EC
+          #ifdef USE_EC_MODULE
+          PublishSingleton << PARAM_DELIMITER << 1;
+          #else
+          PublishSingleton << PARAM_DELIMITER << 0;
+          #endif
+
           //TODO: Тут остальные типы датчиков указывать !!!
                      
         }
@@ -555,13 +570,14 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
               uint8_t soilMoistureCount = mod->State.GetStateCount(StateSoilMoisture); 
               uint8_t phCount = mod->State.GetStateCount(StatePH); 
               uint8_t co2Count = mod->State.GetStateCount(StateCO2); 
+              uint8_t ecCount = mod->State.GetStateCount(StateEC); 
               
               //TODO: тут другие типы датчиков!!!
 
-              if((tempCount + humCount + lightCount + waterflowCountInstant + waterflowCount + soilMoistureCount + phCount + co2Count) < 1) // пустой модуль, без интересующих нас датчиков
+              if((tempCount + humCount + lightCount + waterflowCountInstant + waterflowCount + soilMoistureCount + phCount + co2Count + ecCount) < 1) // пустой модуль, без интересующих нас датчиков
                 continue;
 
-              uint8_t flags = 0;
+              uint16_t flags = 0;
               if(tempCount) flags |= StateTemperature;
               if(humCount) flags |= StateHumidity;
               if(lightCount) flags |= StateLuminosity;
@@ -570,12 +586,14 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
               if(soilMoistureCount) flags |= StateSoilMoisture;
               if(phCount) flags |= StatePH;
               if(co2Count) flags |= StateCO2;
+              if(ecCount) flags |= StateEC;
               //TODO: Тут другие типы датчиков!!!
 
             // показание каждого модуля идут так:
             
-            // 1 байт - флаги о том, какие датчики есть
-             pStream->write(WorkStatus::ToHex(flags));
+            // 2 байта - флаги о том, какие датчики есть
+             pStream->write(WorkStatus::ToHex((uint8_t) (flags >> 8)));
+             pStream->write(WorkStatus::ToHex((uint8_t) (flags & 0x00ff)));
              yield(); // немного даём поработать другим модулям
             
             // 1 байт - длина ID модуля
@@ -611,6 +629,9 @@ bool  ZeroStreamListener::ExecCommand(const Command& command, bool wantAnswer)
               yield(); // немного даём поработать другим модулям
               // затем идут датчики CO2, если они есть
               PrintSensorsValues(co2Count,StateCO2,mod,pStream);
+              yield(); // немного даём поработать другим модулям
+              // затем идут датчики EC, если они есть
+              PrintSensorsValues(ecCount,StateEC,mod,pStream);
             
               //TODO: тут другие типы датчиков!!!
 

@@ -2725,6 +2725,7 @@ void SensorsUniClient::UpdateOneState(OneState* os, const UniSensorData* dataPac
       case StateWaterFlowIncremental:
       case StateUnknown:
       case StateCO2:
+      case StateEC:
       
       break;
       

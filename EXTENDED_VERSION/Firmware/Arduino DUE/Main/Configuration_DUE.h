@@ -244,7 +244,6 @@
 // НЕ ИСПОЛЬЗУЕТСЯ !!!
 #define GSM_PROVIDER_EEPROM_ADDR 108 // адрес хранения оператора GSM, 1 байт
 
-#define IOT_SETTINGS_EEPROM_ADDR 109 // адрес хранения настроек IOT, 51 байт
 #define OPEN_INTERVAL_EEPROM_ADDR 160 // адрес хранения настроек интервала открытия окон, 4 байта
 #define CLOSE_TEMP_EEPROM_ADDR 164 // адрес хранения температуры закрытия, 1 байт
 #define OPEN_TEMP_EEPROM_ADDR 165 // адрес хранения температуры открытия, 1 байт
@@ -320,6 +319,7 @@
 
 #define EEPROM_RULES_START_ADDR 5120 // с пятого килобайта в EEPROM идут правила
 
+#define IOT_SETTINGS_EEPROM_ADDR    9900 // адрес хранения настроек IOT, 60 байт
 #define WATER_TANK_BINDING_ADDRESS  10000 // тут хранятся привезки модуля бака в настройкам, 50 байт (про запас)
 #define CO2_BINDING_ADDRESS 10300 // тут хранятся привязки CO2 к железу, 100 байт (про запас)
 #define PH_BINDING_ADDRESS 10400 // тут хранятся привязки pH к железу, 100 байт (про запас)

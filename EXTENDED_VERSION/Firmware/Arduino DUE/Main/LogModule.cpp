@@ -261,7 +261,7 @@ void LogModule::TryAddFileHeader()
     // тут можем добавлять свой заголовок в файл
 
     // сначала опрашиваем все модули в системе, записывая их имена в файл, и попутно сохраняя те типы датчиков, которые есть у модулей
-    int statesFound = 0; // какие состояния нашли
+    uint16_t statesFound = 0; // какие состояния нашли
 
     size_t cnt = MainController->GetModulesCount();
     bool anyModuleNameWritten = false;

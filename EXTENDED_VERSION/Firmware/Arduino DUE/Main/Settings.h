@@ -29,7 +29,7 @@ typedef struct
 // функция, которая вызывается при чтении/записи установок дельт - чтобы не хранить их в классе настроек.
 // При чтении настроек класс настроек вызывает функцию OnDeltaRead, передавая прочитанные значения вовне.
 // При записи настроек класс настроек вызывает функцию OnDeltaWrite.
-typedef void (*DeltaReadWriteFunction)(uint8_t& sensorType, String& moduleName1,uint8_t& sensorIdx1, String& moduleName2, uint8_t& sensorIdx2);
+typedef void (*DeltaReadWriteFunction)(uint16_t& sensorType, String& moduleName1,uint8_t& sensorIdx1, String& moduleName2, uint8_t& sensorIdx2);
 //--------------------------------------------------------------------------------------------------------------------------------------
 // функция, которая вызывается при чтении/записи установок дельт. Класс настроек вызывает OnDeltaGetCount, чтобы получить кол-во записей, которые следует сохранить,
 // и OnDeltaSetCount - чтобы сообщить подписчику - сколько записей он передаст в вызове OnDeltaRead.
@@ -38,8 +38,8 @@ typedef void (*DeltaCountFunction)(uint8_t& count);
 #pragma pack(push,1)
 typedef struct
 {
-  byte ThingSpeakEnabled : 1;
-  byte pad : 7;
+  uint8_t ThingSpeakEnabled : 1;
+  uint8_t pad : 7;
   
 } IoTSettingsFlags;
 #pragma pack(pop)
@@ -47,9 +47,9 @@ typedef struct
 #pragma pack(push,1)
 typedef struct
 {
-  byte ModuleID;
-  byte Type;
-  byte SensorIndex;
+  uint8_t ModuleID;
+  uint16_t Type;
+  uint8_t SensorIndex;
   
 } IoTSensorSettings;
 #pragma pack(pop)
@@ -57,8 +57,8 @@ typedef struct
 #pragma pack(push,1)
 typedef struct
 {
-  byte Header1;
-  byte Header2;
+  uint8_t Header1;
+  uint8_t Header2;
   IoTSettingsFlags Flags; // флаги
   uint32_t UpdateInterval; // интервал обновления, мс
   char ThingSpeakChannelID[20]; // ID канала ThingSpeak
@@ -289,8 +289,10 @@ class GlobalSettings
     uint8_t GetControllerID();
     void SetControllerID(uint8_t val);
 
+#ifdef USE_DELTA_MODULE
     void ReadDeltaSettings(DeltaCountFunction OnDeltaSetCount, DeltaReadWriteFunction OnDeltaRead); // читаем настройки дельт 
     void WriteDeltaSettings(DeltaCountFunction OnDeltaGetCount, DeltaReadWriteFunction OnDeltaWrite); // пишем настройки дельт 
+#endif    
 
     uint8_t GetWateringOption();
     void SetWateringOption(uint8_t val);

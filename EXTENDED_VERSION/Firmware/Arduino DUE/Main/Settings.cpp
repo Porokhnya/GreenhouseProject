@@ -197,6 +197,8 @@ void GlobalSettings::setKey(const String& val)
   #endif
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_DELTA_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
 void GlobalSettings::WriteDeltaSettings(DeltaCountFunction OnDeltaGetCount, DeltaReadWriteFunction OnDeltaWrite)
 {
   if(!(OnDeltaGetCount && OnDeltaWrite)) // обработчики не заданы
@@ -221,14 +223,15 @@ void GlobalSettings::WriteDeltaSettings(DeltaCountFunction OnDeltaGetCount, Delt
   for(uint8_t i=0;i<deltaCount;i++)
   {
     String name1,name2;
-    uint8_t sensorType = 0,sensorIdx1 = 0,sensorIdx2 = 0;
+    uint16_t sensorType = 0;
+    uint8_t sensorIdx1 = 0,sensorIdx2 = 0;
 
     // получаем настройки дельт
     OnDeltaWrite(sensorType,name1,sensorIdx1,name2,sensorIdx2);
 
     // получили, можем сохранять. Каждая запись дельт идёт так:
   
-  // 1 байт - тип датчика (температура, влажность, освещенность)
+  // 2 байта - тип датчика (температура, влажность, освещенность и т.п.)
   
   // 1 байт - длина имени модуля 1
   // N байт - имя модуля 1
@@ -239,7 +242,10 @@ void GlobalSettings::WriteDeltaSettings(DeltaCountFunction OnDeltaGetCount, Delt
   // 1 байт - индекс датчика модуля 1
 
     // пишем тип датчика
-     MemWrite(writeAddr++,sensorType);
+    uint8_t* sType = (uint8_t*)&sensorType;
+    
+     MemWrite(writeAddr++,*sType);sType++;
+     MemWrite(writeAddr++,*sType);
 
      // пишем длину имени модуля 1
      uint8_t nameLen = name1.length();
@@ -317,7 +323,10 @@ void GlobalSettings::ReadDeltaSettings(DeltaCountFunction OnDeltaSetCount, Delta
   for(uint8_t i=0;i<deltaCount;i++)
   {
     // читаем тип датчика
-    uint8_t sensorType = MemRead(readAddr++);
+    uint16_t sensorType;
+    uint8_t* sType = (uint8_t*)&sensorType;
+    *sType = MemRead(readAddr++); sType++;
+    *sType = MemRead(readAddr++);
 
     // читаем длину имени модуля 1
     uint8_t nameLen = MemRead(readAddr++);
@@ -354,6 +363,8 @@ void GlobalSettings::ReadDeltaSettings(DeltaCountFunction OnDeltaSetCount, Delta
   
     
 }
+//--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_DELTA_MODULE
 //--------------------------------------------------------------------------------------------------------------------------------------
 WindowsChannelsBinding GlobalSettings::readWBinding(uint32_t addr)
 {

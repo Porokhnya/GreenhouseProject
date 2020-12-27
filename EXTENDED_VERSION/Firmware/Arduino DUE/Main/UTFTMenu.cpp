@@ -4396,6 +4396,21 @@ void TFTSensorsScreen::initSensors()
       }
     }  
   #endif // USE_CO2_MODULE  
+
+  #ifdef USE_EC_MODULE
+    AbstractModule* ecMod = MainController->GetModuleByID("EC");
+    if(ecMod)
+    {
+      size_t tempCount = ecMod->State.GetStateCount(StateEC);
+      for(size_t i=0;i<tempCount;i++)
+      {
+        TFTSensorData dt;
+        dt.sensorIndex = i;
+        dt.type = tftSensorEC;
+        sensors.push_back(dt);
+      }
+    }  
+  #endif // USE_EC_MODULE  
   
   
 }
@@ -4804,7 +4819,26 @@ void TFTSensorsScreen::drawSensor(TFTMenu* menuManager,uint8_t row, TFTSensorDat
         }
       } // if(mod)          
     }
+    break;
+
+    case tftSensorEC:
+    {
+      if(!onlyData)
+        caption = F("Датчик EC #");
+
+      AbstractModule* mod = MainController->GetModuleByID("EC");
+      if(mod)
+      {
+        OneState* os = mod->State.GetStateByOrder(StateEC,data->sensorIndex);
+        if(os && os->HasData())
+        {
+          sensorData = *os;
+          sensorData += os->GetUnit();
+        }
+      } // if(mod)          
+    }
     break;    
+        
   } // switch
 
   if(data->type != tftSensorSystemTemperature)
@@ -17390,6 +17424,13 @@ void TFTIdleScreen::drawSensorData(TFTMenu* menuManager,TFTInfoBox* box, int dat
     }
     break;
 
+    case tftSensorModule_EC:
+    {
+      moduleName = "EC";
+      sensorType = StateEC;                        
+    }
+    break;
+
     case tftSensorModule_Soil:
     {
       moduleName = "SOIL";
@@ -17509,6 +17550,16 @@ void TFTIdleScreen::drawSensorData(TFTMenu* menuManager,TFTInfoBox* box, int dat
         }
         break;
 
+        case StateEC:
+        {
+          unitChar = charCO2;
+        
+          //Тут получение данных с датчика
+          ECPair lp = *sensorState;
+          uint16_t lum = lp.Current;
+          sensorValue = lum;
+        }
+        break;
     
         case StateWaterFlowInstant:
         case StateWaterFlowIncremental:

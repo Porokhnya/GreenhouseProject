@@ -447,6 +447,7 @@ typedef enum
   tftSensorModule_CO2,
   tftSensorModule_Soil,
   tftSensorModule_PH,
+  tftSensorModule_EC,
   
 } TFTSensorModuleType; // типы датчиков и модулей для отображения на TFT-экране
 //--------------------------------------------------------------------------------------------------------------------------------------

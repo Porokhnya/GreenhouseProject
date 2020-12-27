@@ -910,6 +910,7 @@ size_t DS18B20Dispatcher::getRawDataLength(ModuleStates sensorType)
     case StateHumidity:
     case StateLuminosity:
     case StateCO2:
+    case StateEC:
       return 9;
 
     default:

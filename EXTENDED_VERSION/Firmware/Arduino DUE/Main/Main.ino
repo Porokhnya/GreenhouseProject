@@ -142,6 +142,10 @@
 #include "CO2Module.h"
 #endif
 
+#ifdef USE_EC_MODULE
+#include "ECModule.h"
+#endif
+
 #ifdef USE_IOT_MODULE
 #include "IoTModule.h"
 #endif
@@ -300,6 +304,11 @@ PhModule phModule;
 #ifdef USE_CO2_MODULE
 // модуль контроля CO2
 CO2Module co2Module;
+#endif
+
+#ifdef USE_EC_MODULE
+// модуль контроля EC
+ECModule ecModule;
 #endif
 
 #ifdef USE_RESERVATION_MODULE
@@ -665,6 +674,9 @@ void setup()
 
   START_LOG(22);
 
+  #ifdef USE_EC_MODULE
+  controller.RegisterModule(&ecModule);
+  #endif  
 
   START_LOG(23);
 

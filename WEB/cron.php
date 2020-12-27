@@ -43,6 +43,7 @@ function requestControllerData($controller_id,$address)
   $NO_TEMPERATURE_DATA = "-128.00"; // нет показаний с датчика температуры
   $NO_LUMINOSITY_DATA = "-1.00"; // нет показаний с датчика освещенности
   $NO_CO2_DATA = "-1.00"; // нет показаний с датчика CO2
+  $NO_EC_DATA = "-1.00"; // нет показаний с датчика EC
   $NO_PH_DATA = "-128.00"; // нет показаний с датчика pH
   
   // пытаемся законнектиться
@@ -150,8 +151,8 @@ function requestControllerData($controller_id,$address)
       while(strlen($line) > 0)
       {
 
-        $f = substr($line,0, 2);
-        $line = substr($line,2);
+        $f = substr($line,0, 4);
+        $line = substr($line,4);
         
         $flags = hexdec($f);
         $tempPresent = ($flags & 1) == 1;
@@ -162,6 +163,7 @@ function requestControllerData($controller_id,$address)
         $soilMoisturePresent = ($flags & 64) == 64;        
         $phPresent = ($flags & 128) == 128;
         $co2Present = ($flags & 2) == 2;
+        $ecPresent = ($flags & 256) == 256;
         
         // читаем байт имени модуля
          $namelen = hexdec(substr($line,0, 2));
@@ -503,7 +505,51 @@ function requestControllerData($controller_id,$address)
 				*/
 
               } // for
-          } // $co2Present	  
+          } // $co2Present	
+
+		if ($ecPresent)
+          {
+              // далее идут показания датчиков EC
+              $cnt = hexdec(substr($line,0,2));
+              $line = substr($line,2);
+              
+			  /*
+              $sensor_type_id = intval(@$sensor_types['EC']);
+			  */
+
+              // обрабатываем их
+              for ($i = 0; $i < $cnt; $i++)
+              {
+                  // первым байтом идёт индекс датчика
+                  $sensorIdx = hexdec(substr($line,0,2));
+                  // затем два байта - его показания
+                  $val = substr($line,2, 2);
+                  $fract = substr($line,4, 2);
+                  $line = substr($line,6);
+
+                  // теперь смотрим, есть ли показания с датчика
+                  $haveSensorData = !($val == "FF" && $fract == "FF");
+                  $ppm = $NO_EC_DATA;
+                  if ($haveSensorData)
+                  {
+                      // имеем показания, надо сконвертировать
+                      $ppm = hexdec( ($val . $fract) );
+
+                  }
+				  
+				  /*
+
+                  // получили показания с датчика, надо их сохранить в БД
+                  $sql = "INSERT INTO controller_data(controller_id,sensor_type_id,module_id,sensor_index,sensor_data) VALUES($controller_id,$sensor_type_id,$module_id,$sensorIdx,$ppm);";
+                  if($SIMULATION)
+                    echo "$sql\n";
+                  else
+                    $dbengine->exec($sql);
+				*/
+
+              } // for
+          } // $ecPresent	  
+		  
 
           // все датчики обработали, переходим к следующему модулю          
           

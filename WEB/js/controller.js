@@ -574,8 +574,8 @@ Controller.prototype.parseControllerState = function(answer)
    while (line.length > 0)
    {
      // читаем байт флагов модуля
-      var f = "0x" + line.substring(0, 2);
-      line = line.substring(2);
+      var f = "0x" + line.substring(0, 4);
+      line = line.substring(4);
 
       // смотрим, чего там во флагах модуля задано
       var flags = parseInt(f);

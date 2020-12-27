@@ -1,6 +1,8 @@
 #include "DeltaModule.h"
 #include "ModuleController.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_DELTA_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
 DeltaModule* DeltaModule::_thisDeltaModule = NULL; // указатель на экземпляр класса
 //--------------------------------------------------------------------------------------------------------------------------------------
 void DeltaModule::OnDeltaSetCount(uint8_t& count)
@@ -10,7 +12,7 @@ void DeltaModule::OnDeltaSetCount(uint8_t& count)
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void DeltaModule::OnDeltaRead(uint8_t& _sensorType, String& moduleName1,uint8_t& sensorIdx1, String& moduleName2, uint8_t& sensorIdx2)
+void DeltaModule::OnDeltaRead(uint16_t& _sensorType, String& moduleName1,uint8_t& sensorIdx1, String& moduleName2, uint8_t& sensorIdx2)
 {
   // нам передали прочитанные из EEPROM данные одной дельты
   // вызываем yield, поскольку чтение из EEPROM занимает время.
@@ -70,7 +72,7 @@ void DeltaModule::OnDeltaGetCount(uint8_t& count)
   
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void DeltaModule::OnDeltaWrite(uint8_t& sensorType, String& moduleName1,uint8_t& sensorIdx1, String& moduleName2, uint8_t& sensorIdx2)
+void DeltaModule::OnDeltaWrite(uint16_t& sensorType, String& moduleName1,uint8_t& sensorIdx1, String& moduleName2, uint8_t& sensorIdx2)
 {
   // мы передаём данные очередной дельты
   // вызываем yield, поскольку запись в EEPROM занимает время.
@@ -365,3 +367,4 @@ bool  DeltaModule::ExecCommand(const Command& command, bool wantAnswer)
   return true;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_DELTA_MODULE
