@@ -15131,6 +15131,12 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     screenButtons->disableButton(sprayButton);
     #endif
    
+    ecButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, EC_BUTTON_CAPTION);
+    //screenButtons->setButtonHasIcon(ecButton);
+    leftPos += controlsButtonsWidth + spacing;
+    #ifndef USE_EC_MODULE
+    screenButtons->disableButton(ecButton);
+    #endif
   
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -15206,6 +15212,11 @@ void TFTDriveScreen::update(TFTMenu* menuManager)
         if(pressed_button == sprayButton)
         {
           menuManager->switchToScreen("SPRAY");
+        }
+        else
+        if(pressed_button == ecButton)
+        {
+          menuManager->switchToScreen("ECControl");
         }
         else
         if(pressed_button == thermostatButton)
@@ -19005,7 +19016,7 @@ void TFTIdleScreen::update(TFTMenu* menuManager)
   }
 
   #ifdef USE_WATER_TANK_MODULE
-  if(pressed_button == fillTankButton)
+  if(pressed_button == fillTankButton && fillTankButton != 0xFF)
   {
     WaterTank->FillTank(!WaterTank->IsValveOn());
   }
@@ -19090,30 +19101,32 @@ void TFTIdleScreen::updateCurrentScreen(TFTMenu* menuManager)
       case TFT_IDLE_PH_SCREEN_NUMBER:
       {
         if(fillTankButton == 0xFF) // ещё нет кнопки
-        {          
+        {   
 
-          #ifdef USE_LORA_GATE
+          bool canAddFillTankButton =
+          #if defined(USE_LORA_GATE) || defined(USE_RS485_GATE) // или LoRa, или RS-485, считаем, что кнопку добавлять можно
+          true;
+          #else
+          false;
+          #endif
 
-          // тут проверяем, активна ли LoRa
-          if(loraGate.isLoraInited())
+          #if defined(USE_LORA_GATE) && !defined(USE_RS485_GATE) // только LoRa, добавляем кнопку только тогда, когда LoRa инициализирована
+            canAddFillTankButton = loraGate.isLoraInited();
+          #endif
+
+          if(canAddFillTankButton)
           {
-          
               TFTInfoBoxContentRect rc = waterTankCommandsBox->getContentRect(menuManager);
               fillTankButton = screenButtons->addButton( rc.x + 10 , rc.y + 10, rc.w - 20,  rc.h - 20, "НАПОЛНИТЬ БАК");
-              //screenButtons->setButtonBackColor(fillTankButton, VGA_MAROON);
-              //screenButtons->setButtonFontColor(fillTankButton, VGA_WHITE);
 
               if(!WaterTank->IsModuleOnline())
               {
                 screenButtons->disableButton(fillTankButton);
-              }
-    
-              //Serial.println("draw fill tank button 2");
+              }    
               screenButtons->drawButton(fillTankButton);
-              
-          } // if(loraGate.isLoraInited())
+            
+          } // canAddFillTankButton        
 
-         #endif // USE_LORA_GATE
 
         } // if(fillTankButton == 0xFF)
         else

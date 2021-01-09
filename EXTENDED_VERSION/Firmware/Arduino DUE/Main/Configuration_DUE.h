@@ -123,6 +123,9 @@
 #define SPRAY_BUTTON_CAPTION "D СПРИНКЛЕРЫ"
 #define SPRAY_SCREEN_CAPTION "СПРИНКЛЕРЫ"
 
+#define EC_BUTTON_CAPTION "КОНТРОЛЬ EC"
+#define EC_SCREEN_CAPTION "КОНТРОЛЬ EC"
+
 #define WM_BLINK_ON_TEXT_COLOR VGA_WHITE
 #define WM_BLINK_OFF_TEXT_COLOR 0x3A8D
 #define WM_ON_BLINK_BGCOLOR VGA_MAROON
