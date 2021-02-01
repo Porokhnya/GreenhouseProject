@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include "Globals.h"
+#include "Memory.h"
+#include "Utils.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
 // класс настроек, которые сохраняются и читаются в/из EEPROM
 // здесь будут всякие настройки, типа уставок срабатывания и пр. лабуды
@@ -199,6 +201,28 @@ typedef struct
 } DoorSettings;
 #pragma pack(pop)
 //--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_EC_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
+#pragma pack(push,1)
+typedef struct
+{
+  uint16_t targetPPM; // какой ЕС держим
+  uint16_t histeresis; // гистерезис
+  uint16_t interval; // интервал между проверками, минут
+  int8_t sensorIndex; // индекс датчика EC
+  
+  uint16_t reagentATime; // время подачи реагента А для изменения ЕС на 100 ppm, секунд
+  uint16_t reagentBTime; // время подачи реагента B для изменения ЕС на 100 ppm, секунд
+  uint16_t reagentCTime; // время подачи реагента C для изменения ЕС на 100 ppm, секунд
+  uint16_t waterTime; // время подачи воды для изменения ЕС на 100 ppm, секунд
+  uint16_t mixTime; // время перемешивания после регулировки EC, секунд
+  uint16_t tCalibration; // температура калибровки датчика
+  
+} ECSettings;
+#pragma pack(pop)
+//--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_EC_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
 class GlobalSettings
 {
   private:
@@ -217,6 +241,48 @@ class GlobalSettings
    bool checkHeader(uint32_t addr);
    void writeHeader(uint32_t addr);
 
+   template< typename T >
+    bool read(uint32_t address, T& result)
+    {
+        if(MemRead(address++) != SETT_HEADER1)
+        {
+          return false;
+        }
+    
+        if(MemRead(address++) != SETT_HEADER2)
+        {
+          return false;
+        }
+    
+       uint8_t* ptr = (uint8_t*)&result;
+    
+       for(size_t i=0;i<sizeof(T);i++)
+       {
+        *ptr++ = MemRead(address++);
+       }
+
+      // читаем контрольную сумму
+      uint8_t crc = MemRead(address);       
+      return crc == crc8((const uint8_t*)&result, sizeof(result));
+    }
+
+    template< typename T >
+    void write(uint32_t address, T& val)
+    {
+        MemWrite(address++,SETT_HEADER1);
+        MemWrite(address++,SETT_HEADER2);
+      
+        uint8_t* ptr = (uint8_t*)&val;
+        
+        for(size_t i=0;i<sizeof(T);i++)
+          MemWrite(address++,*ptr++); 
+
+       // пишем контрольную сумму
+        uint8_t crc = crc8((const uint8_t*)&val, sizeof(val));
+        MemWrite(address,crc);
+    }
+   
+
    uint8_t wateringOption;
    uint8_t wateringWeekDays;
    uint16_t wateringTime;
@@ -227,6 +293,9 @@ class GlobalSettings
    uint8_t turnWateringToAutoAfterMidnight;
    uint8_t wateringStartBorder;
 
+#ifdef USE_EC_MODULE
+   ECSettings ecSettings;
+#endif
 
    WateringChannelOptions wateringChannels[WATER_RELAYS_COUNT];
    uint8_t wateringChannelsStartBorders[WATER_RELAYS_COUNT];
@@ -460,7 +529,10 @@ class GlobalSettings
     void getLastScheduleRunDate(uint8_t& dayOfMonth,uint8_t& month,uint16_t& year, uint8_t& hour, uint8_t& minute);
     void setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uint16_t year, uint8_t hour, uint8_t minute);
     
-    
+    #ifdef USE_EC_MODULE
+      ECSettings* GetECSettings() { return &ecSettings; }
+      void SetECSettings(const ECSettings& val);
+    #endif
 };
 
 #endif

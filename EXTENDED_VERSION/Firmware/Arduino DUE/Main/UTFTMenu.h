@@ -1,5 +1,4 @@
-#ifndef _UTFTMENU_H
-#define _UTFTMENU_H
+#pragma once
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #include "Globals.h"
 
@@ -562,7 +561,7 @@ private:
   
 
   TFTInfoBox* phFlowMixBox, *phPlusMinusBox;
-  #ifdef USE_PH_MODULE
+  #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
     bool phFlowAddOn, phMixOn, phPlusOn, phMinusOn;
   #endif
 
@@ -851,6 +850,7 @@ typedef enum
   tftSensorCO2,
   tftSensorSystemTemperature,
   tftSensorEC,
+  tftSensorEC_PH,
   
 } TFTSensorType;
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1472,7 +1472,7 @@ class TFTSpraySettingsScreen : public AbstractTFTScreen, public ITickHandler
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_HUMIDITY_SPRAY_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#ifdef USE_PH_MODULE
+#if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class TFTPHControlScreen : public AbstractTFTScreen, public ITickHandler
 {
@@ -1493,6 +1493,7 @@ class TFTPHControlScreen : public AbstractTFTScreen, public ITickHandler
 
     uint16_t phValue; // значение pH, за которым следим
     uint16_t histeresis; // гистерезис
+
     uint16_t mixWorkTime; // время работы насоса перемешивания, с
     uint16_t reagentWorkTime; // время работы подачи реагента, с
 
@@ -1512,6 +1513,7 @@ class TFTPHControlScreen : public AbstractTFTScreen, public ITickHandler
     void incPH(int val);
     String formatPH();
 
+    
     // время работы насоса перемешивания, секунд
     TFTInfoBox* mixWorkTimeBox;
     int incMixWorkTimeButton, decMixWorkTimeButton;
@@ -1521,6 +1523,7 @@ class TFTPHControlScreen : public AbstractTFTScreen, public ITickHandler
     TFTInfoBox* reagentWorkTimeBox;
     int incReagentWorkTimeButton, decReagentWorkTimeButton;
     void incReagentWorkTime(int val);
+
 
     void saveSettings();
 
@@ -1928,6 +1931,133 @@ class TFTHeatSettingsScreen : public AbstractTFTScreen, public ITickHandler
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_HEAT_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_EC_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class TFTECControlScreen : public AbstractTFTScreen, public ITickHandler
+{
+  public:
+    TFTECControlScreen();
+    ~TFTECControlScreen();
+
+    void setup(TFTMenu* menuManager);
+    void update(TFTMenu* menuManager);
+    void draw(TFTMenu* menuManager);
+    void onActivate(TFTMenu* menuManager);
+    void onButtonPressed(TFTMenu* menuManager,int buttonID);
+    void onButtonReleased(TFTMenu* menuManager,int buttonID);
+    void onTick();    
+    
+
+  private:
+
+  ECSettings ecSettings;
+
+    int tickerButton;
+    int backButton, saveButton, ecSettingsButton;
+    UTFT_Buttons_Rus* screenButtons;
+
+    // значение ppm
+    TFTInfoBox* ppmBox;
+    int decPPMButton, incPPMButton;
+    void incPPM(int val);
+    
+    // гистерезис
+    TFTInfoBox* histeresisBox;
+    int decHisteresisButton, incHisteresisButton;
+    void incHisteresis(int val);
+
+    // ннтервал
+    TFTInfoBox* intervalBox;
+    int decIntervalButton, incIntervalButton;
+    void incInterval(int val);
+    
+    // датчик EC
+    TFTInfoBox* sensorBox;
+    int decSensorButton, incSensorButton;
+
+    int sensorDataLeft, sensorDataTop;
+    String sensorDataString;
+    int ecSensorsCount;
+
+    void drawSensorData(TFTMenu* menuManager, String& which, int left, int top);
+    void getSensorData(String& result);
+  
+
+    void saveSettings();
+
+    uint32_t blinkTimer;
+    bool blinkOn, blinkActive;
+    
+    void blinkSaveSettingsButton(bool bOn);
+    
+       
+};
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class TFTECSettingsScreen : public AbstractTFTScreen, public ITickHandler
+{
+  public:
+  
+    TFTECSettingsScreen();
+    ~TFTECSettingsScreen();
+    
+    void setup(TFTMenu* menuManager);
+    void update(TFTMenu* menuManager);
+    void draw(TFTMenu* menuManager);
+    void onActivate(TFTMenu* menuManager);
+    void onButtonPressed(TFTMenu* menuManager,int buttonID);
+    void onButtonReleased(TFTMenu* menuManager,int buttonID);
+    void onTick();    
+
+    private:
+
+      int tickerButton;
+    
+      int backButton, saveButton;
+      UTFT_Buttons_Rus* screenButtons;
+
+      // уставка температуры калибровки
+      TFTInfoBox* calibrationBox;
+      int decCalibrationButton, incCalibrationButton;
+      void incCalibration(int val);
+
+      // уставка подачи реагента A
+      TFTInfoBox* agentABox;
+      int decAgentAButton, incAgentAButton;
+      void incAgentA(int val);
+
+      // уставка подачи реагента B
+      TFTInfoBox* agentBBox;
+      int decAgentBButton, incAgentBButton;
+      void incAgentB(int val);
+
+      // уставка подачи реагента C
+      TFTInfoBox* agentCBox;
+      int decAgentCButton, incAgentCButton;
+      void incAgentC(int val);
+
+      // уставка времени подачи воды
+      TFTInfoBox* waterBox;
+      int decWaterButton, incWaterButton;
+      void incWater(int val);
+
+      // уставка времени перемешивания
+      TFTInfoBox* mixBox;
+      int decMixButton, incMixButton;
+      void incMix(int val);
+    
+    ECSettings ecSettings;
+
+      void saveSettings();
+
+      uint32_t blinkTimer;
+      bool blinkOn, blinkActive;
+      
+      void blinkSaveSettingsButton(bool bOn);
+
+};
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_EC_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #if (TARGET_BOARD == DUE_BOARD) && defined(PROTECT_ENABLED)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class TFTUnrKScreen : public AbstractTFTScreen
@@ -2241,7 +2371,8 @@ private:
 
   
 };
-extern TFTMenu* TFTScreen;
-#endif // USE_TFT_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#endif
+extern TFTMenu* TFTScreen;
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_TFT_MODULE
+

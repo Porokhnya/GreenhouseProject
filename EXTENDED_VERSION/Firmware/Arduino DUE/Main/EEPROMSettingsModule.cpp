@@ -213,6 +213,7 @@ void EEPROMSettingsModule::Setup()
   }
 
   // читаем настройки pH
+  #ifdef USE_PH_MODULE
   memset(&phBinding,0,sizeof(phBinding));
   if(!read(PH_BINDING_ADDRESS, phBinding))
   {
@@ -234,6 +235,41 @@ void EEPROMSettingsModule::Setup()
 
       phBinding.VRef = 2400;
   }
+  #else // EC MODULE
+  memset(&ecphBinding,0,sizeof(ecphBinding));
+  if(!read(PH_BINDING_ADDRESS, ecphBinding))
+  {
+      memset(&ecphBinding,0,sizeof(ecphBinding));      
+      ecphBinding.SensorPin = UNBINDED_PIN;
+      ecphBinding.MVPer7Ph = EC_PH_MV_PER_7_PH;
+      ecphBinding.VRef = 2400;
+  }
+
+  memset(&ecBinding,0,sizeof(ecBinding));
+  if(!read(EC_BINDING_ADDRESS, ecBinding))
+  {
+      memset(&ecBinding,0,sizeof(ecBinding));      
+      ecBinding.LinkType = linkUnbinded;
+        for(uint8_t k=0;k<sizeof(ecBinding.SensorPins)/sizeof(ecBinding.SensorPins[0]);k++)
+        {
+          ecBinding.SensorPins[k] = UNBINDED_PIN;
+        }
+
+        ecBinding.PinA = UNBINDED_PIN;
+        ecBinding.PinB = UNBINDED_PIN;
+        ecBinding.PinC = UNBINDED_PIN;
+
+        ecBinding.PinPhPlus = UNBINDED_PIN;
+        ecBinding.PinPhMinus = UNBINDED_PIN;
+        ecBinding.PinWater = UNBINDED_PIN;
+        ecBinding.WaterValve = UNBINDED_PIN;
+        ecBinding.WaterContour = UNBINDED_PIN;
+        ecBinding.PumpPin = UNBINDED_PIN;
+        ecBinding.MaxPpm = 1000;
+        
+  }
+  
+  #endif // EC module
 
   // читаем настройки термостатов
   memset(thermostatBinding,0,sizeof(thermostatBinding));
@@ -1009,6 +1045,72 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           }        
        } // F("PH")
        #endif // #ifdef USE_PH_MODULE
+       #ifdef USE_EC_MODULE
+       else
+       if(param == F("ECPH")) // установить настройки EC/pH: CTSET=EES|ECPH|sensor pin|mvPer7pH|reversive flag|vref
+       {
+          if(argsCnt < 5)
+          {
+            if(wantAnswer)
+            {
+              PublishSingleton = PARAMS_MISSED;
+            }
+          }
+          else
+          {
+             // аргументов хватает
+             ecphBinding.SensorPin = atoi(command.GetArg(1));
+             ecphBinding.MVPer7Ph = atoi(command.GetArg(2));
+             ecphBinding.ReversiveMeasure = atoi(command.GetArg(3));
+             ecphBinding.VRef = atoi(command.GetArg(4));
+             
+             write(PH_BINDING_ADDRESS, ecphBinding);
+
+             PublishSingleton.Flags.Status = true;
+             PublishSingleton = param;
+             PublishSingleton << PARAM_DELIMITER << REG_SUCC;
+          }        
+       } // F("ECPH")
+              else
+       if(param == F("EC")) // установить настройки EC: CTSET=EES|EC|link type|mcp address|sensor1|sensor2|sensor3|sensor4|pinA|pinB|pinC|ph+|ph-|water|water valve|water contour valve|pump|max ppm|level
+       {
+          if(argsCnt < 18)
+          {
+            if(wantAnswer)
+            {
+              PublishSingleton = PARAMS_MISSED;
+            }
+          }
+          else
+          {
+             // аргументов хватает
+             uint8_t _cntr = 1;
+             ecBinding.LinkType = atoi(command.GetArg(_cntr++));
+             ecBinding.MCPAddress = atoi(command.GetArg(_cntr++));
+             ecBinding.SensorPins[0] = atoi(command.GetArg(_cntr++));
+             ecBinding.SensorPins[1] = atoi(command.GetArg(_cntr++));
+             ecBinding.SensorPins[2] = atoi(command.GetArg(_cntr++));
+             ecBinding.SensorPins[3] = atoi(command.GetArg(_cntr++));
+             ecBinding.PinA = atoi(command.GetArg(_cntr++));
+             ecBinding.PinB = atoi(command.GetArg(_cntr++));
+             ecBinding.PinC = atoi(command.GetArg(_cntr++));
+             ecBinding.PinPhPlus = atoi(command.GetArg(_cntr++));
+             ecBinding.PinPhMinus = atoi(command.GetArg(_cntr++));
+             ecBinding.PinWater = atoi(command.GetArg(_cntr++));
+             ecBinding.WaterValve = atoi(command.GetArg(_cntr++));
+             ecBinding.WaterContour = atoi(command.GetArg(_cntr++));
+             ecBinding.PumpPin = atoi(command.GetArg(_cntr++));
+             ecBinding.MaxPpm = atoi(command.GetArg(_cntr++));
+             ecBinding.Level = atoi(command.GetArg(_cntr++));
+             
+             write(EC_BINDING_ADDRESS, ecBinding);
+
+             PublishSingleton.Flags.Status = true;
+             PublishSingleton = param;
+             PublishSingleton << PARAM_DELIMITER << REG_SUCC;
+          }        
+       } // F("EC")
+       #endif // #ifdef USE_EC_MODULE
        #ifdef USE_THERMOSTAT_MODULE
        else
        if(param == F("THERMOSTAT")) // установить настройки термостатов: CTSET=EES|THERMOSTAT|link type 1|mcp address 1|pin 1|level 1|link type 2|mcp address 2|pin 2|level 2|link type 3|mcp address 3|pin 3|level 3
@@ -2224,6 +2326,43 @@ bool  EEPROMSettingsModule::ExecCommand(const Command& command, bool wantAnswer)
           ;                  
         } // F("PH")
         #endif // #ifdef USE_PH_MODULE
+        #ifdef USE_EC_MODULE
+        else
+        if(param == F("ECPH")) // запросили настройки EC/PH: CTGET=EES|ECPH
+        {
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = param;
+          PublishSingleton << PARAM_DELIMITER << ecphBinding.SensorPin
+          << PARAM_DELIMITER << ecphBinding.MVPer7Ph
+          << PARAM_DELIMITER << ecphBinding.ReversiveMeasure
+          << PARAM_DELIMITER << ecphBinding.VRef
+          ;                  
+        } // F("ECPH")
+        else
+        if(param == F("EC")) // запросили настройки EC: CTGET=EES|EC
+        {
+          PublishSingleton.Flags.Status = true;
+          PublishSingleton = param;
+          PublishSingleton << PARAM_DELIMITER << ecBinding.LinkType
+          << PARAM_DELIMITER << ecBinding.MCPAddress
+          << PARAM_DELIMITER << ecBinding.SensorPins[0]
+          << PARAM_DELIMITER << ecBinding.SensorPins[1]
+          << PARAM_DELIMITER << ecBinding.SensorPins[2]
+          << PARAM_DELIMITER << ecBinding.SensorPins[3]
+          << PARAM_DELIMITER << ecBinding.PinA
+          << PARAM_DELIMITER << ecBinding.PinB
+          << PARAM_DELIMITER << ecBinding.PinC
+          << PARAM_DELIMITER << ecBinding.PinPhPlus
+          << PARAM_DELIMITER << ecBinding.PinPhMinus
+          << PARAM_DELIMITER << ecBinding.PinWater
+          << PARAM_DELIMITER << ecBinding.WaterValve
+          << PARAM_DELIMITER << ecBinding.WaterContour
+          << PARAM_DELIMITER << ecBinding.PumpPin
+          << PARAM_DELIMITER << ecBinding.MaxPpm
+          << PARAM_DELIMITER << ecBinding.Level
+          ;                  
+        } // F("EC")
+        #endif // #ifdef USE_EC_MODULE
         #ifdef USE_THERMOSTAT_MODULE
         else
         if(param == F("THERMOSTAT")) // запросили настройки термостатов: CTGET=EES|THERMOSTAT

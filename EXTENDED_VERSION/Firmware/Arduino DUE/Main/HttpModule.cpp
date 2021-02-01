@@ -311,7 +311,7 @@ void HttpModule::CollectControllerStatus(String* data)
      */
      byte phState = 0;
 
-     #ifdef USE_PH_MODULE
+     #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
         phState |= 0x80;
         if(WORK_STATUS.GetStatus(PH_FLOW_ADD_BIT))
           phState |= 1;
@@ -494,6 +494,12 @@ void HttpModule::CollectSensorsData(String* data)
     // собираем показания датчиков pH
     ///////////////////////////////////////////////////////////
     mod = MainController->GetModuleByID("PH");
+    
+    if(!mod) // пытаемся взять показания с модуля контроля ЕС
+    {
+      mod = MainController->GetModuleByID("EC");
+    }
+    
     if(mod)
     {
        int cnt = mod->State.GetStateCount(StatePH);

@@ -25,6 +25,10 @@
 #include "PHModule.h"
 #endif
 
+#ifdef USE_EC_MODULE
+#include "ECModule.h"
+#endif
+
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // This code block is only needed to support multiple
 // MCU architectures in a single sketch.
@@ -4381,7 +4385,6 @@ void TFTSensorsScreen::initSensors()
   #endif // USE_PH_MODULE
 
 
-
   #ifdef USE_CO2_MODULE
     AbstractModule* co2Mod = MainController->GetModuleByID("CO2");
     if(co2Mod)
@@ -4398,10 +4401,18 @@ void TFTSensorsScreen::initSensors()
   #endif // USE_CO2_MODULE  
 
   #ifdef USE_EC_MODULE
-    AbstractModule* ecMod = MainController->GetModuleByID("EC");
-    if(ecMod)
+    if(ECControl)
     {
-      size_t tempCount = ecMod->State.GetStateCount(StateEC);
+      size_t tempCount = ECControl->State.GetStateCount(StatePH);
+      for(size_t i=0;i<tempCount;i++)
+      {
+        TFTSensorData dt;
+        dt.sensorIndex = i;
+        dt.type = tftSensorEC_PH;
+        sensors.push_back(dt);
+      }
+      
+      tempCount = ECControl->State.GetStateCount(StateEC);
       for(size_t i=0;i<tempCount;i++)
       {
         TFTSensorData dt;
@@ -4786,11 +4797,22 @@ void TFTSensorsScreen::drawSensor(TFTMenu* menuManager,uint8_t row, TFTSensorDat
     break;
 
     case tftSensorPH:
+    case tftSensorEC_PH:
     {
       if(!onlyData)
         caption = F("Датчик pH #");
 
-      AbstractModule* mod = MainController->GetModuleByID("PH");
+      AbstractModule* mod = NULL;
+      
+      if(data->type == tftSensorPH)
+      {
+        mod = MainController->GetModuleByID("PH");
+      }
+      else
+      {
+        mod = MainController->GetModuleByID("EC");
+      }
+      
       if(mod)
       {
         OneState* os = mod->State.GetStateByOrder(StatePH,data->sensorIndex);
@@ -10536,7 +10558,7 @@ void TFTSprayScreen::draw(TFTMenu* menuManager)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_HUMIDITY_SPRAY_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#ifdef USE_PH_MODULE
+#if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 TFTPHSettingsScreen::TFTPHSettingsScreen()
 {
@@ -10571,12 +10593,25 @@ void TFTPHSettingsScreen::onActivate(TFTMenu* menuManager)
 
     screenButtons->disableButton(saveButton);
 
-  calibration = PHModule->GetCalibration();
-  ph4Voltage = PHModule->GetPh4Voltage();
-  ph7Voltage = PHModule->GetPh7Voltage();
-  ph10Voltage = PHModule->GetPh10Voltage();
-  phTemperatureSensorIndex = PHModule->GetTemperatureSensorIndex();
-  phSamplesTemperature = PHModule->GetTemperature();      
+  #if defined(USE_PH_MODULE) // только для модуля pH 
+  
+    calibration = PHModule->GetCalibration();
+    ph4Voltage = PHModule->GetPh4Voltage();
+    ph7Voltage = PHModule->GetPh7Voltage();
+    ph10Voltage = PHModule->GetPh10Voltage();
+    phTemperatureSensorIndex = PHModule->GetTemperatureSensorIndex();
+    phSamplesTemperature = PHModule->GetTemperature();      
+    
+  #else // для модуля ЕС
+  
+    calibration = ECControl->GetPhCalibration();
+    ph4Voltage = ECControl->GetPh4Voltage();
+    ph7Voltage = ECControl->GetPh7Voltage();
+    ph10Voltage = ECControl->GetPh10Voltage();
+    phTemperatureSensorIndex = ECControl->GetPhTemperatureSensorIndex();
+    phSamplesTemperature = ECControl->GetPhSamplesTemperature();      
+    
+  #endif
 
     blinkActive = false;
     screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
@@ -10584,16 +10619,23 @@ void TFTPHSettingsScreen::onActivate(TFTMenu* menuManager)
 
     AbstractModule* module = MainController->GetModuleByID("STATE");
     if(module)
+    {
       tempSensorsCount = module->State.GetStateCount(StateTemperature);
+    }
     else
+    {
       tempSensorsCount = 0;
+    }
 
     module = MainController->GetModuleByID("HUMIDITY");
     if(module)
+    {
       humiditySensorsCount = module->State.GetStateCount(StateTemperature);
+    }
     else
+    {
       humiditySensorsCount = 0; 
-
+    }
 
     getSensorData(sensorDataString);
     
@@ -10617,11 +10659,15 @@ void TFTPHSettingsScreen::getSensorData(String& result)
   
   AbstractModule* module = MainController->GetModuleByID(moduleName);
   if(!module)
+  {
     return;
+  }
 
   OneState* sensorState = module->State.GetState(StateTemperature,sensorIndex);
   if(!sensorState)
+  {
     return;
+  }
 
   if(sensorState->HasData())
   {
@@ -10636,7 +10682,9 @@ void TFTPHSettingsScreen::getSensorData(String& result)
   }
 
    while(result.length() < 10)
+   {
     result += ' ';
+   }
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHSettingsScreen::drawSensorData(TFTMenu* menuManager, String& which, int left, int top)
@@ -10781,14 +10829,30 @@ void TFTPHSettingsScreen::setup(TFTMenu* menuManager)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHSettingsScreen::saveSettings()
 {
-  PHModule->SetCalibration(calibration);
-  PHModule->SetPh4Voltage(ph4Voltage);
-  PHModule->SetPh7Voltage(ph7Voltage);
-  PHModule->SetPh10Voltage(ph10Voltage);
-  PHModule->SetTemperatureSensorIndex(phTemperatureSensorIndex);
-  PHModule->SetTemperature(phSamplesTemperature);
-
-  PHModule->SaveSettings();
+  #if defined(USE_PH_MODULE) // только для модуля pH
+  
+    PHModule->SetCalibration(calibration);
+    PHModule->SetPh4Voltage(ph4Voltage);
+    PHModule->SetPh7Voltage(ph7Voltage);
+    PHModule->SetPh10Voltage(ph10Voltage);
+    PHModule->SetTemperatureSensorIndex(phTemperatureSensorIndex);
+    PHModule->SetTemperature(phSamplesTemperature);
+  
+    PHModule->SaveSettings();
+    
+  #else // для модуля ЕС
+  
+    ECControl->SetPhCalibration(calibration);
+    ECControl->SetPh4Voltage(ph4Voltage);
+    ECControl->SetPh7Voltage(ph7Voltage);
+    ECControl->SetPh10Voltage(ph10Voltage);
+    ECControl->SetPhTemperatureSensorIndex(phTemperatureSensorIndex);
+    ECControl->SetPhSamplesTemperature(phSamplesTemperature);
+  
+    ECControl->SaveSettings();
+    
+  #endif
+    
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHSettingsScreen::blinkSaveSettingsButton(bool bOn)
@@ -11140,6 +11204,7 @@ TFTPHControlScreen::TFTPHControlScreen()
 {
   phBox = NULL;
   histeresisBox = NULL;
+
   mixWorkTimeBox = NULL;
   reagentWorkTimeBox = NULL;
   tickerButton = -1;  
@@ -11161,10 +11226,20 @@ void TFTPHControlScreen::onActivate(TFTMenu* menuManager)
     return;
   }
 
+#if defined(USE_PH_MODULE) // только для модуля pH
+
     phValue = PHModule->GetPHValue();
     histeresis = PHModule->GetHisteresis();
     mixWorkTime = PHModule->GetMixPumpTime();
     reagentWorkTime = PHModule->GetReagentPumpTime();
+
+#else
+  //TODO: ДЛЯ МОДУЛЯ ЕС !!!
+    phValue = ECControl->GetPhTarget();
+    histeresis = ECControl->GetPhHisteresis();
+    mixWorkTime = ECControl->GetPhMixPumpTime();
+    reagentWorkTime = ECControl->GetPhReagentPumpTime();
+#endif    
 
     screenButtons->disableButton(saveButton);
 
@@ -11256,6 +11331,7 @@ void TFTPHControlScreen::setup(TFTMenu* menuManager)
    incHisteresisButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
 
 
+
    // вторая строка
    textBoxTopPos = secondRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
    topPos = secondRowTopPos;
@@ -11286,12 +11362,23 @@ void TFTPHControlScreen::setup(TFTMenu* menuManager)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHControlScreen::saveSettings()
 {
+#if defined(USE_PH_MODULE) // только для модуля pH
+  
   PHModule->SetPHValue(phValue);
   PHModule->SetHisteresis(histeresis);
   PHModule->SetMixPumpTime(mixWorkTime);
   PHModule->SetReagentPumpTime(reagentWorkTime);
 
   PHModule->SaveSettings();
+#else
+  //TODO: ДЛЯ МОДУЛЯ ЕС !!!
+  ECControl->SetPhTarget(phValue);
+  ECControl->SetPhHisteresis(histeresis);
+  ECControl->SetPhMixPumpTime(mixWorkTime);
+  ECControl->SetPhReagentPumpTime(reagentWorkTime);
+
+  ECControl->SaveSettings();
+#endif
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHControlScreen::blinkSaveSettingsButton(bool bOn)
@@ -11323,8 +11410,10 @@ void TFTPHControlScreen::onButtonPressed(TFTMenu* menuManager,int buttonID)
 {
   tickerButton = -1;
   if(buttonID == decPHButton || buttonID == incPHButton || buttonID == decHisteresisButton
-  || buttonID == incHisteresisButton || buttonID == incMixWorkTimeButton || buttonID == decMixWorkTimeButton
-  || buttonID == incReagentWorkTimeButton || buttonID == decReagentWorkTimeButton)
+  || buttonID == incHisteresisButton 
+  || buttonID == incMixWorkTimeButton || buttonID == decMixWorkTimeButton
+  || buttonID == incReagentWorkTimeButton || buttonID == decReagentWorkTimeButton
+  )
   {
     tickerButton = buttonID;
     Ticker.start(this);
@@ -11405,7 +11494,9 @@ void TFTPHControlScreen::incMixWorkTime(int val)
 
       
     if(mixWorkTime != old)
+    {
       drawValueInBox(mixWorkTimeBox,mixWorkTime);  
+    }
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHControlScreen::incReagentWorkTime(int val)
@@ -11418,7 +11509,9 @@ void TFTPHControlScreen::incReagentWorkTime(int val)
         reagentWorkTime = 0;
     
     if(reagentWorkTime != old)
+    {
       drawValueInBox(reagentWorkTimeBox,reagentWorkTime);  
+    }
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTPHControlScreen::update(TFTMenu* menuManager)
@@ -11527,7 +11620,6 @@ void TFTPHControlScreen::update(TFTMenu* menuManager)
             screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
             blinkSaveSettingsButton(true);
           }
-          
 
     } // if(pressed_button != -1)
     
@@ -11603,6 +11695,1007 @@ String TFTPHControlScreen::formatPH()
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #endif // USE_PH_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_EC_MODULE
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTECSettingsScreen::TFTECSettingsScreen()
+{
+  calibrationBox = NULL;
+  agentABox = NULL;
+  agentBBox = NULL;
+  agentCBox = NULL;
+  waterBox = NULL;
+  mixBox = NULL;
+
+  tickerButton = -1;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTECSettingsScreen::~TFTECSettingsScreen()
+{
+ delete screenButtons;
+ delete calibrationBox;
+ delete agentABox;
+ delete agentBBox;
+ delete agentCBox;
+ delete waterBox;
+ delete mixBox;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::onActivate(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  ecSettings = *(MainController->GetSettings()->GetECSettings());
+
+    screenButtons->disableButton(saveButton);
+
+    blinkActive = false;
+    screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+    screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::setup(TFTMenu* menuManager)
+{
+    UTFT* dc = menuManager->getDC();
+
+  if(!dc)
+  {
+    return;
+  }
+    
+    
+    screenButtons = new UTFT_Buttons_Rus(dc, menuManager->getTouch(),menuManager->getRusPrinter());
+    screenButtons->setTextFont(BigRusFont);
+    screenButtons->setSymbolFont(SensorFont);
+    screenButtons->setButtonColors(TFT_CHANNELS_BUTTON_COLORS);
+ 
+    UTFTRus* rusPrinter = menuManager->getRusPrinter();
+    
+    int screenWidth = dc->getDisplayXSize();
+    int screenHeight = dc->getDisplayYSize();
+
+    dc->setFont(BigRusFont);
+    int textFontHeight = dc->getFontYsize();
+    int textFontWidth = dc->getFontXsize();
+
+    // вычисляем ширину всего занятого пространства
+    int widthOccupied = TFT_TEXT_INPUT_WIDTH*2 + TFT_ARROW_BUTTON_WIDTH*4 + INFO_BOX_V_SPACING*6;    
+    
+    // теперь вычисляем левую границу для начала рисования
+    int leftPos = (screenWidth - widthOccupied)/2;
+    int initialLeftPos = leftPos;
+    
+    // теперь вычисляем верхнюю границу для отрисовки кнопок
+    int topPos = INFO_BOX_V_SPACING*2;
+    int secondRowTopPos = topPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    int thirdRowTopPos = secondRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    
+    const int spacing = 10;
+
+    int buttonHeight = TFT_ARROW_BUTTON_HEIGHT;
+
+    int controlsButtonsWidth = (screenWidth - spacing*2 - initialLeftPos*2)/3;
+    int controlsButtonsTop = screenHeight - buttonHeight - spacing;
+   // первая - кнопка назад
+    backButton = screenButtons->addButton( initialLeftPos ,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
+    saveButton = screenButtons->addButton( initialLeftPos + spacing +  controlsButtonsWidth,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_SAVE_CAPTION);
+    
+    screenButtons->disableButton(saveButton);
+
+
+    static char leftArrowCaption[2] = {0};
+    static char rightArrowCaption[2] = {0};
+
+    leftArrowCaption[0] = rusPrinter->mapChar(charLeftArrow);
+    rightArrowCaption[0] = rusPrinter->mapChar(charRightArrow);
+
+    int textBoxHeightWithCaption =  TFT_TEXT_INPUT_HEIGHT + textFontHeight + INFO_BOX_CONTENT_PADDING;
+    int textBoxTopPos = topPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   
+    // теперь добавляем наши кнопки
+    decCalibrationButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   calibrationBox = new TFTInfoBox("T калибровки:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incCalibrationButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+   decAgentAButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   agentABox = new TFTInfoBox("А на 100ppm, мм:сс:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+   
+   incAgentAButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+
+   // вторая строка
+   textBoxTopPos = secondRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = secondRowTopPos;
+   leftPos = initialLeftPos;
+   
+   decAgentBButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   agentBBox = new TFTInfoBox("B на 100ppm, мм:сс:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incAgentBButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+   decAgentCButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   agentCBox = new TFTInfoBox("C на 100ppm, мм:сс:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+   
+   incAgentCButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+   // третья строка
+   textBoxTopPos = thirdRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = thirdRowTopPos;
+   leftPos = initialLeftPos;
+
+   decWaterButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   waterBox = new TFTInfoBox("Вода на 100ppm, мм:сс:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;   
+   incWaterButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+   
+   decMixButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   mixBox = new TFTInfoBox("Перемешивание, мм:сс:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incMixButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+ 
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::saveSettings()
+{
+  MainController->GetSettings()->SetECSettings(ecSettings);   
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::blinkSaveSettingsButton(bool bOn)
+{
+  
+  if(bOn)
+  {
+    if(blinkActive != bOn)
+    {
+      blinkActive = bOn;
+      blinkOn = true;
+      blinkTimer = millis();
+      screenButtons->setButtonFontColor(saveButton,WM_BLINK_ON_TEXT_COLOR);
+      screenButtons->setButtonBackColor(saveButton,WM_ON_BLINK_BGCOLOR);
+      screenButtons->drawButton(saveButton);
+    }
+  }
+  else
+  {
+    blinkOn = false;
+    blinkActive = false;
+    screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+    screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+    screenButtons->drawButton(saveButton);    
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::onButtonPressed(TFTMenu* menuManager,int buttonID)
+{
+  tickerButton = -1;
+  if(buttonID == decCalibrationButton || buttonID == incCalibrationButton || buttonID == decAgentAButton
+  || buttonID == incAgentAButton || buttonID == decAgentBButton || buttonID == incAgentBButton
+  || buttonID == decAgentCButton || buttonID == incAgentCButton || buttonID == decWaterButton
+  || buttonID == incWaterButton || buttonID == decMixButton || buttonID == incMixButton)
+  {
+    tickerButton = buttonID;
+    Ticker.start(this);
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::onButtonReleased(TFTMenu* menuManager,int buttonID)
+{
+  Ticker.stop();
+  tickerButton = -1;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::onTick()
+{
+  if(tickerButton == decCalibrationButton)
+    incCalibration(-3);
+  else
+  if(tickerButton == incCalibrationButton)
+    incCalibration(3);
+  else
+  if(tickerButton == decAgentAButton)
+    incAgentA(-5);
+  else
+  if(tickerButton == incAgentAButton)
+    incAgentA(5);
+  else
+  if(tickerButton == decAgentBButton)
+    incAgentB(-5);
+  else
+  if(tickerButton == incAgentBButton)
+    incAgentB(5);
+  else
+  if(tickerButton == decAgentCButton)
+    incAgentC(-5);
+  else
+  if(tickerButton == incAgentCButton)
+    incAgentC(5);
+  else
+  if(tickerButton == decWaterButton)
+    incWater(-5);
+  else
+  if(tickerButton == incWaterButton)
+    incWater(5);
+  else
+  if(tickerButton == decMixButton)
+    incMix(-5);
+  else
+  if(tickerButton == incMixButton)
+    incMix(5);
+    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::incCalibration(int val)
+{
+  uint16_t old = ecSettings.tCalibration;
+  
+  ecSettings.tCalibration+=val;
+
+  
+  if(ecSettings.tCalibration >= 100)
+    ecSettings.tCalibration = 0;
+
+  if(ecSettings.tCalibration != old)
+    drawValueInBox(calibrationBox,ecSettings.tCalibration);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::incAgentA(int val)
+{
+    uint16_t old = ecSettings.reagentATime;
+    
+    ecSettings.reagentATime += val;
+    
+    if(ecSettings.reagentATime >= 600)
+        ecSettings.reagentATime = 0;
+
+      
+    if(ecSettings.reagentATime != old)
+      drawTimeInBox(agentABox,ecSettings.reagentATime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::incAgentC(int val)
+{
+    uint16_t old = ecSettings.reagentCTime;
+    
+    ecSettings.reagentCTime += val;
+    
+    if(ecSettings.reagentCTime >= 600)
+        ecSettings.reagentCTime = 0;
+
+      
+    if(ecSettings.reagentCTime != old)
+      drawTimeInBox(agentCBox,ecSettings.reagentCTime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::incAgentB(int val)
+{
+    uint16_t old = ecSettings.reagentBTime;
+    
+    ecSettings.reagentBTime += val;
+    
+    if(ecSettings.reagentBTime >= 600)
+        ecSettings.reagentBTime = 0;
+
+      
+    if(ecSettings.reagentBTime != old)
+      drawTimeInBox(agentBBox,ecSettings.reagentBTime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::incWater(int val)
+{
+    uint16_t old = ecSettings.waterTime;
+    
+    ecSettings.waterTime += val;
+    
+    if(ecSettings.waterTime >= 600)
+        ecSettings.waterTime = 0;
+
+      
+    if(ecSettings.waterTime != old)
+      drawTimeInBox(waterBox,ecSettings.waterTime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::incMix(int val)
+{
+    uint16_t old = ecSettings.mixTime;
+    
+    ecSettings.mixTime += val;
+    
+    if(ecSettings.mixTime >= 600)
+        ecSettings.mixTime = 0;
+
+      
+    if(ecSettings.mixTime != old)
+      drawTimeInBox(mixBox,ecSettings.mixTime);  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::update(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  if(blinkActive && screenButtons)
+  {
+    if(millis() - blinkTimer > 500)
+    {
+      blinkOn = !blinkOn;
+
+      if(blinkOn)
+      {
+        screenButtons->setButtonFontColor(saveButton,WM_BLINK_ON_TEXT_COLOR);
+        screenButtons->setButtonBackColor(saveButton,WM_ON_BLINK_BGCOLOR);
+        screenButtons->drawButton(saveButton);
+      }
+      else
+      {
+        screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+        screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+        screenButtons->drawButton(saveButton);   
+      }
+
+      blinkTimer = millis();
+    }
+  } // if(blinkActive)
+
+ if(screenButtons)
+ {
+    int pressed_button = screenButtons->checkButtons(ButtonPressed,ButtonReleased);
+
+    if(pressed_button != -1)
+    {
+      menuManager->resetIdleTimer();
+    
+   
+          if(pressed_button == backButton)
+          {
+            menuManager->switchToScreen("ECControl");
+            return;
+          }
+          else
+          if(pressed_button == saveButton)
+          {
+            saveSettings();
+            blinkSaveSettingsButton(false);
+            screenButtons->disableButton(saveButton,true);
+            return;
+          }
+          else if(pressed_button == decCalibrationButton)
+          {
+            incCalibration(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incCalibrationButton)
+          {
+            incCalibration(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decAgentAButton)
+          {
+            incAgentA(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incAgentAButton)
+          {
+            incAgentA(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decAgentBButton)
+          {
+            incAgentB(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incAgentBButton)
+          {
+            incAgentB(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }  
+          else if(pressed_button == decAgentCButton)
+          {
+            incAgentC(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incAgentCButton)
+          {
+            incAgentC(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }  
+          else if(pressed_button == decWaterButton)
+          {
+            incWater(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incWaterButton)
+          {
+            incWater(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decMixButton)
+          {
+            incMix(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incMixButton)
+          {
+            incMix(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+
+    } // if(pressed_button != -1)
+    
+ } // if(screenButtons)
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECSettingsScreen::draw(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  if(screenButtons)
+  {
+    screenButtons->drawButtons(drawButtonsYield);
+  }
+
+  calibrationBox->draw(menuManager);
+  drawValueInBox(calibrationBox,ecSettings.tCalibration);
+
+  agentABox->draw(menuManager);
+  drawTimeInBox(agentABox,ecSettings.reagentATime);
+
+  agentBBox->draw(menuManager);
+  drawTimeInBox(agentBBox,ecSettings.reagentBTime);
+
+  agentCBox->draw(menuManager);
+  drawTimeInBox(agentCBox,ecSettings.reagentCTime);
+
+  waterBox->draw(menuManager);
+  drawTimeInBox(waterBox,ecSettings.waterTime);
+
+  mixBox->draw(menuManager);
+  drawTimeInBox(mixBox,ecSettings.mixTime);
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTECControlScreen::TFTECControlScreen()
+{
+  ppmBox = NULL;
+  histeresisBox = NULL;
+
+  intervalBox = NULL;
+  sensorBox = NULL;
+  tickerButton = -1;  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TFTECControlScreen::~TFTECControlScreen()
+{
+ delete screenButtons;
+ delete ppmBox;
+ delete histeresisBox;
+ delete intervalBox;  
+ delete sensorBox;  
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::onActivate(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  AbstractModule* module = MainController->GetModuleByID("EC");
+    if(module)
+      ecSensorsCount = module->State.GetStateCount(StateEC);
+    else
+      ecSensorsCount = 0;  
+
+    ecSettings = *(MainController->GetSettings()->GetECSettings());
+    
+    screenButtons->disableButton(saveButton);
+
+    blinkActive = false;
+    screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+    screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+
+    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::setup(TFTMenu* menuManager)
+{
+    UTFT* dc = menuManager->getDC();
+
+  if(!dc)
+  {
+    return;
+  }
+    
+    
+    screenButtons = new UTFT_Buttons_Rus(dc, menuManager->getTouch(),menuManager->getRusPrinter());
+    screenButtons->setTextFont(BigRusFont);
+    screenButtons->setSymbolFont(SensorFont);
+    screenButtons->setButtonColors(TFT_CHANNELS_BUTTON_COLORS);
+ 
+    UTFTRus* rusPrinter = menuManager->getRusPrinter();
+    
+    int screenWidth = dc->getDisplayXSize();
+    int screenHeight = dc->getDisplayYSize();
+
+    dc->setFont(BigRusFont);
+    int textFontHeight = dc->getFontYsize();
+    int textFontWidth = dc->getFontXsize();
+
+    // вычисляем ширину всего занятого пространства
+    int widthOccupied = TFT_TEXT_INPUT_WIDTH*2 + TFT_ARROW_BUTTON_WIDTH*4 + INFO_BOX_V_SPACING*6;    
+    
+    // теперь вычисляем левую границу для начала рисования
+    int leftPos = (screenWidth - widthOccupied)/2;
+    int initialLeftPos = leftPos;
+    
+    // теперь вычисляем верхнюю границу для отрисовки кнопок
+    int topPos = INFO_BOX_V_SPACING*4;
+    int secondRowTopPos = topPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    int thirdRowTopPos = secondRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
+    
+    const int spacing = 10;
+
+    int buttonHeight = TFT_ARROW_BUTTON_HEIGHT;
+
+    int controlsButtonsWidth = (screenWidth - spacing*2 - initialLeftPos*2)/3;
+    int controlsButtonsTop = screenHeight - buttonHeight - spacing;
+   // первая - кнопка назад
+    backButton = screenButtons->addButton( initialLeftPos ,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_BACK_CAPTION);
+    saveButton = screenButtons->addButton( initialLeftPos + spacing +  controlsButtonsWidth,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, WM_SAVE_CAPTION);
+    ecSettingsButton = screenButtons->addButton( initialLeftPos + spacing*2 +  controlsButtonsWidth*2,  controlsButtonsTop, controlsButtonsWidth,  buttonHeight, "НАСТРОЙКИ");
+    screenButtons->setButtonBackColor(ecSettingsButton,MODE_ON_COLOR);
+    screenButtons->setButtonFontColor(ecSettingsButton,CHANNELS_BUTTONS_TEXT_COLOR);
+    
+    screenButtons->disableButton(saveButton);
+
+
+    static char leftArrowCaption[2] = {0};
+    static char rightArrowCaption[2] = {0};
+
+    leftArrowCaption[0] = rusPrinter->mapChar(charLeftArrow);
+    rightArrowCaption[0] = rusPrinter->mapChar(charRightArrow);
+
+    int textBoxHeightWithCaption =  TFT_TEXT_INPUT_HEIGHT + textFontHeight + INFO_BOX_CONTENT_PADDING;
+    int textBoxTopPos = topPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   
+    // теперь добавляем наши кнопки
+   decPPMButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   ppmBox = new TFTInfoBox("Держим EC, ppm:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incPPMButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+ 
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+   decHisteresisButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   histeresisBox = new TFTInfoBox("Гистерезис:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+   
+   incHisteresisButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+
+
+   // вторая строка
+   textBoxTopPos = secondRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = secondRowTopPos;
+   leftPos = initialLeftPos;
+   
+   decIntervalButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+      
+   intervalBox = new TFTInfoBox("Интервал, чч:мм:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+ 
+   incIntervalButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+
+  leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH;
+
+   decSensorButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   const char* capt = "Датчик:";
+   sensorBox = new TFTInfoBox(capt,TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   sensorDataTop = textBoxTopPos;
+   sensorDataLeft = leftPos + textFontWidth*rusPrinter->utf8_strlen(capt) + textFontWidth*3 - (TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING);
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
+   
+   incSensorButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+ 
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::saveSettings()
+{
+  MainController->GetSettings()->SetECSettings(ecSettings);
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::blinkSaveSettingsButton(bool bOn)
+{
+  
+  if(bOn)
+  {
+    if(blinkActive != bOn)
+    {
+      blinkActive = bOn;
+      blinkOn = true;
+      blinkTimer = millis();
+      screenButtons->setButtonFontColor(saveButton,WM_BLINK_ON_TEXT_COLOR);
+      screenButtons->setButtonBackColor(saveButton,WM_ON_BLINK_BGCOLOR);
+      screenButtons->drawButton(saveButton);
+    }
+  }
+  else
+  {
+    blinkOn = false;
+    blinkActive = false;
+    screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+    screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+    screenButtons->drawButton(saveButton);    
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::onButtonPressed(TFTMenu* menuManager,int buttonID)
+{
+  tickerButton = -1;
+  if(buttonID == decPPMButton || buttonID == incPPMButton || buttonID == decHisteresisButton
+  || buttonID == incHisteresisButton 
+  || buttonID == decIntervalButton || buttonID == incIntervalButton
+  )
+  {
+    tickerButton = buttonID;
+    Ticker.start(this);
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::onButtonReleased(TFTMenu* menuManager,int buttonID)
+{
+  Ticker.stop();
+  tickerButton = -1;
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::onTick()
+{
+  if(tickerButton == decPPMButton)
+    incPPM(-50);
+  else
+  if(tickerButton == incPPMButton)
+    incPPM(50);
+  else
+  if(tickerButton == decHisteresisButton)
+    incHisteresis(-10);
+  else
+  if(tickerButton == incHisteresisButton)
+    incHisteresis(10);
+  else
+  if(tickerButton == incIntervalButton)
+    incInterval(5);
+  else
+  if(tickerButton == decIntervalButton)
+    incInterval(-5);    
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::incPPM(int val)
+{
+  uint16_t old = ecSettings.targetPPM;
+  
+  ecSettings.targetPPM+=val;
+
+  if(ecSettings.targetPPM >= 0xFFFF)
+  {
+    ecSettings.targetPPM = 0;
+  }
+  
+  if(ecSettings.targetPPM != old)
+  {
+    drawValueInBox(ppmBox,ecSettings.targetPPM);  
+  }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::incHisteresis(int val)
+{
+    uint16_t old = ecSettings.histeresis;
+    
+    ecSettings.histeresis += val;
+    
+    if(ecSettings.histeresis >= 500)
+        ecSettings.histeresis = 0;
+
+      
+    if(ecSettings.histeresis != old)
+    {
+      drawValueInBox(histeresisBox,ecSettings.histeresis);  
+    }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::incInterval(int val)
+{
+    uint16_t old = ecSettings.interval;
+    
+    ecSettings.interval += val;
+    
+    if(ecSettings.interval >= 0xFFFF)
+        ecSettings.interval = 0;
+
+      
+    if(ecSettings.interval != old)
+    {
+      drawTimeInBox(intervalBox,ecSettings.interval);  
+    }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::update(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  static uint32_t sensorUpdateTimer = millis();
+  if(millis() - sensorUpdateTimer > 2000)
+  {
+    String old1 = sensorDataString;
+    
+    getSensorData(sensorDataString);
+    
+    if(sensorDataString != old1)
+    {
+      drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+    }
+
+    sensorUpdateTimer = millis();
+  }    
+
+  if(blinkActive && screenButtons)
+  {
+    if(millis() - blinkTimer > 500)
+    {
+      blinkOn = !blinkOn;
+
+      if(blinkOn)
+      {
+        screenButtons->setButtonFontColor(saveButton,WM_BLINK_ON_TEXT_COLOR);
+        screenButtons->setButtonBackColor(saveButton,WM_ON_BLINK_BGCOLOR);
+        screenButtons->drawButton(saveButton);
+      }
+      else
+      {
+        screenButtons->setButtonFontColor(saveButton,WM_BLINK_OFF_TEXT_COLOR);
+        screenButtons->setButtonBackColor(saveButton,WM_OFF_BLINK_BGCOLOR);
+        screenButtons->drawButton(saveButton);   
+      }
+
+      blinkTimer = millis();
+    }
+  } // if(blinkActive)
+
+ if(screenButtons)
+ {
+    int pressed_button = screenButtons->checkButtons(ButtonPressed,ButtonReleased);
+
+    if(pressed_button != -1)
+    {
+      menuManager->resetIdleTimer();
+    
+   
+          if(pressed_button == backButton)
+          {
+            menuManager->switchToScreen("DRIVE");
+            return;
+          }
+          else
+          if(pressed_button == ecSettingsButton)
+          {
+            menuManager->switchToScreen("ECSettings");
+            return;            
+          }
+          else
+          if(pressed_button == saveButton)
+          {
+            saveSettings();
+            blinkSaveSettingsButton(false);
+            screenButtons->disableButton(saveButton,true);
+            return;
+          }
+          else if(pressed_button == decPPMButton)
+          {
+            incPPM(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incPPMButton)
+          {
+            incPPM(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decHisteresisButton)
+          {
+            incHisteresis(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incHisteresisButton)
+          {
+            incHisteresis(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decIntervalButton)
+          {
+            incInterval(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incIntervalButton)
+          {
+            incInterval(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decSensorButton)
+          {
+            ecSettings.sensorIndex--;
+            if(ecSettings.sensorIndex < 0)
+              ecSettings.sensorIndex = 0;
+      
+            drawValueInBox(sensorBox,ecSettings.sensorIndex);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+      
+            getSensorData(sensorDataString);
+            drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+          }
+          else if(pressed_button == incSensorButton)
+          {
+            ecSettings.sensorIndex++;
+            if(ecSettings.sensorIndex >= ecSensorsCount)
+              ecSettings.sensorIndex = ecSensorsCount - 1;
+     
+            if(ecSettings.sensorIndex < 0 || ecSettings.sensorIndex >= ecSensorsCount)
+              ecSettings.sensorIndex = 0;
+      
+            drawValueInBox(sensorBox,ecSettings.sensorIndex);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+            
+            getSensorData(sensorDataString);
+            drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+          }
+
+    } // if(pressed_button != -1)
+    
+ } // if(screenButtons)
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::draw(TFTMenu* menuManager)
+{
+  if(!menuManager->getDC())
+  {
+    return;
+  }
+
+  drawScreenCaption(menuManager,"КОНТРОЛЬ EC");  
+
+  if(screenButtons)
+  {
+    screenButtons->drawButtons(drawButtonsYield);
+  }
+
+  ppmBox->draw(menuManager);
+  drawValueInBox(ppmBox,ecSettings.targetPPM);
+
+  histeresisBox->draw(menuManager);
+  drawValueInBox(histeresisBox,ecSettings.histeresis);
+
+  intervalBox->draw(menuManager);
+  drawTimeInBox(intervalBox,ecSettings.interval);
+
+
+  sensorBox->draw(menuManager);
+  drawValueInBox(sensorBox,ecSettings.sensorIndex);
+
+  drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::getSensorData(String& result)
+{
+
+  result = F(" - ppm");
+
+  const char* moduleName = "EC";
+  uint16_t sensorIndex = ecSettings.sensorIndex;
+  
+  AbstractModule* module = MainController->GetModuleByID(moduleName);
+  if(!module)
+    return;
+
+  OneState* sensorState = module->State.GetState(StateEC,sensorIndex);
+  if(!sensorState)
+    return;
+
+  if(sensorState->HasData())
+  {
+   ECPair tmp = *sensorState;
+   result = "";
+
+   result += tmp.Current;
+
+   result += " ppm";
+   
+  }
+
+   while(result.length() < 10)
+    result += ' ';
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::drawSensorData(TFTMenu* menuManager, String& which, int left, int top)
+{
+    UTFT* dc = menuManager->getDC();
+    dc->setFont(BigRusFont);
+
+    dc->setColor(VGA_RED);
+    dc->setBackColor(TFT_BACK_COLOR);
+
+    dc->print(which.c_str(), left,top);
+
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_EC_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #ifdef USE_THERMOSTAT_MODULE
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -15103,7 +16196,8 @@ void TFTDriveScreen::setup(TFTMenu* menuManager)
     phButton = screenButtons->addButton( leftPos ,  topPos, controlsButtonsWidth,  buttonHeight, CONTROL_PH_CAPTION);
     leftPos += controlsButtonsWidth + spacing;
     screenButtons->setButtonHasIcon(phButton);
-    #ifndef USE_PH_MODULE
+    
+    #if !defined(USE_PH_MODULE) && !defined(USE_EC_MODULE) // если оба модуля неактивны - то pH точно не контролируется
     screenButtons->disableButton(phButton);
     #endif
 
@@ -15216,7 +16310,7 @@ void TFTDriveScreen::update(TFTMenu* menuManager)
         else
         if(pressed_button == ecButton)
         {
-          menuManager->switchToScreen("ECControl");
+          menuManager->switchToScreen("ECControl"); // экран контроля EC
         }
         else
         if(pressed_button == thermostatButton)
@@ -15226,7 +16320,7 @@ void TFTDriveScreen::update(TFTMenu* menuManager)
         else
         if(pressed_button == phButton)
         {
-          menuManager->switchToScreen("PHControl");
+          menuManager->switchToScreen("PHControl"); // экран контроля pH модуля PH
         }
         else
         if(pressed_button == co2Button)
@@ -16878,7 +17972,7 @@ void TFTIdleScreen::drawHeatStatus(TFTMenu* menuManager)
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTIdleScreen::drawPHStatus(TFTMenu* menuManager, uint8_t whichSection, TFTInfoBox* _box, bool on1, bool on2)
 {
-  #ifdef USE_PH_MODULE 
+  #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
     if(whichSection == 1) // flow add, mix on
     {
       drawStatusesInBox(menuManager, _box,on1, on2, "ВКЛ", "ВЫКЛ", "ВКЛ", "ВЫКЛ", "Подача воды:", "Перемешивание:");  
@@ -16896,7 +17990,7 @@ void TFTIdleScreen::drawPHStatus(TFTMenu* menuManager)
   phFlowMixBox->draw(menuManager);
   phPlusMinusBox->draw(menuManager);
   
-  #ifdef USE_PH_MODULE
+  #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
     drawPHStatus(menuManager,1,phFlowMixBox, phFlowAddOn, phMixOn);
     drawPHStatus(menuManager,2,phPlusMinusBox, phPlusOn, phMinusOn);
   #else
@@ -17869,7 +18963,7 @@ void TFTIdleScreen::updateStatuses(TFTMenu* menuManager)
     }
   #endif   // USE_HEAT_MODULE
 
-   #ifdef USE_PH_MODULE
+   #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
       bool _phFlowAddOn = WORK_STATUS.GetStatus(PH_FLOW_ADD_BIT);
       bool _phMixOn = WORK_STATUS.GetStatus(PH_MIX_PUMP_BIT);
 
@@ -17880,7 +18974,9 @@ void TFTIdleScreen::updateStatuses(TFTMenu* menuManager)
         phMixOn = _phMixOn;
 
         if(drawCalled && currentScreen == TFT_IDLE_PH_SCREEN_NUMBER)
+        {
           drawPHStatus(menuManager,1, phFlowMixBox, phFlowAddOn, phMixOn);
+        }
       }
 
       bool _phPlusOn = WORK_STATUS.GetStatus(PH_PLUS_PUMP_BIT);
@@ -17893,7 +18989,9 @@ void TFTIdleScreen::updateStatuses(TFTMenu* menuManager)
         phMinusOn = _phMinusOn;
 
          if(drawCalled && currentScreen == TFT_IDLE_PH_SCREEN_NUMBER)
+         {
           drawPHStatus(menuManager,2, phPlusMinusBox, phPlusOn, phMinusOn);
+         }
       }
    #endif // USE_PH_MODULE
 
@@ -19733,7 +20831,7 @@ void TFTMenu::setup()
     #endif // USE_THERMOSTAT_MODULE    
 
 
-    #ifdef USE_PH_MODULE
+    #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
       AbstractTFTScreen* phScreen = new TFTPHControlScreen();
       phScreen->setup(this);
       TFTScreenInfo phInfo;
@@ -19750,6 +20848,24 @@ void TFTMenu::setup()
       screens.push_back(phInfo);
       
     #endif // USE_PH_MODULE
+
+
+    #if defined(USE_EC_MODULE)
+      AbstractTFTScreen* eccScreen = new TFTECControlScreen();
+      eccScreen->setup(this);
+      TFTScreenInfo eccInfo;
+
+      eccInfo.screenName = "ECControl"; 
+      eccInfo.screen = eccScreen;  
+      screens.push_back(eccInfo);
+
+      eccScreen = new TFTECSettingsScreen();
+      eccScreen->setup(this);
+      eccInfo.screenName = "ECSettings"; 
+      eccInfo.screen = eccScreen;  
+      screens.push_back(eccInfo);
+      
+    #endif // USE_EC_MODULE    
 
     
     

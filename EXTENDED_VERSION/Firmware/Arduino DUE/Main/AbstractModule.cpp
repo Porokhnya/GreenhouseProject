@@ -3,6 +3,9 @@
 #ifdef USE_PH_MODULE
 #include "PHModule.h"
 #endif
+#ifdef USE_EC_MODULE
+#include "ECModule.h"
+#endif
 #ifdef USE_TEMP_SENSORS
 #include "TempSensors.h"
 #endif
@@ -472,11 +475,15 @@ void OneState::Update(void* newData) // обновляем внутреннее 
 
         Temperature* tNew = (Temperature*) newData;
 
-        #ifdef USE_PH_MODULE
+        #if defined(USE_PH_MODULE) || defined(USE_EC_MODULE)
           if(Type == StatePH)
           {
             // тут поправляем значение pH в зависимости от калибровочных коэффициентов
-            PHCalculation.ApplyCalculation(tNew);
+            #if defined(USE_PH_MODULE)
+              PHCalculation.ApplyCalculation(tNew);
+            #else
+              EC_PH_Calculation.ApplyCalculation(tNew);
+            #endif
               
           }
         #endif // USE_PH_MODULE

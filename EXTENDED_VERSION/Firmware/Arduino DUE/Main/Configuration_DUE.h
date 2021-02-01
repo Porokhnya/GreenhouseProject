@@ -322,6 +322,8 @@
 
 #define EEPROM_RULES_START_ADDR 5120 // с пятого килобайта в EEPROM идут правила
 
+#define EC_SETTINGS_ADDRESS         9700  // адрес настроек модуля EC, 100 байт (про запас)
+#define EC_BINDING_ADDRESS          9800 // адрес привязок железа модуля EC, 100 байт (про запас)
 #define IOT_SETTINGS_EEPROM_ADDR    9900 // адрес хранения настроек IOT, 60 байт
 #define WATER_TANK_BINDING_ADDRESS  10000 // тут хранятся привезки модуля бака в настройкам, 50 байт (про запас)
 #define CO2_BINDING_ADDRESS 10300 // тут хранятся привязки CO2 к железу, 100 байт (про запас)

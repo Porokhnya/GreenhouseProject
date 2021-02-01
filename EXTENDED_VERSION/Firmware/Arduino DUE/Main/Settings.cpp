@@ -1,6 +1,5 @@
 #include "Settings.h"
-#include "Globals.h"
-#include "Memory.h" 
+#include "EEPROMSettingsModule.h"
 //--------------------------------------------------------------------------------------------------------------------------------------
 //  ГЛОБАЛЬНЫЕ НАСТРОЙКИ
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -167,6 +166,24 @@ void GlobalSettings::setup()
   } // checkHeader
 
   scheduleActiveFlag = read8(SCHEDULE_ACTIVE_FLAG_ADDRESS,0) == 1;  
+
+  #ifdef USE_EC_MODULE
+  if(!read(EC_SETTINGS_ADDRESS, ecSettings))
+  {
+    memset(&ecSettings,0,sizeof(ecSettings));
+    ecSettings.targetPPM = 1000;
+    ecSettings.histeresis = 50;
+    ecSettings.interval = 60;
+    ecSettings.sensorIndex = -1;
+    ecSettings.reagentATime = 2;
+    ecSettings.reagentBTime = 2;
+    ecSettings.reagentCTime = 2;
+    ecSettings.waterTime = 2;
+    ecSettings.mixTime = 20;
+    ecSettings.tCalibration = 20;
+     
+  }
+  #endif // USE_EC_MODULE
 
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -1592,6 +1609,16 @@ void GlobalSettings::setLastScheduleRunDate(uint8_t dayOfMonth,uint8_t month,uin
   MemWrite(addr,hour);addr++;
   MemWrite(addr,minute);addr++;
 }
-//--------------------------------------------------------------------------------------------------------------------------------------        
+//--------------------------------------------------------------------------------------------------------------------------------------
+#ifdef USE_EC_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
+void GlobalSettings::SetECSettings(const ECSettings& val)
+{
+      ecSettings = val;
+      write(EC_SETTINGS_ADDRESS, ecSettings);
+}
+//--------------------------------------------------------------------------------------------------------------------------------------
+#endif // USE_EC_MODULE
+//--------------------------------------------------------------------------------------------------------------------------------------
 
 
