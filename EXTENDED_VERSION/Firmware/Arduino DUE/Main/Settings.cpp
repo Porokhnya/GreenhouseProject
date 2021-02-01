@@ -181,6 +181,8 @@ void GlobalSettings::setup()
     ecSettings.waterTime = 2;
     ecSettings.mixTime = 20;
     ecSettings.tCalibration = 20;
+    ecSettings.workInterval = 30;
+    ecSettings.workTime = 10;
      
   }
   #endif // USE_EC_MODULE

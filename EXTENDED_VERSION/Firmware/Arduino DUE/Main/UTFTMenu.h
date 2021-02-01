@@ -1982,6 +1982,15 @@ class TFTECControlScreen : public AbstractTFTScreen, public ITickHandler
     void drawSensorData(TFTMenu* menuManager, String& which, int left, int top);
     void getSensorData(String& result);
   
+    // интервал подачи
+    TFTInfoBox* workIntervalBox;
+    int decWorkIntervalButton, incWorkIntervalButton;
+    void incWorkInterval(int val);
+
+    // время подачи
+    TFTInfoBox* workTimeBox;
+    int decWorkTimeButton, incWorkTimeButton;
+    void incWorkTime(int val);
 
     void saveSettings();
 

@@ -217,6 +217,8 @@ typedef struct
   uint16_t waterTime; // время подачи воды для изменения ЕС на 100 ppm, секунд
   uint16_t mixTime; // время перемешивания после регулировки EC, секунд
   uint16_t tCalibration; // температура калибровки датчика
+  uint16_t workInterval; // периодичность подачи раствора в рабочую зону, минут
+  uint16_t workTime; // время подачи, секунд
   
 } ECSettings;
 #pragma pack(pop)

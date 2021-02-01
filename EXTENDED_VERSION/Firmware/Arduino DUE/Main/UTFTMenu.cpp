@@ -12204,9 +12204,10 @@ TFTECControlScreen::TFTECControlScreen()
 {
   ppmBox = NULL;
   histeresisBox = NULL;
-
   intervalBox = NULL;
   sensorBox = NULL;
+  workIntervalBox = NULL;
+  
   tickerButton = -1;  
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -12216,7 +12217,8 @@ TFTECControlScreen::~TFTECControlScreen()
  delete ppmBox;
  delete histeresisBox;
  delete intervalBox;  
- delete sensorBox;  
+ delete sensorBox;
+ delete workIntervalBox;
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTECControlScreen::onActivate(TFTMenu* menuManager)
@@ -12275,7 +12277,7 @@ void TFTECControlScreen::setup(TFTMenu* menuManager)
     int initialLeftPos = leftPos;
     
     // теперь вычисляем верхнюю границу для отрисовки кнопок
-    int topPos = INFO_BOX_V_SPACING*4;
+    int topPos = INFO_BOX_V_SPACING*2;
     int secondRowTopPos = topPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
     int thirdRowTopPos = secondRowTopPos + TFT_ARROW_BUTTON_HEIGHT + INFO_BOX_V_SPACING*2;
     
@@ -12334,7 +12336,7 @@ void TFTECControlScreen::setup(TFTMenu* menuManager)
    leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
 
       
-   intervalBox = new TFTInfoBox("Интервал, чч:мм:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   intervalBox = new TFTInfoBox("Период контроля, чч:мм:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
    leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
  
    incIntervalButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
@@ -12353,7 +12355,29 @@ void TFTECControlScreen::setup(TFTMenu* menuManager)
    
    incSensorButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
 
+
+   // третья строка
+   textBoxTopPos = thirdRowTopPos - textFontHeight - INFO_BOX_CONTENT_PADDING;
+   topPos = thirdRowTopPos;
+   leftPos = initialLeftPos;
+
+   decWorkIntervalButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+
+   workIntervalBox = new TFTInfoBox("Период подачи, чч:мм:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;   
+   incWorkIntervalButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+
+   leftPos += INFO_BOX_V_SPACING*2 + TFT_ARROW_BUTTON_WIDTH; 
+
+   decWorkTimeButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, leftArrowCaption, BUTTON_SYMBOL);
+   leftPos += INFO_BOX_V_SPACING + TFT_ARROW_BUTTON_WIDTH;
+   
+   workTimeBox = new TFTInfoBox("Время подачи, мм:сс:",TFT_TEXT_INPUT_WIDTH,textBoxHeightWithCaption,leftPos,textBoxTopPos,-(TFT_ARROW_BUTTON_WIDTH+INFO_BOX_V_SPACING));
+   leftPos += INFO_BOX_V_SPACING + TFT_TEXT_INPUT_WIDTH;
  
+   incWorkTimeButton = screenButtons->addButton( leftPos ,  topPos, TFT_ARROW_BUTTON_WIDTH,  TFT_ARROW_BUTTON_HEIGHT, rightArrowCaption, BUTTON_SYMBOL);
+   
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTECControlScreen::saveSettings()
@@ -12392,6 +12416,8 @@ void TFTECControlScreen::onButtonPressed(TFTMenu* menuManager,int buttonID)
   if(buttonID == decPPMButton || buttonID == incPPMButton || buttonID == decHisteresisButton
   || buttonID == incHisteresisButton 
   || buttonID == decIntervalButton || buttonID == incIntervalButton
+  || buttonID == decWorkIntervalButton || buttonID == incWorkIntervalButton
+  || buttonID == decWorkTimeButton || buttonID == incWorkTimeButton
   )
   {
     tickerButton = buttonID;
@@ -12424,6 +12450,18 @@ void TFTECControlScreen::onTick()
   else
   if(tickerButton == decIntervalButton)
     incInterval(-5);    
+  else
+  if(tickerButton == incWorkIntervalButton)
+    incWorkInterval(5);
+  else
+  if(tickerButton == decWorkIntervalButton)
+    incWorkInterval(-5);    
+  else
+  if(tickerButton == incWorkTimeButton)
+    incWorkTime(5);
+  else
+  if(tickerButton == decWorkTimeButton)
+    incWorkTime(-5);    
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void TFTECControlScreen::incPPM(int val)
@@ -12472,6 +12510,38 @@ void TFTECControlScreen::incInterval(int val)
     if(ecSettings.interval != old)
     {
       drawTimeInBox(intervalBox,ecSettings.interval);  
+    }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::incWorkTime(int val)
+{
+    uint16_t old = ecSettings.workTime;
+    
+    ecSettings.workTime += val;
+    
+    if(ecSettings.workTime >= 0xFFFF)
+        ecSettings.workTime = 0;
+
+      
+    if(ecSettings.workTime != old)
+    {
+      drawTimeInBox(workTimeBox,ecSettings.workTime);  
+    }
+}
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void TFTECControlScreen::incWorkInterval(int val)
+{
+    uint16_t old = ecSettings.workInterval;
+    
+    ecSettings.workInterval += val;
+    
+    if(ecSettings.workInterval >= 0xFFFF)
+        ecSettings.workInterval = 0;
+
+      
+    if(ecSettings.workInterval != old)
+    {
+      drawTimeInBox(workIntervalBox,ecSettings.workInterval);  
     }
 }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -12584,6 +12654,30 @@ void TFTECControlScreen::update(TFTMenu* menuManager)
             screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
             blinkSaveSettingsButton(true);
           }
+          else if(pressed_button == decWorkIntervalButton)
+          {
+            incWorkInterval(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incWorkIntervalButton)
+          {
+            incWorkInterval(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == decWorkTimeButton)
+          {
+            incWorkTime(-1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
+          else if(pressed_button == incWorkTimeButton)
+          {
+            incWorkTime(1);
+            screenButtons->enableButton(saveButton,!screenButtons->buttonEnabled(saveButton));
+            blinkSaveSettingsButton(true);
+          }
           else if(pressed_button == decSensorButton)
           {
             ecSettings.sensorIndex--;
@@ -12626,9 +12720,7 @@ void TFTECControlScreen::draw(TFTMenu* menuManager)
   {
     return;
   }
-
-  drawScreenCaption(menuManager,"КОНТРОЛЬ EC");  
-
+  
   if(screenButtons)
   {
     screenButtons->drawButtons(drawButtonsYield);
@@ -12646,8 +12738,13 @@ void TFTECControlScreen::draw(TFTMenu* menuManager)
 
   sensorBox->draw(menuManager);
   drawValueInBox(sensorBox,ecSettings.sensorIndex);
-
   drawSensorData(menuManager, sensorDataString,sensorDataLeft,sensorDataTop);
+
+  workIntervalBox->draw(menuManager);
+  drawTimeInBox(workIntervalBox,ecSettings.workInterval);
+  
+  workTimeBox->draw(menuManager);
+  drawTimeInBox(workTimeBox,ecSettings.workTime);
 
 
 }
