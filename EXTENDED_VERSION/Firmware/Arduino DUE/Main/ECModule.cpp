@@ -30,9 +30,17 @@ ECModule::ECModule() : AbstractModule("EC")
   ecSamplesDone = 0;
   ecTimer = 0;
   ecMeasureState = ecInMeasure;
+
+  ecControlled = false;
+  ecControlTimer = 0;
+  ecWorkTimer = 0;
+  ecRequestedTimerInterval = 0;
+  ecMachineState = ms_Normal;
+  ecCheckRetries = 0;
+  absDiffPPM = 0;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
-void ECModule::out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t level, bool setMode)
+bool ECModule::out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t level, bool setMode)
 {
   if(linkType == linkDirect)
   {
@@ -43,6 +51,8 @@ void ECModule::out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t le
          WORK_STATUS.PinMode(pin,OUTPUT);
       }
       WORK_STATUS.PinWrite(pin,level);
+
+      return true;
     }
   }
   else
@@ -57,6 +67,8 @@ void ECModule::out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t le
             WORK_STATUS.MCP_SPI_PinMode(MCPAddress,pin,OUTPUT);
           }
           WORK_STATUS.MCP_SPI_PinWrite(MCPAddress,pin,level);
+
+          return true;
         }
 
         
@@ -74,10 +86,14 @@ void ECModule::out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t le
             WORK_STATUS.MCP_I2C_PinMode(MCPAddress,pin,OUTPUT);
           }
           WORK_STATUS.MCP_I2C_PinWrite(MCPAddress,pin,level);
+
+          return true;
         }
 
     #endif
   }  
+
+  return false;
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 void ECModule::ReadECSensors()
@@ -390,7 +406,7 @@ void ECModule::Setup()
     phSensorAdded = true;
   }
 
-  // настраиваем выхода
+  // настраиваем выхода контроля EC
   ECBinding bnd = HardwareBinding->GetECBinding();
   
   out(bnd.LinkType,bnd.MCPAddress,bnd.PinA,!bnd.Level,true);
@@ -414,15 +430,6 @@ void ECModule::Setup()
       ecSensorsCounter++;
     }
   }
-
-  /*
-  State.AddState(StateEC,0);
-
-  // пока делаем ему фейковые показания
-  uint16_t fakeEC = 1234;
-  State.UpdateState(StateEC,0,(void*)&fakeEC);
-  */
-
 
   // сохраняем статусы работы pH
   SAVE_STATUS(PH_FLOW_ADD_BIT,0); // жидкость в бак не поступает
@@ -648,6 +655,13 @@ void ECModule::Update()
   ReadPHSensor(); // читаем значение с датчика pH
   ReadECSensors(); // читаем значения с датчиков EC
 
+  /////////////////////////////////////////////////////////////////////////////////////
+  //PAID CODE BEGIN
+  /////////////////////////////////////////////////////////////////////////////////////
+ 
+  /////////////////////////////////////////////////////////////////////////////////////
+  //PAID CODE END
+  /////////////////////////////////////////////////////////////////////////////////////
 }
 //--------------------------------------------------------------------------------------------------------------------------------------
 bool  ECModule::ExecCommand(const Command& command, bool wantAnswer)

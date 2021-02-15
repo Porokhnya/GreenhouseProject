@@ -3615,7 +3615,9 @@ void LogicManageModuleClass::Update()
 void LogicManageModuleClass::solveConflicts()
 {
 	// ТУТ РАЗРУЛИВАЕМ РАЗЛИЧНЫЕ КОНФЛИКТЫ
-	
+
+  //TODO: ЗАКОММЕНТИРОВАЛ ЗАКРЫТИЕ ОКОН ПРИ ВКЛЮЧЁННОМ ОТОПЛЕНИИ
+  /*
 	// при включенном отоплении на любом из каналов - закрываем фрамуги
 	#if defined(USE_TEMP_SENSORS) && SUPPORTED_WINDOWS > 0
 
@@ -3649,7 +3651,7 @@ void LogicManageModuleClass::solveConflicts()
 		
 	
 	#endif // defined(USE_TEMP_SENSORS) && SUPPORTED_WINDOWS > 0
-	
+	*/
 	// тут можно разруливать другие зависимости
 	
 }

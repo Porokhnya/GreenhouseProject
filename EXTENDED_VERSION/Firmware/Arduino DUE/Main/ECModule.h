@@ -16,6 +16,33 @@ typedef enum
   
 } ECMeasureState;
 //--------------------------------------------------------------------------------------------------------------------------------------
+typedef enum
+{
+  ms_Normal, // нормальный режим работы
+  ms_CheckEC, // контроль EC
+  ms_CheckECRetries, // повторы прочитать с датчика EC
+  ms_AddA, // добавление раствора А
+  ms_AddACheck, // проверка, что надо выключать подачу А
+  ms_AddB, // добавление раствора B
+  ms_AddBCheck, // проверка, что надо выключать подачу B
+  ms_AddC, // добавление раствора С
+  ms_AddCCheck, // проверка, что надо выключать подачу C
+  ms_AddWater, // добавление воды (уменьшение EC)
+  ms_AddWaterCheck, // проверка, что надо выключать подачу воды
+  ms_CheckPH, // контроль pH
+  ms_PhPlus, // увеличение pH
+  ms_PhPlusCheck, // проверка, что надо выключать подачу pH+
+  ms_PhMinus, // уменьшение pH
+  ms_PhMinusCheck, // проверка, что надо выключать подачу pH-
+  ms_Mix, // перемешивание
+  ms_MixCheck, // проверка, что надо выключать перемешивание
+  ms_Work, // подача готового раствора
+  ms_WorkCheck, // проверка, что надо выключать подачу раствора
+  ms_Mix2, // перемешиваем после добавления pH
+  ms_Mix2Check, // проверка, что надо закончить перемешивание pH
+  
+} ECMachineState;
+//--------------------------------------------------------------------------------------------------------------------------------------
 class ECModule : public AbstractModule // модуль контроля EC
 {
   private:
@@ -52,7 +79,7 @@ class ECModule : public AbstractModule // модуль контроля EC
     void ReadSettings();
 
     // установка уровня на пине
-    void out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t level, bool setMode=false);
+    bool out(uint8_t linkType, uint8_t MCPAddress, uint8_t pin, uint8_t level, bool setMode=false);
 
     // чтение датчиков EC
     void ReadECSensors();
@@ -61,6 +88,19 @@ class ECModule : public AbstractModule // модуль контроля EC
     uint8_t ecSamplesDone;
     uint32_t ecDataArray[4];
     ECMeasureState ecMeasureState;
+
+
+// контроль EC
+    
+    bool ecControlled; // флаг, что мы проконтролировали EC перед первой подачей
+    uint32_t ecControlTimer; // таймер контроля EC
+    uint32_t ecWorkTimer; // таймер подачи раствора в рабочую зону
+    uint32_t ecRequestedTimerInterval; // интервал для таймера
+    ECMachineState ecMachineState; // состояние конечного автомата
+    uint8_t ecCheckRetries; // кол-во попыток прочитать с датчика при контроле ЕС
+    uint32_t absDiffPPM; // абсолютная разница PPM с датчика и уставки
+    
+// контроль EC
 
   
   public:
